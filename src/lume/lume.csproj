@@ -12,7 +12,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>lume</ToolCommandName>
     <PackageId>Lume.Cli</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>cybercat37</Authors>
     <Description>Lume compiler and CLI tool.</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

@@ -96,3 +96,4 @@ Notes:
 - Sub-step 9: complete
 - Sub-step 11: complete
 - Sub-step 12: complete
+- Sub-step 10: complete

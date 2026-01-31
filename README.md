@@ -151,6 +151,12 @@ dotnet new tool-manifest
 dotnet tool install --local Lume.Cli
 ```
 
+### Shell Completions
+
+- Bash: `source docs/completions/lume.bash`
+- Zsh: `autoload -U compinit && compinit` then `fpath+=($PWD/docs/completions)`
+- PowerShell: `. $PWD/docs/completions/lume.ps1`
+
 ### Golden/Snapshot Updates
 
 Golden and snapshot files live under `tests/Lume.Tests/Golden` and `tests/Lume.Tests/Snapshots`.
