@@ -110,7 +110,7 @@ public sealed class Lexer
         var badChar = current;
         Next();
         var badSpan = new TextSpan(start, 1);
-        diagnostics.Add(Diagnostic.Error(sourceText, badSpan, $"Unexpected character: '{badChar}'."));
+        diagnostics.Add(Diagnostic.Error(sourceText, badSpan, $"Expected token, found '{badChar}'."));
         return new SyntaxToken(TokenKind.BadToken, badSpan, badChar.ToString(), null);
     }
 
