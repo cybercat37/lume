@@ -15,23 +15,158 @@ Lume is a minimal, opinionated language for .NET focused on simplicity, explicit
 - **Full .NET interoperability** — seamless integration with existing .NET ecosystems
 - **Small, understandable language surface** — easy to learn and maintain
 
+## Quick Start
+
+### Hello World
+
+```lume
+print "Hello, Lume!"
+```
+
+Run it:
+
+```bash
+make run FILE=hello.lume
+# or
+dotnet run --project src/lume -- run hello.lume
+```
+
+### Example Program
+
+```lume
+let mut counter = 0
+{
+  let x = 10
+  let y = 20
+  counter = x + y
+}
+print counter
+```
+
 ## Status
 
-**Early Draft** — This project is in its initial design phase. The language specification is being developed and refined.
+**In Development** — Steps 1-7 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs.
+
+### Currently Implemented ✅
+
+- Lexer and Parser with error recovery
+- Variables (`let`, `let mut`) and assignments
+- Primitive types (`Int`, `Bool`, `String`)
+- Arithmetic, logical, and comparison operators
+- Blocks and scoped variables
+- String escape sequences (`\n`, `\t`, `\r`, `\"`, `\\`)
+- Binding and scope resolution
+- Type checking
+- Interpreter runtime
+- Code generation (emits C#)
+- Builtin functions (`print`, `println`, `input`)
+
+### Coming Soon 🔜
+
+- Pattern matching (`match`)
+- Functions and lambdas
+- Records and Sum types
+- Generics
+- `Result`/`Option` and error propagation (`?`)
+- Collections (List, Map, Tuple)
+- Iterator combinators
+- Modules and imports
+- Structured concurrency
+- String interpolation
+
+## Building and Running
+
+### Prerequisites
+
+- .NET 8 SDK
+- Make (optional, for convenience targets)
+
+### Build
+
+```bash
+make build
+# or
+dotnet build
+```
+
+### Run a Lume Program
+
+```bash
+make run FILE=path/to/file.lume
+# or
+dotnet run --project src/lume -- run path/to/file.lume
+```
+
+### Compile to C#
+
+```bash
+make compile FILE=path/to/file.lume
+# or
+dotnet run --project src/lume -- build path/to/file.lume
+```
+
+### Run Tests
+
+```bash
+make test
+# or
+dotnet test
+```
 
 ## Documentation
 
-The complete language specification is available in [`docs/spec.md`](docs/spec.md).
+- **[Language Tutorial](docs/tutorial.md)** — Learn Lume with examples
+- **[Language Specification](docs/spec.md)** — Complete language reference
+- **[Roadmap](ROADMAP.md)** — Implementation progress and plans
 
 ## Roadmap
 
-The implementation roadmap includes:
+The implementation follows a 12-step roadmap:
 
-1. **Lexer & Parser** — Tokenize and parse Lume source code
-2. **AST & Type System** — Build abstract syntax tree with type checking
-3. **Code Generation** — Emit .NET IL or C# code
-4. **Runtime Library** — Core types (`Result`, `Option`, concurrency primitives)
-5. **Tooling** — Language server, formatter, and build tools
+1. ✅ **Pipeline Base** — Lexer, parser, AST, diagnostics, minimal emitter
+2. ✅ **Core Syntax** — Variables, assignments, blocks, expressions
+3. ✅ **Parser Robustness** — Error recovery and clear diagnostics
+4. ✅ **Binding & Scope** — Symbol resolution and scope rules
+5. ✅ **Type System** — Type checking and inference
+6. ✅ **Interpreter Runtime** — Direct AST execution
+7. ✅ **Code Generation v1** — C# code emission
+8. 🔜 **Standard Library** — Collections, I/O, math functions
+9. 🔜 **CLI UX** — Commands for check/format/run/build
+10. 🔜 **Test Hardening** — Golden files, fuzzing
+11. 🔜 **Performance** — Incremental compilation, caching
+12. 🔜 **Tooling** — Packaging, distribution, CI
+
+See [ROADMAP.md](ROADMAP.md) for detailed progress.
+
+## Language Features
+
+### No Traditional Control Flow
+
+Lume intentionally omits `if`, `while`, `for`, and `loop`. Instead:
+
+- **Pattern matching** with `match` for all branching
+- **Tail recursion** for custom iteration
+- **Iterator combinators** (`each`, `map`, `fold`, `filter`) for collections
+
+### Explicit Error Handling
+
+```lume
+// Planned syntax
+pub fn load(id: Int) -> Result<User, String> {
+  let raw = db.get(id)?
+  Ok(parse(raw)?)
+}
+```
+
+Errors are values (`Result`/`Option`), not exceptions.
+
+### Immutability by Default
+
+```lume
+let x = 10        // Immutable
+let mut y = 20    // Mutable (scope-local only)
+y = y + 1
+```
 
 ## Contributing
 
