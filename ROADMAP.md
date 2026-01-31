@@ -100,4 +100,4 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 4: complete (see `STEP4_BINDING_SCOPE.md`)
 - Step 5: complete (see `STEP5_TYPE_SYSTEM.md`)
 - Step 6: complete (see `STEP6_INTERPRETER.md`)
-- Step 7: not started (see `STEP7_CODEGEN.md`)
+- Step 7: complete (see `STEP7_CODEGEN.md`)

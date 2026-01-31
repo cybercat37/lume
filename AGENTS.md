@@ -138,7 +138,7 @@ See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `
 - Step 4 (Binding and scope): complete
 - Step 5 (Type system): complete
 - Step 6 (Interpreter runtime): complete
-- Step 7 (Code generation v1): not started
+- Step 7 (Code generation v1): complete
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file

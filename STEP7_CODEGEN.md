@@ -63,4 +63,4 @@ Goal: generate robust C# output from the bound program with correct semantics.
     - Covers grouping, escaping, and blocks.
 
 ## Status
-- Steps 1-12: not started
+- Steps 1-12: complete
