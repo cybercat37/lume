@@ -119,6 +119,12 @@ Follow the existing conventions visible in the C# files.
 - Do not commit generated build artifacts (`bin/`, `obj/`, `out/`).
 - Keep changes scoped; avoid unrelated refactors unless required by the task.
 
+## Roadmap (12 main steps)
+See `ROADMAP.md` for the full 12-step program and `STEP1_PIPELINE.md` for the detailed breakdown of Step 1.
+
+### Current progress
+- Step 1 (Pipeline base): in progress
+
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file
 with the exact commands and any per-project variants.
