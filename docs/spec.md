@@ -82,9 +82,89 @@ let x = DotNet.try(() => SomeApi.Call())?
 
 ---
 
-## 2. Concurrency & Parallelism
+## 2. Control Flow
 
-### 2.1 Effects and Suspension
+### 2.1 No Traditional Control Structures
+
+Lume intentionally omits `if`, `else`, `while`, `for`, and `loop`.
+
+This is a deliberate design choice to enforce:
+- Exhaustive handling via pattern matching
+- Functional iteration patterns
+- Predictable control flow
+
+---
+
+### 2.2 Branching via Pattern Matching
+
+All conditional logic uses `match`:
+
+```lume
+let message = match x > 5 {
+  true -> "large"
+  false -> "small"
+}
+```
+
+Pattern matching must be exhaustive. The compiler rejects non-exhaustive matches.
+
+---
+
+### 2.3 Iteration via Recursion
+
+Custom iteration uses tail-recursive functions:
+
+```lume
+fn countdown(n: Int) {
+  match n {
+    0 -> println "done"
+    _ -> {
+      println n
+      countdown(n - 1)
+    }
+  }
+}
+```
+
+The compiler optimizes tail calls to prevent stack overflow.
+
+---
+
+### 2.4 Iteration via Standard Library
+
+For collections, use iterator combinators:
+
+```lume
+// Iterate with side effects
+items.each(fn(x) { println x })
+
+// Transform
+let doubled = items.map(fn(x) { x * 2 })
+
+// Reduce
+let sum = items.fold(0, fn(acc, x) { acc + x })
+
+// Filter
+let evens = items.filter(fn(x) { x % 2 == 0 })
+
+// Numeric ranges
+range(1, 10).each(fn(i) { println i })
+```
+
+---
+
+### 2.5 Why No Imperative Loops?
+
+- **One obvious way**: recursion OR iterators, never both for the same problem
+- **Composability**: iterator chains are easier to reason about
+- **Optimization**: no arbitrary control flow simplifies analysis
+- **`let mut` purpose**: local accumulators, not manual loop counters
+
+---
+
+## 3. Concurrency & Parallelism
+
+### 3.1 Effects and Suspension
 
 A function is suspensive if it:
 - calls another suspensive function
@@ -96,13 +176,13 @@ Backend mapping:
 
 ---
 
-### 2.2 Implicit Await
+### 3.2 Implicit Await
 
 Sequential calls to suspensive functions implicitly await.
 
 ---
 
-### 2.3 Structured Concurrency
+### 3.3 Structured Concurrency
 
 Primitives:
 - scope { }
@@ -113,14 +193,14 @@ Fire-and-forget is intentionally impossible.
 
 ---
 
-### 2.4 Cancellation
+### 3.4 Cancellation
 
 - Cancellation is implicit and scoped
 - Blocking operations are forbidden
 
 ---
 
-### 2.5 CPU Parallelism
+### 3.5 CPU Parallelism
 
 ```lume
 let result = par compute(data)?
@@ -130,15 +210,15 @@ let result = par compute(data)?
 
 ---
 
-## 3. Mutability
+## 4. Mutability
 
-### 3.1 Immutability by Default
+### 4.1 Immutability by Default
 
 All bindings are immutable by default.
 
 ---
 
-### 3.2 Local Mutability
+### 4.2 Local Mutability
 
 ```lume
 let mut x = 0
@@ -150,7 +230,7 @@ x = x + 1
 
 ---
 
-### 3.3 Mutable Containers
+### 4.3 Mutable Containers
 
 Provided by runtime:
 - Cell<T>
@@ -162,14 +242,14 @@ Builders must be frozen to produce immutable values.
 
 ---
 
-### 3.4 Concurrency and Mutation
+### 4.4 Concurrency and Mutation
 
 - Shared state must be explicit
 - Default concurrency is shared-state-free
 
 ---
 
-## 4. Types & Data
+## 5. Types & Data
 
 - Primitive types: Int, Bool, String
 - Records
@@ -178,7 +258,7 @@ Builders must be frozen to produce immutable values.
 
 ---
 
-## 5. Interoperability
+## 6. Interoperability
 
 - Direct .NET calls
 - NuGet supported
@@ -186,7 +266,7 @@ Builders must be frozen to produce immutable values.
 
 ---
 
-## 6. Philosophy Recap
+## 7. Philosophy Recap
 
 - Errors are values
 - Concurrency is structured
