@@ -44,20 +44,6 @@ public sealed class Lexer
                 return LexNewLine();
             }
 
-            if (IsCommentStart())
-            {
-                if (Peek(1) == '/')
-                {
-                    SkipSingleLineComment();
-                }
-                else
-                {
-                    SkipMultiLineComment();
-                }
-
-                continue;
-            }
-
             break;
         }
 
@@ -230,41 +216,6 @@ public sealed class Lexer
         }
     }
 
-    private bool IsCommentStart() =>
-        Current() == '/' && (Peek(1) == '/' || Peek(1) == '*');
-
-    private void SkipSingleLineComment()
-    {
-        Next();
-        Next();
-
-        while (!IsAtEnd() && !IsLineBreak(Current()))
-        {
-            Next();
-        }
-    }
-
-    private void SkipMultiLineComment()
-    {
-        var start = position;
-        Next();
-        Next();
-
-        while (!IsAtEnd())
-        {
-            if (Current() == '*' && Peek(1) == '/')
-            {
-                Next();
-                Next();
-                return;
-            }
-
-            Next();
-        }
-
-        var span = new TextSpan(start, Math.Max(1, position - start));
-        diagnostics.Add(Diagnostic.Error(sourceText, span, "Unterminated block comment."));
-    }
 
     private char Current() =>
         position >= sourceText.Text.Length ? '\0' : sourceText.Text[position];
