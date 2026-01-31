@@ -130,7 +130,10 @@ public sealed class Emitter
     {
         return value
             .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"");
+            .Replace("\"", "\\\"")
+            .Replace("\n", "\\n")
+            .Replace("\t", "\\t")
+            .Replace("\r", "\\r");
     }
 
     private sealed class IndentedWriter
