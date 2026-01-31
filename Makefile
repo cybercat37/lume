@@ -1,4 +1,4 @@
-.PHONY: build test run clean help
+.PHONY: build test run demo clean help
 
 # Default target
 help:
@@ -7,6 +7,7 @@ help:
 	@echo "  make test       - Run tests"
 	@echo "  make run FILE=hello.lume - Compile and run a Lume file"
 	@echo "  make compile FILE=hello.lume - Compile a Lume file (build only)"
+	@echo "  make demo      - Run a quick demo (print \"ciao\")"
 	@echo "  make clean      - Clean build artifacts"
 	@echo "  make help       - Show this help message"
 
@@ -33,6 +34,11 @@ run:
 		exit 1; \
 	fi
 	dotnet run --project src/lume -- run $(FILE)
+
+# Quick demo run
+demo:
+	@printf 'print "ciao"\n' > out/demo.lume
+	dotnet run --project src/lume -- run out/demo.lume
 
 # Clean build artifacts
 clean:
