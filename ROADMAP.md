@@ -96,4 +96,4 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 2: complete (see `STEP2_CORE_SYNTAX.md`)
 - Step 3: complete (see `STEP3_PARSER_ROBUSTNESS.md`)
 - Step 4: complete (see `STEP4_BINDING_SCOPE.md`)
-- Step 5: not started (see `STEP5_TYPE_SYSTEM.md`)
+- Step 5: complete (see `STEP5_TYPE_SYSTEM.md`)

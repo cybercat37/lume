@@ -63,4 +63,4 @@ Goal: introduce primitive types, basic type checking, and early inference.
     - Cover literals, assignments, unary/binary ops.
 
 ## Status
-- Steps 1-12: not started
+- Steps 1-12: complete
