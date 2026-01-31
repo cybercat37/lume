@@ -52,17 +52,21 @@ print counter
 - Lexer and Parser with error recovery
 - Variables (`let`, `let mut`) and assignments
 - Primitive types (`Int`, `Bool`, `String`)
-- Arithmetic, logical, and comparison operators
+- Arithmetic operators (`+`, `-`, `*`, `/`, `%`)
+- Unary operators (`-`, `+`)
+- String concatenation (`+`)
 - Blocks and scoped variables
 - String escape sequences (`\n`, `\t`, `\r`, `\"`, `\\`)
 - Binding and scope resolution
 - Type checking
 - Interpreter runtime
 - Code generation (emits C#)
-- Builtin functions (`print`, `println`, `input`)
+- Builtin functions: `print`, `println`, `input`, `len`, `abs`, `min`, `max`
 
 ### Coming Soon 🔜
 
+- Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
+- Logical operators (`&&`, `||`, `!`)
 - Pattern matching (`match`)
 - Functions and lambdas
 - Records and Sum types
@@ -73,6 +77,7 @@ print counter
 - Modules and imports
 - Structured concurrency
 - String interpolation
+- Comments (`//`, `/* */`)
 
 ## Building and Running
 
@@ -130,7 +135,7 @@ The implementation follows a 12-step roadmap:
 5. ✅ **Type System** — Type checking and inference
 6. ✅ **Interpreter Runtime** — Direct AST execution
 7. ✅ **Code Generation v1** — C# code emission
-8. 🔜 **Standard Library** — Collections, I/O, math functions
+8. 🔄 **Standard Library** (partial) — Basic builtins (`print`, `println`, `input`, `len`, `abs`, `min`, `max`) implemented
 9. 🔜 **CLI UX** — Commands for check/format/run/build
 10. 🔜 **Test Hardening** — Golden files, fuzzing
 11. 🔜 **Performance** — Incremental compilation, caching
