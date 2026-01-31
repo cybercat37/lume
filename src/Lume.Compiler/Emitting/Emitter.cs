@@ -54,19 +54,52 @@ public sealed class Emitter
         }
     }
 
-    private static string WriteExpression(BoundExpression expression)
+    private static string WriteExpression(BoundExpression expression, int parentPrecedence = 0)
     {
         return expression switch
         {
             BoundLiteralExpression literal => FormatLiteral(literal.Value),
             BoundNameExpression name => name.Symbol.Name,
-            BoundAssignmentExpression assignment =>
-                $"{assignment.Symbol.Name} = {WriteExpression(assignment.Expression)}",
-            BoundUnaryExpression unary =>
-                $"{OperatorText(unary.OperatorKind)}{WriteExpression(unary.Operand)}",
-            BoundBinaryExpression binary =>
-                $"{WriteExpression(binary.Left)} {OperatorText(binary.OperatorKind)} {WriteExpression(binary.Right)}",
+            BoundAssignmentExpression assignment => WrapIfNeeded(
+                $"{assignment.Symbol.Name} = {WriteExpression(assignment.Expression, GetAssignmentPrecedence())}",
+                GetAssignmentPrecedence(),
+                parentPrecedence),
+            BoundUnaryExpression unary => WrapIfNeeded(
+                $"{OperatorText(unary.OperatorKind)}{WriteExpression(unary.Operand, GetUnaryPrecedence())}",
+                GetUnaryPrecedence(),
+                parentPrecedence),
+            BoundBinaryExpression binary => WriteBinaryExpression(binary, parentPrecedence),
             _ => throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}")
+        };
+    }
+
+    private static string WriteBinaryExpression(BoundBinaryExpression binary, int parentPrecedence)
+    {
+        var precedence = GetBinaryPrecedence(binary.OperatorKind);
+        var left = WriteExpression(binary.Left, precedence);
+        var right = WriteExpression(binary.Right, precedence);
+        var text = $"{left} {OperatorText(binary.OperatorKind)} {right}";
+        return WrapIfNeeded(text, precedence, parentPrecedence);
+    }
+
+    private static string WrapIfNeeded(string text, int precedence, int parentPrecedence)
+    {
+        return precedence < parentPrecedence ? $"({text})" : text;
+    }
+
+    private static int GetAssignmentPrecedence() => 1;
+
+    private static int GetUnaryPrecedence() => 4;
+
+    private static int GetBinaryPrecedence(TokenKind kind)
+    {
+        return kind switch
+        {
+            TokenKind.Star => 3,
+            TokenKind.Slash => 3,
+            TokenKind.Plus => 2,
+            TokenKind.Minus => 2,
+            _ => 0
         };
     }
 
