@@ -84,7 +84,7 @@ pub fn get_name(id: Int) -> Option<String> {
 
 ### Decisione
 
-- [x] Aggiungere sezione "Comments" alla spec
+- [x] Niente commenti nel linguaggio (scelta voluta; documentata in spec)
 
 ---
 

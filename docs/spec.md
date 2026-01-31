@@ -135,14 +135,11 @@ String literals support the following escape sequences:
 
 ## Comments
 
-Lume supports single-line and multi-line comments:
-
-- `// single line`
-- `/* multi line */`
-
-Comments are not nested.
+Comments are intentionally not part of the language.
+This is a deliberate design choice to keep the surface area minimal.
 
 ---
+
 
 ### 1.3 Pattern Matching
 
@@ -174,6 +171,8 @@ This is a deliberate design choice to enforce:
 - Exhaustive handling via pattern matching
 - Functional iteration patterns
 - Predictable control flow
+
+This is a deliberate design choice, not a missing feature.
 
 ---
 
