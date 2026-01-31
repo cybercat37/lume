@@ -105,3 +105,4 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 8: complete (see `STEP8_STDLIB.md`)
 - Step 9: complete (see `STEP9_CLI_UX.md`)
 - Step 10: complete (see `STEP10_TEST_HARDENING.md`)
+- Step 11: complete (see `STEP11_PERFORMANCE.md`)

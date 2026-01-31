@@ -38,6 +38,14 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 - `make fuzz` (short fuzz run)
 - `dotnet run --project tests/Lume.Fuzz -- --iterations 1000 --max-length 128 --seed 123`
 
+### Tooling/Release
+- `dotnet pack src/lume -c Release`
+- `dotnet publish src/lume -c Release -o out/publish`
+- `dotnet nuget push src/lume/bin/Release/*.nupkg -k <API_KEY> -s https://api.nuget.org/v3/index.json`
+
+### CI
+- GitHub Actions workflow: `.github/workflows/ci.yml` runs build, tests, hardening, and fuzz.
+
 ### Run a single test
 Use xUnit filters via `dotnet test --filter`.
 
@@ -148,6 +156,8 @@ See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `
 - Step 7 (Code generation v1): complete
 - Step 8 (Standard library minimal): complete
 - Step 9 (CLI UX): complete
+- Step 10 (Test hardening): complete
+- Step 11 (Performance): complete
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file

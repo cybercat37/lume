@@ -9,6 +9,21 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>lume</ToolCommandName>
+    <PackageId>Lume.Cli</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>cybercat37</Authors>
+    <Description>Lume compiler and CLI tool.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/cybercat37/lume</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/cybercat37/lume</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>lume;compiler;cli;language</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>

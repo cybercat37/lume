@@ -45,7 +45,7 @@ print counter
 
 ## Status
 
-**In Development** — Steps 1-10 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots.
+**In Development** — Steps 1-11 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots, plus compilation caching.
 
 ### Currently Implemented ✅
 
@@ -64,6 +64,7 @@ print counter
 - Builtin functions: `print`, `println`, `input`, `len`, `abs`, `min`, `max`
 - CLI commands: `check`, `build`, `run` with options
 - Test infrastructure: golden files and diagnostic snapshots
+- Compilation cache (`--cache`) and large input guardrail
 
 ### Coming Soon 🔜
 
@@ -141,6 +142,15 @@ make test
 dotnet test
 ```
 
+### Install CLI (dotnet tool)
+
+```bash
+dotnet tool install -g Lume.Cli
+# or (local tool manifest)
+dotnet new tool-manifest
+dotnet tool install --local Lume.Cli
+```
+
 ### Golden/Snapshot Updates
 
 Golden and snapshot files live under `tests/Lume.Tests/Golden` and `tests/Lume.Tests/Snapshots`.
@@ -167,7 +177,7 @@ The implementation follows a 12-step roadmap:
 8. ✅ **Standard Library** — Basic builtins (`print`, `println`, `input`, `len`, `abs`, `min`, `max`)
 9. ✅ **CLI UX** — Commands `check`, `build`, `run` with options (`--out`, `--quiet`, `--verbose`, `--help`, `--version`)
 10. ✅ **Test Hardening** — Golden files for codegen, snapshot tests for diagnostics
-11. 🔜 **Performance** — Incremental compilation, caching
+11. ✅ **Performance** — Incremental compilation, caching, guardrails
 12. 🔜 **Tooling** — Packaging, distribution, CI
 
 See [ROADMAP.md](ROADMAP.md) for detailed progress.

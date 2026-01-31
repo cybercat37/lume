@@ -7,7 +7,21 @@ public class Program
 {
     public static int Main(string[] args)
     {
-        const string usage = "Usage: lume <build|run|check> <file.lume> [--out <dir>] [--quiet] [--verbose] [--cache]";
+        const string usage =
+            "Usage: lume <build|run|check> <file.lume> [options]\n" +
+            "\n" +
+            "Options:\n" +
+            "  --out <dir>   Override output directory (default: out)\n" +
+            "  --quiet       Suppress non-error output\n" +
+            "  --verbose     Include extra context\n" +
+            "  --cache       Enable compilation cache\n" +
+            "  --help, -h    Show usage\n" +
+            "  --version     Show version\n" +
+            "\n" +
+            "Examples:\n" +
+            "  lume check hello.lume\n" +
+            "  lume build hello.lume --out out\n" +
+            "  lume run hello.lume --cache\n";
 
         if (args.Length == 1)
         {
