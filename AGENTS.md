@@ -135,7 +135,7 @@ See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `
 - Step 1 (Pipeline base): complete
 - Step 2 (Core syntax): complete
 - Step 3 (Parser robustness): complete
-- Step 4 (Binding and scope): not started
+- Step 4 (Binding and scope): complete
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file

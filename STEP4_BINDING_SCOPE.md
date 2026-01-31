@@ -63,4 +63,4 @@ Goal: resolve symbols, enforce scope rules, and report semantic diagnostics.
     - Compilation fails on semantic errors.
 
 ## Status
-- Steps 1-12: not started
+- Steps 1-12: complete
