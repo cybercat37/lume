@@ -24,6 +24,18 @@ make run FILE=hello.lume
 dotnet run --project src/lume -- run hello.lume
 ```
 
+You can also validate without generating output:
+
+```bash
+dotnet run --project src/lume -- check hello.lume
+```
+
+Build to C# without running:
+
+```bash
+dotnet run --project src/lume -- build hello.lume
+```
+
 **Status**: ✅ Implemented
 
 ---
