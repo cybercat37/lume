@@ -1,4 +1,6 @@
-using Lume.Compiler.Diagnostics;
+using Lume.Compiler.Emitting;
+using Lume.Compiler.Parsing;
+using Lume.Compiler.Text;
 
 namespace Lume.Compiler;
 
@@ -6,35 +8,16 @@ public sealed class CompilerDriver
 {
     public CompilationResult Compile(string source, string fileName)
     {
-        var diagnostics = new List<Diagnostic>();
+        var sourceText = new SourceText(source, fileName);
+        var syntaxTree = SyntaxTree.Parse(sourceText);
 
-        if (string.IsNullOrWhiteSpace(source))
+        if (syntaxTree.Diagnostics.Count > 0)
         {
-            diagnostics.Add(
-                Diagnostic.Error(
-                    fileName,
-                    1,
-                    1,
-                    "Source file is empty"
-                )
-            );
-
-            return CompilationResult.Fail(diagnostics);
+            return CompilationResult.Fail(syntaxTree.Diagnostics, syntaxTree);
         }
 
-        // Placeholder: lexer/parser/codegen arriveranno qui
-        var generatedCode = """
-using System;
-
-class Program
-{
-    static void Main()
-    {
-        Console.WriteLine("Hello from Lume (stub)");
-    }
-}
-""";
-
-        return CompilationResult.CreateSuccess(generatedCode);
+        var emitter = new Emitter();
+        var generatedCode = emitter.Emit(syntaxTree.Root);
+        return CompilationResult.CreateSuccess(generatedCode, syntaxTree);
     }
 }
