@@ -44,6 +44,7 @@ Each step is meant to be completed sequentially and validated with tests.
 
 6) Interpreter runtime
    Execute AST directly for fast feedback and feature validation.
+   - See `STEP6_INTERPRETER.md` for the 12 sub-steps.
    Definition of Done:
    - Interpreter can run a multi-statement program.
    - Errors surface as diagnostics (not exceptions).
@@ -97,3 +98,4 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 3: complete (see `STEP3_PARSER_ROBUSTNESS.md`)
 - Step 4: complete (see `STEP4_BINDING_SCOPE.md`)
 - Step 5: complete (see `STEP5_TYPE_SYSTEM.md`)
+- Step 6: complete (see `STEP6_INTERPRETER.md`)
