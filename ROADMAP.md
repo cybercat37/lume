@@ -103,3 +103,4 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 6: complete (see `STEP6_INTERPRETER.md`)
 - Step 7: complete (see `STEP7_CODEGEN.md`)
 - Step 8: complete (see `STEP8_STDLIB.md`)
+- Step 9: complete (see `STEP9_CLI_UX.md`)

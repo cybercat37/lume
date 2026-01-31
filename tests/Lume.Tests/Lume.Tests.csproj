@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Lume.Compiler\Lume.Compiler.csproj" />
+    <ProjectReference Include="..\..\src\lume\lume.csproj" />
   </ItemGroup>
 
 </Project>

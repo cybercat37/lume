@@ -3,22 +3,88 @@ using System.Diagnostics;
 
 namespace Lume.Cli;
 
-class Program
+public class Program
 {
-    static int Main(string[] args)
+    public static int Main(string[] args)
     {
+        const string usage = "Usage: lume <build|run|check> <file.lume> [--out <dir>] [--quiet] [--verbose]";
+
+        if (args.Length == 1)
+        {
+            if (args[0] == "--help" || args[0] == "-h")
+            {
+                Console.WriteLine(usage);
+                return 0;
+            }
+
+            if (args[0] == "--version")
+            {
+                var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+                Console.WriteLine($"lume {version}");
+                return 0;
+            }
+        }
+
         if (args.Length < 2)
         {
-            Console.Error.WriteLine("Usage: lume <build|run> <file.lume>");
+            Console.Error.WriteLine(usage);
             return 1;
         }
 
         var command = args[0];
         var inputPath = args[1];
 
-        if (command != "build" && command != "run")
+        if (command != "build" && command != "run" && command != "check")
         {
-            Console.Error.WriteLine("Usage: lume <build|run> <file.lume>");
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
+        var outputDir = "out";
+        var quiet = false;
+        var verbose = false;
+
+        for (var i = 2; i < args.Length; i++)
+        {
+            var argument = args[i];
+            if (argument == "--out")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    Console.Error.WriteLine(usage);
+                    return 1;
+                }
+
+                outputDir = args[i + 1];
+                if (string.IsNullOrWhiteSpace(outputDir))
+                {
+                    Console.Error.WriteLine(usage);
+                    return 1;
+                }
+
+                i++;
+                continue;
+            }
+
+            if (argument == "--quiet")
+            {
+                quiet = true;
+                continue;
+            }
+
+            if (argument == "--verbose")
+            {
+                verbose = true;
+                continue;
+            }
+
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
+        if (quiet && verbose)
+        {
+            Console.Error.WriteLine(usage);
             return 1;
         }
 
@@ -41,22 +107,36 @@ class Program
             return 1;
         }
 
-        Directory.CreateDirectory("out");
-        File.WriteAllText("out/Program.cs", result.GeneratedCode);
+        if (command == "check")
+        {
+            return 0;
+        }
+
+        Directory.CreateDirectory(outputDir);
+        var outputPath = Path.Combine(outputDir, "Program.cs");
+        File.WriteAllText(outputPath, result.GeneratedCode);
 
         if (command == "build")
         {
-            Console.WriteLine("Build succeeded.");
+            if (!quiet)
+            {
+                if (verbose)
+                {
+                    Console.WriteLine($"Output: {outputPath}");
+                }
+
+                Console.WriteLine("Build succeeded.");
+            }
             return 0;
         }
 
         // run command: compile and execute
-        return RunGeneratedCode();
+        return RunGeneratedCode(outputDir);
     }
 
-    static int RunGeneratedCode()
+    static int RunGeneratedCode(string outputDir)
     {
-        var tempDir = Path.Combine("out", ".run");
+        var tempDir = Path.Combine(outputDir, ".run");
         
         try
         {
@@ -91,7 +171,7 @@ class Program
             }
 
             // Copy generated Program.cs
-            File.Copy("out/Program.cs", Path.Combine(tempDir, "TempRun", "Program.cs"), true);
+            File.Copy(Path.Combine(outputDir, "Program.cs"), Path.Combine(tempDir, "TempRun", "Program.cs"), true);
 
             // Build and run
             var runProcess = new Process

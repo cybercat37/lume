@@ -45,7 +45,7 @@ print counter
 
 ## Status
 
-**In Development** — Steps 1-7 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs.
+**In Development** — Steps 1-9 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available.
 
 ### Currently Implemented ✅
 
@@ -62,6 +62,7 @@ print counter
 - Interpreter runtime
 - Code generation (emits C#)
 - Builtin functions: `print`, `println`, `input`, `len`, `abs`, `min`, `max`
+- CLI commands: `check`, `build`, `run` with options
 
 ### Coming Soon 🔜
 
@@ -102,6 +103,14 @@ make run FILE=path/to/file.lume
 dotnet run --project src/lume -- run path/to/file.lume
 ```
 
+### Check a Lume Program
+
+```bash
+dotnet run --project src/lume -- check path/to/file.lume
+```
+
+Validates the source code without generating output files.
+
 ### Compile to C#
 
 ```bash
@@ -109,6 +118,14 @@ make compile FILE=path/to/file.lume
 # or
 dotnet run --project src/lume -- build path/to/file.lume
 ```
+
+### CLI Options
+
+- `--out <dir>` — Override output directory (default: `out`)
+- `--quiet` — Suppress non-error output
+- `--verbose` — Include extra context
+- `--help` or `-h` — Show usage information
+- `--version` — Show version
 
 ### Run Tests
 
@@ -135,8 +152,8 @@ The implementation follows a 12-step roadmap:
 5. ✅ **Type System** — Type checking and inference
 6. ✅ **Interpreter Runtime** — Direct AST execution
 7. ✅ **Code Generation v1** — C# code emission
-8. 🔄 **Standard Library** (partial) — Basic builtins (`print`, `println`, `input`, `len`, `abs`, `min`, `max`) implemented
-9. 🔜 **CLI UX** — Commands for check/format/run/build
+8. ✅ **Standard Library** — Basic builtins (`print`, `println`, `input`, `len`, `abs`, `min`, `max`)
+9. ✅ **CLI UX** — Commands `check`, `build`, `run` with options (`--out`, `--quiet`, `--verbose`, `--help`, `--version`)
 10. 🔜 **Test Hardening** — Golden files, fuzzing
 11. 🔜 **Performance** — Incremental compilation, caching
 12. 🔜 **Tooling** — Packaging, distribution, CI

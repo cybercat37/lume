@@ -21,6 +21,7 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 ### Run the CLI
 - `dotnet run --project src/lume -- build path/to/file.lume`
 - `dotnet run --project src/lume -- run path/to/file.lume`
+- `dotnet run --project src/lume -- check path/to/file.lume`
 - `make compile FILE=path/to/file.lume`
 - `make run FILE=path/to/file.lume`
 
@@ -140,6 +141,7 @@ See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `
 - Step 6 (Interpreter runtime): complete
 - Step 7 (Code generation v1): complete
 - Step 8 (Standard library minimal): complete
+- Step 9 (CLI UX): complete
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file
