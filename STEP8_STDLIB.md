@@ -63,4 +63,4 @@ Goal: introduce a minimal standard library surface for core I/O and utilities.
     - Cover success and failure cases.
 
 ## Status
-- Steps 1-12: not started
+- Steps 1-12: complete

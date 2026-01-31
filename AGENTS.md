@@ -139,7 +139,7 @@ See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `
 - Step 5 (Type system): complete
 - Step 6 (Interpreter runtime): complete
 - Step 7 (Code generation v1): complete
-- Step 8 (Standard library minimal): not started
+- Step 8 (Standard library minimal): complete
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file
