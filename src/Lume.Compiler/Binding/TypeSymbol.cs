@@ -13,6 +13,7 @@ public sealed class TypeSymbol
     public static TypeSymbol Bool { get; } = new("Bool");
     public static TypeSymbol String { get; } = new("String");
     public static TypeSymbol Error { get; } = new("Error");
+    public static TypeSymbol Unit { get; } = new("Unit");
 
     public override string ToString() => Name;
 

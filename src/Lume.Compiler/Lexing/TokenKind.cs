@@ -20,6 +20,7 @@ public enum TokenKind
     Minus,
     Star,
     Slash,
+    Comma,
     OpenParen,
     CloseParen,
     OpenBrace,

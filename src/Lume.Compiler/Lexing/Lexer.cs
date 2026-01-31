@@ -95,6 +95,9 @@ public sealed class Lexer
             case '/':
                 Next();
                 return new SyntaxToken(TokenKind.Slash, new TextSpan(start, 1), "/", null);
+            case ',':
+                Next();
+                return new SyntaxToken(TokenKind.Comma, new TextSpan(start, 1), ",", null);
             case '(':
                 Next();
                 return new SyntaxToken(TokenKind.OpenParen, new TextSpan(start, 1), "(", null);

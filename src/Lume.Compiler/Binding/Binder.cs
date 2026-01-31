@@ -102,7 +102,9 @@ public sealed class Binder
             case ParenthesizedExpressionSyntax parenthesized:
                 return BindExpression(parenthesized.Expression);
             case InputExpressionSyntax:
-                return new BoundInputExpression();
+                return BindInputExpression();
+            case CallExpressionSyntax call:
+                return BindCallExpression(call);
             default:
                 throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
         }
@@ -217,5 +219,54 @@ public sealed class Binder
         }
 
         return new BoundAssignmentExpression(symbol, boundExpression);
+    }
+
+    private BoundExpression BindInputExpression()
+    {
+        return new BoundCallExpression(BuiltinFunctions.Input, Array.Empty<BoundExpression>());
+    }
+
+    private BoundExpression BindCallExpression(CallExpressionSyntax call)
+    {
+        var name = call.FunctionToken.Text;
+        if (!BuiltinFunctions.TryLookup(name, out var function) || function is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.FunctionToken.Span,
+                $"Unknown function '{name}'."));
+            return new BoundLiteralExpression(null, TypeSymbol.Error);
+        }
+
+        var boundArguments = new List<BoundExpression>();
+        foreach (var argument in call.Arguments)
+        {
+            boundArguments.Add(BindExpression(argument));
+        }
+
+        if (function.ParameterTypes.Count != boundArguments.Count)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.FunctionToken.Span,
+                $"Function '{name}' expects {function.ParameterTypes.Count} arguments."));
+        }
+        else
+        {
+            for (var i = 0; i < function.ParameterTypes.Count; i++)
+            {
+                var expected = function.ParameterTypes[i];
+                var actual = boundArguments[i].Type;
+                if (expected != actual && actual != TypeSymbol.Error)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        call.FunctionToken.Span,
+                        $"Function '{name}' expects '{expected}' but got '{actual}'."));
+                }
+            }
+        }
+
+        return new BoundCallExpression(function, boundArguments);
     }
 }

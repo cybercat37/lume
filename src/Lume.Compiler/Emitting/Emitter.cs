@@ -1,4 +1,5 @@
 using System.Text;
+using System.Linq;
 using Lume.Compiler.Binding;
 using Lume.Compiler.Lexing;
 
@@ -70,7 +71,24 @@ public sealed class Emitter
                 parentPrecedence),
             BoundBinaryExpression binary => WriteBinaryExpression(binary, parentPrecedence),
             BoundInputExpression => "Console.ReadLine()",
+            BoundCallExpression call => WriteCallExpression(call),
             _ => throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}")
+        };
+    }
+
+    private static string WriteCallExpression(BoundCallExpression call)
+    {
+        var args = string.Join(", ", call.Arguments.Select(arg => WriteExpression(arg)));
+        return call.Function.Name switch
+        {
+            "println" => $"Console.WriteLine({args})",
+            "print" => $"Console.WriteLine({args})",
+            "input" => "Console.ReadLine()",
+            "len" => $"{args}.Length",
+            "abs" => $"Math.Abs({args})",
+            "min" => $"Math.Min({args})",
+            "max" => $"Math.Max({args})",
+            _ => $"{EscapeIdentifier(call.Function.Name)}({args})"
         };
     }
 

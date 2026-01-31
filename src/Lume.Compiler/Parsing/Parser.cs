@@ -239,7 +239,7 @@ public sealed class Parser
             case TokenKind.InputKeyword:
                 return new InputExpressionSyntax(NextToken());
             case TokenKind.Identifier:
-                return new NameExpressionSyntax(NextToken());
+                return ParseNameOrCallExpression();
             default:
                 diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("expression", Current())));
                 var missing = SyntaxToken.Missing(TokenKind.NumberLiteral, Current().Position);
@@ -249,6 +249,35 @@ public sealed class Parser
                 }
                 return new LiteralExpressionSyntax(missing);
         }
+    }
+
+    private ExpressionSyntax ParseNameOrCallExpression()
+    {
+        var identifier = MatchToken(TokenKind.Identifier, "identifier");
+        if (Current().Kind != TokenKind.OpenParen)
+        {
+            return new NameExpressionSyntax(identifier);
+        }
+
+        var openParen = MatchToken(TokenKind.OpenParen, "(");
+        var arguments = new List<ExpressionSyntax>();
+        if (Current().Kind != TokenKind.CloseParen)
+        {
+            do
+            {
+                var expression = ParseExpression();
+                arguments.Add(expression);
+                if (Current().Kind != TokenKind.Comma)
+                {
+                    break;
+                }
+
+                NextToken();
+            } while (Current().Kind != TokenKind.CloseParen && Current().Kind != TokenKind.EndOfFile);
+        }
+
+        var closeParen = MatchToken(TokenKind.CloseParen, ")");
+        return new CallExpressionSyntax(identifier, openParen, arguments, closeParen);
     }
 
     private void ConsumeSeparators()

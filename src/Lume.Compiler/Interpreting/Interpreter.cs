@@ -113,8 +113,34 @@ public sealed class Interpreter
                     return EvaluateBinaryExpression(binary);
                 case BoundInputExpression:
                     return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
+                case BoundCallExpression call:
+                    return EvaluateCall(call);
                 default:
                     throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
+            }
+        }
+
+        private object? EvaluateCall(BoundCallExpression call)
+        {
+            var arguments = call.Arguments.Select(EvaluateExpression).ToArray();
+            switch (call.Function.Name)
+            {
+                case "println":
+                case "print":
+                    output.AppendLine(FormatValue(arguments[0]));
+                    return null;
+                case "input":
+                    return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
+                case "len":
+                    return arguments[0] is string text ? text.Length : 0;
+                case "abs":
+                    return arguments[0] is int value ? Math.Abs(value) : 0;
+                case "min":
+                    return arguments[0] is int left && arguments[1] is int right ? Math.Min(left, right) : 0;
+                case "max":
+                    return arguments[0] is int leftMax && arguments[1] is int rightMax ? Math.Max(leftMax, rightMax) : 0;
+                default:
+                    return null;
             }
         }
 
