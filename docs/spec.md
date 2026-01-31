@@ -29,6 +29,65 @@ interoperable with existing C# code.
 
 ---
 
+## Language Decisions (Summary)
+
+This section captures agreed design choices to guide implementation.
+
+### Functions
+- Return is implicit from the last expression; `return` is allowed for early exit.
+- Functions without an explicit return type have type `Unit`.
+- No optional/default params or named arguments (for now).
+- Lambdas: `fn(x) => x * 2` for single-expression; captures by value only; no `mut` capture.
+- Top-level statements are allowed; `fn main()` is optional. CLI args later.
+
+### Operators
+- Only structural equality `==` (no `===`).
+- Comparisons between different types are compile-time errors.
+- Logical operators are `&&`, `||`, `!` only (no `and/or/not`).
+- `+` is used for string concatenation.
+- Division is integer-only for now; floats later.
+- Overflow is checked (no silent wrap).
+- Pipe operator `|>` planned for later, passes value as first argument.
+
+### Types & Data
+- `Int` is 64-bit. `Double` planned later. No `Char`, `Byte`, or `UInt` for now.
+- Records use `type`, have auto-constructors, update syntax, and destructuring.
+- Sum types use `Variant` / `Variant(value)` payload style.
+- Generics use `<T>` with inference; no constraints for now.
+- Type aliases are equivalent to the base type (no newtype yet).
+
+### Collections & Strings
+- Lists are immutable by default; indexing with `[]` returns `Result` on OOB.
+- Maps have literal syntax; keys are `String` only for now.
+- Tuples are included; access via destructuring only.
+- String interpolation: `f"...{expr}..."` with `{}` expressions.
+- String helpers (length/split) live in stdlib.
+
+### Modules & Visibility
+- One file = one module; no nested modules for now.
+- `import` with aliasing and selective imports is supported.
+- Visibility: `pub` or private only.
+
+### Pattern Matching
+- Supports rest patterns (`..`), guards, and list patterns; no range patterns yet.
+- Non-exhaustive match is an error; `_` is optional but recommended.
+
+### Option/Result
+- Option/Result live in stdlib; `?` works for both.
+- `.unwrap()` exists (panic on None/Error).
+- Result error variant is `Error`; default error type is `String` for now.
+
+### Comments & Docs
+- Comments are not nested.
+- Doc comments use `///` with Markdown; doc tooling later.
+
+### Misc
+- Shadowing in the same scope is not allowed.
+- Mutual recursion is allowed; no forward-declare keyword.
+- Attributes use `@attr`, planned for later.
+
+---
+
 ## 1. Error Handling
 
 ### 1.1 Result and Option
