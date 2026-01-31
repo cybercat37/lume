@@ -1,0 +1,10 @@
+let mut x = 1
+println x
+
+let greeting = "hi"
+print len(greeting)
+
+let m = max(2, abs(-3))
+println m
+
+println input
