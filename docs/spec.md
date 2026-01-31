@@ -21,6 +21,13 @@ interoperable with existing C# code.
 
 ---
 
+## Syntax Notes
+
+- Statement terminators are optional; newlines end statements by default.
+- Semicolons are permitted as explicit separators (useful inside blocks).
+
+---
+
 ## 1. Error Handling
 
 ### 1.1 Result and Option

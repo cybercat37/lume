@@ -16,6 +16,7 @@ Each step is meant to be completed sequentially and validated with tests.
    - Parser handles new syntax with diagnostics.
    - Binder validates symbol usage and reports errors.
    - Tests cover happy paths and failure cases.
+   - See `STEP2_CORE_SYNTAX.md` for the 12 sub-steps.
 
 3) Parser robustness
    Error recovery, synchronization points, and clear diagnostics.
@@ -89,3 +90,4 @@ Each step is meant to be completed sequentially and validated with tests.
 
 ## Current progress
 - Step 1: complete (see `STEP1_PIPELINE.md`)
+- Step 2: not started (see `STEP2_CORE_SYNTAX.md`)

@@ -48,6 +48,13 @@ If you add one, document it here and in the Makefile.
 ## Code style guidelines
 Follow the existing conventions visible in the C# files.
 
+### Language specification
+- Language spec lives at `docs/spec.md`.
+
+### Language spec alignment
+- Statement terminators are optional; newlines end statements by default.
+- Semicolons are allowed as explicit separators (useful inside blocks).
+
 ### C# language and project settings
 - Target framework: .NET 8 (`net8.0`).
 - Nullable reference types are enabled (`<Nullable>enable</Nullable>`).
@@ -121,10 +128,11 @@ Follow the existing conventions visible in the C# files.
 - Keep changes scoped; avoid unrelated refactors unless required by the task.
 
 ## Roadmap (12 main steps)
-See `ROADMAP.md` for the full 12-step program and `STEP1_PIPELINE.md` for the detailed breakdown of Step 1.
+See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, and `STEP2_CORE_SYNTAX.md` for Step 2.
 
 ### Current progress
 - Step 1 (Pipeline base): complete
+- Step 2 (Core syntax): not started
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file
