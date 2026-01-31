@@ -291,6 +291,8 @@ public sealed class Lexer
         return text switch
         {
             "print" => TokenKind.PrintKeyword,
+            "println" => TokenKind.PrintlnKeyword,
+            "input" => TokenKind.InputKeyword,
             "let" => TokenKind.LetKeyword,
             "mut" => TokenKind.MutKeyword,
             "true" => TokenKind.TrueKeyword,

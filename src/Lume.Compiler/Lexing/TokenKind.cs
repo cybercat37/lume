@@ -7,6 +7,8 @@ public enum TokenKind
     NewLine,
     Identifier,
     PrintKeyword,
+    PrintlnKeyword,
+    InputKeyword,
     LetKeyword,
     MutKeyword,
     TrueKeyword,

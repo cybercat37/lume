@@ -5,15 +5,15 @@ namespace Lume.Compiler.Syntax;
 
 public sealed class PrintStatementSyntax : StatementSyntax
 {
-    public SyntaxToken PrintKeyword { get; }
+    public SyntaxToken KeywordToken { get; }
     public ExpressionSyntax Expression { get; }
 
-    public PrintStatementSyntax(SyntaxToken printKeyword, ExpressionSyntax expression)
+    public PrintStatementSyntax(SyntaxToken keywordToken, ExpressionSyntax expression)
     {
-        PrintKeyword = printKeyword;
+        KeywordToken = keywordToken;
         Expression = expression;
     }
 
     public override TextSpan Span =>
-        TextSpan.FromBounds(PrintKeyword.Span.Start, Expression.Span.End);
+        TextSpan.FromBounds(KeywordToken.Span.Start, Expression.Span.End);
 }

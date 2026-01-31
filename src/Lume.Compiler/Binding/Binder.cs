@@ -22,7 +22,10 @@ public sealed class Binder
             statements.Add(BindStatement(statement));
         }
 
-        return new BinderResult(new BoundProgram(statements), diagnostics);
+        var allDiagnostics = syntaxTree.Diagnostics
+            .Concat(diagnostics)
+            .ToList();
+        return new BinderResult(new BoundProgram(statements), allDiagnostics);
     }
 
     private BoundStatement BindStatement(StatementSyntax statement)
@@ -98,6 +101,8 @@ public sealed class Binder
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
                 return BindExpression(parenthesized.Expression);
+            case InputExpressionSyntax:
+                return new BoundInputExpression();
             default:
                 throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
         }

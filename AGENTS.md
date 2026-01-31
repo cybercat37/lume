@@ -129,7 +129,7 @@ Follow the existing conventions visible in the C# files.
 - Keep changes scoped; avoid unrelated refactors unless required by the task.
 
 ## Roadmap (12 main steps)
-See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `STEP2_CORE_SYNTAX.md` for Step 2, `STEP3_PARSER_ROBUSTNESS.md` for Step 3, `STEP4_BINDING_SCOPE.md` for Step 4, `STEP5_TYPE_SYSTEM.md` for Step 5, `STEP6_INTERPRETER.md` for Step 6, and `STEP7_CODEGEN.md` for Step 7.
+See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `STEP2_CORE_SYNTAX.md` for Step 2, `STEP3_PARSER_ROBUSTNESS.md` for Step 3, `STEP4_BINDING_SCOPE.md` for Step 4, `STEP5_TYPE_SYSTEM.md` for Step 5, `STEP6_INTERPRETER.md` for Step 6, `STEP7_CODEGEN.md` for Step 7, and `STEP8_STDLIB.md` for Step 8.
 
 ### Current progress
 - Step 1 (Pipeline base): complete
@@ -139,6 +139,7 @@ See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `
 - Step 5 (Type system): complete
 - Step 6 (Interpreter runtime): complete
 - Step 7 (Code generation v1): complete
+- Step 8 (Standard library minimal): not started
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file

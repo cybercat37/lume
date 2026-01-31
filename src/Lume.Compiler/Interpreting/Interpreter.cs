@@ -7,6 +7,14 @@ namespace Lume.Compiler.Interpreting;
 
 public sealed class Interpreter
 {
+    private readonly Queue<string> inputBuffer = new();
+
+    public void SetInput(string input)
+    {
+        inputBuffer.Clear();
+        inputBuffer.Enqueue(input);
+    }
+
     public InterpreterResult Run(SyntaxTree syntaxTree)
     {
         var binder = new Binder();
@@ -16,7 +24,7 @@ public sealed class Interpreter
             return new InterpreterResult(string.Empty, bindResult.Diagnostics);
         }
 
-        var evaluator = new Evaluator(bindResult.Program);
+        var evaluator = new Evaluator(bindResult.Program, inputBuffer);
         return evaluator.Evaluate();
     }
 
@@ -26,13 +34,15 @@ public sealed class Interpreter
         private readonly Dictionary<VariableSymbol, object?> values;
         private readonly StringBuilder output;
         private readonly List<Diagnostic> diagnostics;
+        private readonly Queue<string> inputBuffer;
 
-        public Evaluator(BoundProgram program)
+        public Evaluator(BoundProgram program, Queue<string> inputBuffer)
         {
             this.program = program;
             values = new Dictionary<VariableSymbol, object?>();
             output = new StringBuilder();
             diagnostics = new List<Diagnostic>();
+            this.inputBuffer = inputBuffer;
         }
 
         public InterpreterResult Evaluate()
@@ -98,6 +108,8 @@ public sealed class Interpreter
                     return EvaluateUnaryExpression(unary);
                 case BoundBinaryExpression binary:
                     return EvaluateBinaryExpression(binary);
+                case BoundInputExpression:
+                    return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
                 default:
                     throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
             }

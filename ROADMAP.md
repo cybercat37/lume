@@ -64,6 +64,7 @@ Each step is meant to be completed sequentially and validated with tests.
    - Minimal API surface documented.
    - Library functions tested in integration tests.
    - Usage errors provide clear diagnostics.
+   - See `STEP8_STDLIB.md` for the 12 sub-steps.
 
 9) CLI UX expansion
    Commands for check/format/run/build with rich diagnostics output.
@@ -101,3 +102,4 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 5: complete (see `STEP5_TYPE_SYSTEM.md`)
 - Step 6: complete (see `STEP6_INTERPRETER.md`)
 - Step 7: complete (see `STEP7_CODEGEN.md`)
+- Step 8: not started (see `STEP8_STDLIB.md`)

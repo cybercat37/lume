@@ -69,6 +69,7 @@ public sealed class Emitter
                 GetUnaryPrecedence(),
                 parentPrecedence),
             BoundBinaryExpression binary => WriteBinaryExpression(binary, parentPrecedence),
+            BoundInputExpression => "Console.ReadLine()",
             _ => throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}")
         };
     }

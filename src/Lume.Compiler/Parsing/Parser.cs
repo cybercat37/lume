@@ -16,7 +16,9 @@ public sealed class Parser
         TokenKind.OpenBrace,
         TokenKind.LetKeyword,
         TokenKind.PrintKeyword,
+        TokenKind.PrintlnKeyword,
         TokenKind.Identifier,
+        TokenKind.InputKeyword,
         TokenKind.TrueKeyword,
         TokenKind.FalseKeyword,
         TokenKind.NumberLiteral,
@@ -85,15 +87,24 @@ public sealed class Parser
             TokenKind.OpenBrace => ParseBlockStatement(),
             TokenKind.LetKeyword => ParseVariableDeclaration(),
             TokenKind.PrintKeyword => ParsePrintStatement(),
+            TokenKind.PrintlnKeyword => ParsePrintStatement(),
             _ => ParseExpressionStatement()
         };
     }
 
     private StatementSyntax ParsePrintStatement()
     {
-        var printKeyword = MatchToken(TokenKind.PrintKeyword, "print");
+        var keywordToken = Current().Kind == TokenKind.PrintlnKeyword
+            ? MatchToken(TokenKind.PrintlnKeyword, "println")
+            : MatchToken(TokenKind.PrintKeyword, "print");
         var expression = ParseExpression();
-        return new PrintStatementSyntax(printKeyword, expression);
+        if (!IsStatementTerminator(Current().Kind))
+        {
+            diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, "Unexpected token after print statement."));
+            SynchronizeStatement();
+        }
+
+        return new PrintStatementSyntax(keywordToken, expression);
     }
 
     private StatementSyntax ParseVariableDeclaration()
@@ -225,6 +236,8 @@ public sealed class Parser
             case TokenKind.NumberLiteral:
             case TokenKind.StringLiteral:
                 return new LiteralExpressionSyntax(NextToken());
+            case TokenKind.InputKeyword:
+                return new InputExpressionSyntax(NextToken());
             case TokenKind.Identifier:
                 return new NameExpressionSyntax(NextToken());
             default:
@@ -317,6 +330,12 @@ public sealed class Parser
         var tokenText = string.IsNullOrEmpty(actual.Text) ? actual.Kind.ToString() : actual.Text;
         return $"Expected {expectedDescription}, found '{tokenText}'.";
     }
+
+    private static bool IsStatementTerminator(TokenKind kind) =>
+        kind == TokenKind.NewLine ||
+        kind == TokenKind.Semicolon ||
+        kind == TokenKind.EndOfFile ||
+        kind == TokenKind.CloseBrace;
 
     private static int GetBinaryOperatorPrecedence(TokenKind kind)
     {
