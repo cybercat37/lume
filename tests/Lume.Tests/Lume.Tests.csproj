@@ -28,4 +28,9 @@
     <ProjectReference Include="..\..\src\lume\lume.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Golden\**\*.cs" />
+    <None Include="Golden\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

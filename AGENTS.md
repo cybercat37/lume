@@ -27,10 +27,15 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 
 ### Test
 - `make test` (wraps `dotnet test`)
+- `make test-hardening` (golden + snapshot tests)
 - `make test-pipeline` (runs `CompilerPipelineTests.Compile_print_string_generates_console_write`)
 - `dotnet test`
 - `dotnet test Lume.sln`
 - `dotnet test tests/Lume.Tests/Lume.Tests.csproj`
+
+### Fuzz
+- `make fuzz` (short fuzz run)
+- `dotnet run --project tests/Lume.Fuzz -- --iterations 1000 --max-length 128 --seed 123`
 
 ### Run a single test
 Use xUnit filters via `dotnet test --filter`.

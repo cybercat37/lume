@@ -135,6 +135,12 @@ make test
 dotnet test
 ```
 
+### Golden/Snapshot Updates
+
+Golden and snapshot files live under `tests/Lume.Tests/Golden` and `tests/Lume.Tests/Snapshots`.
+To update them, run the relevant tests, then replace the `.golden.cs` or `.snapshot.txt`
+files with the new expected output.
+
 ## Documentation
 
 - **[Language Tutorial](docs/tutorial.md)** — Learn Lume with examples

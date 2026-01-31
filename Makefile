@@ -1,4 +1,4 @@
-.PHONY: build test test-pipeline run demo clean help
+.PHONY: build test test-pipeline test-hardening fuzz run demo clean help
 
 # Default target
 help:
@@ -6,6 +6,8 @@ help:
 	@echo "  make build      - Build the solution"
 	@echo "  make test       - Run tests"
 	@echo "  make test-pipeline - Run CompilerPipelineTests"
+	@echo "  make test-hardening - Run golden/snapshot tests"
+	@echo "  make fuzz       - Run fuzz harness (short)"
 	@echo "  make run FILE=hello.lume - Compile and run a Lume file"
 	@echo "  make compile FILE=hello.lume - Compile a Lume file (build only)"
 	@echo "  make demo      - Run a quick demo (print \"ciao\")"
@@ -23,6 +25,14 @@ test:
 # Run the end-to-end pipeline test
 test-pipeline:
 	dotnet test tests/Lume.Tests/Lume.Tests.csproj --filter "FullyQualifiedName~CompilerPipelineTests.Compile_print_string_generates_console_write"
+
+# Run golden/snapshot tests
+test-hardening:
+	dotnet test tests/Lume.Tests/Lume.Tests.csproj --filter "FullyQualifiedName~CodegenGoldenTests|FullyQualifiedName~CodegenGoldenCoverageTests|FullyQualifiedName~DiagnosticsSnapshotTests"
+
+# Run fuzz harness (short)
+fuzz:
+	dotnet run --project tests/Lume.Fuzz -- --iterations 100 --max-length 128
 
 # Compile a Lume file (build only)
 compile:

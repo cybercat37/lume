@@ -1,4 +1,5 @@
 using Lume.Compiler;
+using Lume.Tests;
 
 public class CodegenGoldenTests
 {
@@ -10,20 +11,7 @@ public class CodegenGoldenTests
 
         Assert.True(result.Success);
 
-        var expected = "using System;\n" +
-                       "\n" +
-                       "class Program\n" +
-                       "{\n" +
-                       "    static void Main()\n" +
-                       "    {\n" +
-                       "        var x = 1;\n" +
-                       "        {\n" +
-                       "            Console.WriteLine(\"hi\");\n" +
-                       "            x = 2;\n" +
-                       "        }\n" +
-                       "        Console.WriteLine(x);\n" +
-                       "    }\n" +
-                       "}\n";
+        var expected = GoldenFiles.Read("CodegenGoldenTests.golden.cs");
 
         Assert.Equal(expected, result.GeneratedCode);
     }

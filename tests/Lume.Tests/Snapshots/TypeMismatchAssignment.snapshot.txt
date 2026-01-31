@@ -1,0 +1,1 @@
+test.lume(2,1): Error: Cannot assign expression of type 'Bool' to variable of type 'Int'.
