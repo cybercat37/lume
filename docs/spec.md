@@ -121,6 +121,29 @@ pub fn load(id: Int) -> Result<User, Err> {
 
 ---
 
+## String Literals
+
+String literals support the following escape sequences:
+
+- `\n` newline
+- `\t` tab
+- `\r` carriage return
+- `\\` backslash
+- `\"` double quote
+
+---
+
+## Comments
+
+Lume supports single-line and multi-line comments:
+
+- `// single line`
+- `/* multi line */`
+
+Comments are not nested.
+
+---
+
 ### 1.3 Pattern Matching
 
 - `match` expressions must be exhaustive
@@ -186,6 +209,18 @@ fn countdown(n: Int) {
 ```
 
 The compiler optimizes tail calls to prevent stack overflow.
+
+---
+
+## Operators
+
+Arithmetic operators include:
+
+- `+` add/concat
+- `-` subtract
+- `*` multiply
+- `/` integer division
+- `%` remainder
 
 ---
 
