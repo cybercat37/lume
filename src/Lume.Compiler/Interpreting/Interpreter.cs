@@ -9,10 +9,13 @@ public sealed class Interpreter
 {
     private readonly Queue<string> inputBuffer = new();
 
-    public void SetInput(string input)
+    public void SetInput(params string[] inputs)
     {
         inputBuffer.Clear();
-        inputBuffer.Enqueue(input);
+        foreach (var input in inputs)
+        {
+            inputBuffer.Enqueue(input);
+        }
     }
 
     public InterpreterResult Run(SyntaxTree syntaxTree)
