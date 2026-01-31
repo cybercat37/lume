@@ -1,3 +1,4 @@
+using Lume.Compiler.Binding;
 using Lume.Compiler.Emitting;
 using Lume.Compiler.Parsing;
 using Lume.Compiler.Text;
@@ -10,10 +11,15 @@ public sealed class CompilerDriver
     {
         var sourceText = new SourceText(source, fileName);
         var syntaxTree = SyntaxTree.Parse(sourceText);
+        var binder = new Binder();
+        var bindResult = binder.Bind(syntaxTree);
+        var diagnostics = syntaxTree.Diagnostics
+            .Concat(bindResult.Diagnostics)
+            .ToList();
 
-        if (syntaxTree.Diagnostics.Count > 0)
+        if (diagnostics.Count > 0)
         {
-            return CompilationResult.Fail(syntaxTree.Diagnostics, syntaxTree);
+            return CompilationResult.Fail(diagnostics, syntaxTree);
         }
 
         var emitter = new Emitter();

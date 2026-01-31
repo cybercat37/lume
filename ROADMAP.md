@@ -32,6 +32,7 @@ Each step is meant to be completed sequentially and validated with tests.
    - Nested scopes work with shadowing rules.
    - Undefined symbols produce diagnostics with spans.
    - Tests cover scope boundaries.
+   - See `STEP4_BINDING_SCOPE.md` for the 12 sub-steps.
 
 5) Type system foundation
    Primitive types, conversions, type inference for literals and variables.
@@ -93,3 +94,4 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 1: complete (see `STEP1_PIPELINE.md`)
 - Step 2: complete (see `STEP2_CORE_SYNTAX.md`)
 - Step 3: complete (see `STEP3_PARSER_ROBUSTNESS.md`)
+- Step 4: not started (see `STEP4_BINDING_SCOPE.md`)
