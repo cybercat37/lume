@@ -65,8 +65,8 @@ items.map(fn(x) { x * 2 })
 | `>=` | Maggiore o uguale |
 
 **Da decidere:**
-- [ ] Uguaglianza referenziale (`===`)? Oppure no perché immutabile?
-- [ ] Confronto tra tipi diversi: errore compile-time?
+- [x] Uguaglianza solo strutturale (`==`); niente `===`.
+- [x] Confronto tra tipi diversi: errore compile-time.
 
 ---
 
@@ -79,7 +79,7 @@ items.map(fn(x) { x * 2 })
 | `!` | NOT logico |
 
 **Da decidere:**
-- [ ] `and`/`or`/`not` come keyword alternative?
+- [x] `and`/`or`/`not` come keyword alternative: no.
 
 ---
 
@@ -94,9 +94,9 @@ items.map(fn(x) { x * 2 })
 | `%` | Modulo/Remainder |
 
 **Da decidere:**
-- [ ] `+` per concatenazione stringhe o operatore dedicato?
-- [ ] Divisione decimale? (richiede Float)
-- [ ] Overflow: wrap, panic, o checked?
+- [x] `+` per concatenazione stringhe.
+- [x] Divisione decimale: dopo (richiede Float).
+- [x] Overflow: no silent wrap (checked; diagnostic/panic).
 
 ---
 
@@ -114,8 +114,8 @@ data.transform().validate().save()
 ```
 
 **Da decidere:**
-- [ ] Pipe operator `|>` incluso?
-- [ ] Se sì, semantica (passa come primo o ultimo argomento)?
+- [x] Pipe operator `|>` incluso: sì, ma dopo (non ora).
+- [x] Semantica pipe: passa come primo argomento.
 
 ---
 
