@@ -21,14 +21,6 @@ interoperable with existing C# code.
 
 ---
 
-## Syntax Notes
-
-- Statement terminators are optional; newlines end statements by default.
-- Semicolons are permitted as explicit separators (useful inside blocks).
-- Identifiers may include underscores (`_`) and may start with `_`.
-
----
-
 ## Language Decisions (Summary)
 
 This section captures agreed design choices to guide implementation.
@@ -73,12 +65,12 @@ This section captures agreed design choices to guide implementation.
 - Non-exhaustive match is an error; `_` is optional but recommended.
 
 ### Option/Result
-- Option/Result live in stdlib; `?` works for both.
+- Option/Result live in stdlib; `?` applies only to `Result`.
 - `.unwrap()` exists (panic on None/Error).
 - Result error variant is `Error`; default error type is `String` for now.
 
 ### Comments & Docs
-- Comments are not nested.
+- Comments are intentionally not part of the language.
 - Doc comments use `///` with Markdown; doc tooling later.
 
 ### Misc
@@ -88,27 +80,84 @@ This section captures agreed design choices to guide implementation.
 
 ---
 
-## 1. Error Handling
+## 1. Syntax Basics
 
-### 1.1 Result and Option
+### 1.1 Identifiers
+
+- Identifiers may include underscores (`_`) and may start with `_`.
+- Statement terminators are optional; newlines end statements by default.
+- Semicolons are permitted as explicit separators (useful inside blocks).
+
+---
+
+### 1.2 String Literals
+
+String literals support the following escape sequences:
+
+| Escape | Meaning |
+|--------|---------|
+| `\n` | newline |
+| `\t` | tab |
+| `\r` | carriage return |
+| `\\` | backslash |
+| `\"` | double quote |
+
+---
+
+### 1.3 Operators
+
+#### Arithmetic
+
+| Operator | Meaning |
+|----------|---------|
+| `+` | add (also string concatenation) |
+| `-` | subtract |
+| `*` | multiply |
+| `/` | integer division |
+| `%` | remainder |
+
+#### Comparison
+
+| Operator | Meaning |
+|----------|---------|
+| `==` | structural equality |
+| `!=` | inequality |
+| `<` | less than |
+| `>` | greater than |
+| `<=` | less or equal |
+| `>=` | greater or equal |
+
+#### Logical
+
+| Operator | Meaning |
+|----------|---------|
+| `&&` | AND (short-circuit) |
+| `\|\|` | OR (short-circuit) |
+| `!` | NOT |
+
+---
+
+## 2. Error Handling
+
+### 2.1 Result and Option
 
 Lume uses explicit types for failure:
 
-- Result<T, E> = Ok(T) | Error(E)
-- Option<T> = Some(T) | None
+- `Result<T, E> = Ok(T) | Error(E)`
+- `Option<T> = Some(T) | None`
 
 Functions that may fail MUST return Result or Option.
 Exceptions are not used for control flow in the core language.
 
 ---
 
-### 1.2 Error Propagation Operator `?`
+### 2.2 Error Propagation Operator `?`
 
-The postfix operator `?` is defined only for Result<T, E>.
+The postfix operator `?` applies only to `Result<T, E>`.
 
-Semantics:
-- Ok(x)?  → evaluates to x
-- Error(e)? → returns Error(e) from the current function
+For Result:
+- `Ok(x)?` → evaluates to `x`
+- `Error(e)?` → returns `Error(e)` from the current function
 
 Example:
 
@@ -117,39 +166,27 @@ pub fn load(id: Int) -> Result<User, Err> {
   let raw = db.get(id)?
   Ok(parse(raw)?)
 }
+
 ```
 
 ---
 
-## String Literals
-
-String literals support the following escape sequences:
-
-- `\n` newline
-- `\t` tab
-- `\r` carriage return
-- `\\` backslash
-- `\"` double quote
-
----
-
-## Comments
-
-Comments are intentionally not part of the language.
-This is a deliberate design choice to keep the surface area minimal.
-
----
-
-
-### 1.3 Pattern Matching
+### 2.3 Pattern Matching
 
 - `match` expressions must be exhaustive
 - Non-exhaustive matches are compile-time errors
 - Works on Result, Option, and sum types
 
+```lume
+let message = match result {
+  Ok(value) -> f"Got: {value}"
+  Error(e) -> f"Error: {e}"
+}
+```
+
 ---
 
-### 1.4 .NET Exception Interop
+### 2.4 .NET Exception Interop
 
 Lume does not expose try/catch in the core language.
 
@@ -161,9 +198,9 @@ let x = DotNet.try(() => SomeApi.Call())?
 
 ---
 
-## 2. Control Flow
+## 3. Control Flow
 
-### 2.1 No Traditional Control Structures
+### 3.1 No Traditional Control Structures
 
 Lume intentionally omits `if`, `else`, `while`, `for`, and `loop`.
 
@@ -172,11 +209,9 @@ This is a deliberate design choice to enforce:
 - Functional iteration patterns
 - Predictable control flow
 
-This is a deliberate design choice, not a missing feature.
-
 ---
 
-### 2.2 Branching via Pattern Matching
+### 3.2 Branching via Pattern Matching
 
 All conditional logic uses `match`:
 
@@ -191,7 +226,7 @@ Pattern matching must be exhaustive. The compiler rejects non-exhaustive matches
 
 ---
 
-### 2.3 Iteration via Recursion
+### 3.3 Iteration via Recursion
 
 Custom iteration uses tail-recursive functions:
 
@@ -211,19 +246,7 @@ The compiler optimizes tail calls to prevent stack overflow.
 
 ---
 
-## Operators
-
-Arithmetic operators include:
-
-- `+` add/concat
-- `-` subtract
-- `*` multiply
-- `/` integer division
-- `%` remainder
-
----
-
-### 2.4 Iteration via Standard Library
+### 3.4 Iteration via Standard Library
 
 For collections, use iterator combinators:
 
@@ -246,60 +269,12 @@ range(1, 10).each(fn(i) { println i })
 
 ---
 
-### 2.5 Why No Imperative Loops?
+### 3.5 Why No Imperative Loops?
 
 - **One obvious way**: recursion OR iterators, never both for the same problem
 - **Composability**: iterator chains are easier to reason about
 - **Optimization**: no arbitrary control flow simplifies analysis
 - **`let mut` purpose**: local accumulators, not manual loop counters
-
----
-
-## 3. Concurrency & Parallelism
-
-### 3.1 Effects and Suspension
-
-A function is suspensive if it:
-- calls another suspensive function
-- performs I/O via the runtime
-
-Backend mapping:
-- Non-suspensive → sync .NET methods
-- Suspensive → ValueTask<T>
-
----
-
-### 3.2 Implicit Await
-
-Sequential calls to suspensive functions implicitly await.
-
----
-
-### 3.3 Structured Concurrency
-
-Primitives:
-- scope { }
-- spawn expr
-- task.join()
-
-Fire-and-forget is intentionally impossible.
-
----
-
-### 3.4 Cancellation
-
-- Cancellation is implicit and scoped
-- Blocking operations are forbidden
-
----
-
-### 3.5 CPU Parallelism
-
-```lume
-let result = par compute(data)?
-```
-
-`par` is the only supported way to express CPU parallelism.
 
 ---
 
@@ -342,16 +317,64 @@ Builders must be frozen to produce immutable values.
 
 ---
 
-## 5. Types & Data
+## 5. Concurrency & Parallelism
 
-- Primitive types: Int, Bool, String
-- Records
-- Sum types
-- Generics (minimal)
+### 5.1 Effects and Suspension
+
+A function is suspensive if it:
+- calls another suspensive function
+- performs I/O via the runtime
+
+Backend mapping:
+- Non-suspensive → sync .NET methods
+- Suspensive → ValueTask<T>
 
 ---
 
-## 6. Interoperability
+### 5.2 Implicit Await
+
+Sequential calls to suspensive functions implicitly await.
+
+---
+
+### 5.3 Structured Concurrency
+
+Primitives:
+- `scope { }`
+- `spawn expr`
+- `task.join()`
+
+Fire-and-forget is intentionally impossible.
+
+---
+
+### 5.4 Cancellation
+
+- Cancellation is implicit and scoped
+- Blocking operations are forbidden
+
+---
+
+### 5.5 CPU Parallelism
+
+```lume
+let result = par compute(data)?
+```
+
+`par` is the only supported way to express CPU parallelism.
+
+---
+
+## 6. Types & Data
+
+- Primitive types: Int (64-bit), Bool, String
+- Records (with `type` keyword)
+- Sum types
+- Generics (minimal, with `<T>` syntax)
+
+---
+
+## 7. Interoperability
 
 - Direct .NET calls
 - NuGet supported
@@ -359,7 +382,7 @@ Builders must be frozen to produce immutable values.
 
 ---
 
-## 7. Philosophy Recap
+## 8. Philosophy Recap
 
 - Errors are values
 - Concurrency is structured
