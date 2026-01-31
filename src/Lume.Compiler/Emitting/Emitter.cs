@@ -41,7 +41,7 @@ public sealed class Emitter
                 writer.WriteLine("}");
                 return;
             case BoundVariableDeclaration declaration:
-                writer.WriteLine($"var {declaration.Symbol.Name} = {WriteExpression(declaration.Initializer)};");
+                writer.WriteLine($"var {EscapeIdentifier(declaration.Symbol.Name)} = {WriteExpression(declaration.Initializer)};");
                 return;
             case BoundPrintStatement print:
                 writer.WriteLine($"Console.WriteLine({WriteExpression(print.Expression)});");
@@ -59,9 +59,9 @@ public sealed class Emitter
         return expression switch
         {
             BoundLiteralExpression literal => FormatLiteral(literal.Value),
-            BoundNameExpression name => name.Symbol.Name,
+            BoundNameExpression name => EscapeIdentifier(name.Symbol.Name),
             BoundAssignmentExpression assignment => WrapIfNeeded(
-                $"{assignment.Symbol.Name} = {WriteExpression(assignment.Expression, GetAssignmentPrecedence())}",
+                $"{EscapeIdentifier(assignment.Symbol.Name)} = {WriteExpression(assignment.Expression, GetAssignmentPrecedence())}",
                 GetAssignmentPrecedence(),
                 parentPrecedence),
             BoundUnaryExpression unary => WrapIfNeeded(
@@ -125,6 +125,93 @@ public sealed class Emitter
             _ => value.ToString() ?? "null"
         };
     }
+
+    private static string EscapeIdentifier(string name)
+    {
+        return CSharpKeywords.Contains(name) ? $"@{name}" : name;
+    }
+
+    private static readonly HashSet<string> CSharpKeywords = new(StringComparer.Ordinal)
+    {
+        "abstract",
+        "as",
+        "base",
+        "bool",
+        "break",
+        "byte",
+        "case",
+        "catch",
+        "char",
+        "checked",
+        "class",
+        "const",
+        "continue",
+        "decimal",
+        "default",
+        "delegate",
+        "do",
+        "double",
+        "else",
+        "enum",
+        "event",
+        "explicit",
+        "extern",
+        "false",
+        "finally",
+        "fixed",
+        "float",
+        "for",
+        "foreach",
+        "goto",
+        "if",
+        "implicit",
+        "in",
+        "int",
+        "interface",
+        "internal",
+        "is",
+        "lock",
+        "long",
+        "namespace",
+        "new",
+        "null",
+        "object",
+        "operator",
+        "out",
+        "override",
+        "params",
+        "private",
+        "protected",
+        "public",
+        "readonly",
+        "ref",
+        "return",
+        "sbyte",
+        "sealed",
+        "short",
+        "sizeof",
+        "stackalloc",
+        "static",
+        "string",
+        "struct",
+        "switch",
+        "this",
+        "throw",
+        "true",
+        "try",
+        "typeof",
+        "uint",
+        "ulong",
+        "unchecked",
+        "unsafe",
+        "ushort",
+        "using",
+        "virtual",
+        "void",
+        "volatile",
+        "while",
+        "var"
+    };
 
     private static string EscapeString(string value)
     {
