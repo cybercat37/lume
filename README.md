@@ -45,7 +45,7 @@ print counter
 
 ## Status
 
-**In Development** — Steps 1-11 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots, plus compilation caching.
+**In Development** — Steps 1-12 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots, plus compilation caching and tooling support.
 
 ### Currently Implemented ✅
 
@@ -65,6 +65,7 @@ print counter
 - CLI commands: `check`, `build`, `run` with options
 - Test infrastructure: golden files and diagnostic snapshots
 - Compilation cache (`--cache`) and large input guardrail
+- Tooling: dotnet tool packaging, CI workflow, shell completions
 
 ### Coming Soon 🔜
 
@@ -184,7 +185,7 @@ The implementation follows a 12-step roadmap:
 9. ✅ **CLI UX** — Commands `check`, `build`, `run` with options (`--out`, `--quiet`, `--verbose`, `--help`, `--version`)
 10. ✅ **Test Hardening** — Golden files for codegen, snapshot tests for diagnostics
 11. ✅ **Performance** — Incremental compilation, caching, guardrails
-12. 🔜 **Tooling** — Packaging, distribution, CI
+12. ✅ **Tooling** — Dotnet tool packaging, CI workflow, completions
 
 See [ROADMAP.md](ROADMAP.md) for detailed progress.
 

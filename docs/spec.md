@@ -392,4 +392,4 @@ let result = par compute(data)?
 
 ---
 
-Status: Draft v0.2
+Status: Draft v0.2 (implementation steps 1-12 complete; planned features pending)

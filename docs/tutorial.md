@@ -784,7 +784,7 @@ numbers.each(fn(x) { sum = sum + x })
 
 ## 15. Implementation Status (Summary)
 
-### ✅ Implemented (Steps 1-10)
+### ✅ Implemented (Steps 1-12)
 
 - Base Lexer and Parser
 - Variables (`let`, `let mut`)
@@ -799,8 +799,10 @@ numbers.each(fn(x) { sum = sum + x })
 - Interpreter runtime
 - Code generation (C# emission)
 - Builtin functions (`print`, `println`, `input`, `len`, `abs`, `min`, `max`)
-- CLI commands (`check`, `build`, `run`)
+- CLI commands (`check`, `build`, `run`) with options (`--out`, `--quiet`, `--verbose`, `--cache`)
 - Test infrastructure (golden files, diagnostic snapshots)
+- Compilation cache and large input guardrail
+- Tooling: dotnet tool packaging, CI workflow, shell completions
 
 ### 🔜 Planned
 
