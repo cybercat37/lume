@@ -26,6 +26,7 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 
 ### Test
 - `make test` (wraps `dotnet test`)
+- `make test-pipeline` (runs `CompilerPipelineTests.Compile_print_string_generates_console_write`)
 - `dotnet test`
 - `dotnet test Lume.sln`
 - `dotnet test tests/Lume.Tests/Lume.Tests.csproj`
@@ -123,7 +124,7 @@ Follow the existing conventions visible in the C# files.
 See `ROADMAP.md` for the full 12-step program and `STEP1_PIPELINE.md` for the detailed breakdown of Step 1.
 
 ### Current progress
-- Step 1 (Pipeline base): in progress
+- Step 1 (Pipeline base): complete
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file

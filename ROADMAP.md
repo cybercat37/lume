@@ -8,6 +8,7 @@ Each step is meant to be completed sequentially and validated with tests.
    Definition of Done:
    - All sub-steps in `STEP1_PIPELINE.md` complete.
    - `dotnet test` passes with new pipeline tests.
+   - `make test-pipeline` validates Step 1 end-to-end (`CompilerPipelineTests.Compile_print_string_generates_console_write`).
 
 2) Core syntax expansion
    Numeric literals, variables, assignments, block statements, and basic expressions.
@@ -87,4 +88,4 @@ Each step is meant to be completed sequentially and validated with tests.
    - Examples verified as part of build/test.
 
 ## Current progress
-- Step 1: in progress (see `STEP1_PIPELINE.md`)
+- Step 1: complete (see `STEP1_PIPELINE.md`)

@@ -70,7 +70,7 @@ Goal: establish a robust compile pipeline that can parse and emit a minimal prog
     - Tests cover success + error cases for each phase.
 
 ## Status
-- Steps 1-12: in progress
+- Steps 1-12: complete
 
 ## Definition of Done
 - A minimal program `print "hello"` compiles and runs through the CLI.

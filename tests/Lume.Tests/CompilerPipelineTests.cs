@@ -1,4 +1,5 @@
 using Lume.Compiler;
+using Lume.Compiler.Syntax;
 
 public class CompilerPipelineTests
 {
@@ -9,7 +10,12 @@ public class CompilerPipelineTests
         var result = compiler.Compile("print \"hello\"", "test.lume");
 
         Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
         Assert.Contains("Console.WriteLine(\"hello\");", result.GeneratedCode);
+
+        var statement = Assert.IsType<PrintStatementSyntax>(result.SyntaxTree.Root.Statement);
+        var literal = Assert.IsType<LiteralExpressionSyntax>(statement.Expression);
+        Assert.Equal("hello", literal.LiteralToken.Value);
     }
 
     [Fact]
@@ -20,5 +26,6 @@ public class CompilerPipelineTests
 
         Assert.False(result.Success);
         Assert.NotEmpty(result.Diagnostics);
+        Assert.True(result.Diagnostics[0].Span.Length > 0);
     }
 }

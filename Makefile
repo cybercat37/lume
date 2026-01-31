@@ -1,10 +1,11 @@
-.PHONY: build test run demo clean help
+.PHONY: build test test-pipeline run demo clean help
 
 # Default target
 help:
 	@echo "Lume - Available commands:"
 	@echo "  make build      - Build the solution"
 	@echo "  make test       - Run tests"
+	@echo "  make test-pipeline - Run CompilerPipelineTests"
 	@echo "  make run FILE=hello.lume - Compile and run a Lume file"
 	@echo "  make compile FILE=hello.lume - Compile a Lume file (build only)"
 	@echo "  make demo      - Run a quick demo (print \"ciao\")"
@@ -18,6 +19,10 @@ build:
 # Run tests
 test:
 	dotnet test
+
+# Run the end-to-end pipeline test
+test-pipeline:
+	dotnet test tests/Lume.Tests/Lume.Tests.csproj --filter "FullyQualifiedName~CompilerPipelineTests.Compile_print_string_generates_console_write"
 
 # Compile a Lume file (build only)
 compile:
