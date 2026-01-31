@@ -10,6 +10,7 @@ public sealed class Binder
     private readonly List<Diagnostic> diagnostics = new();
     private BoundScope scope = new(null);
     private SourceText? sourceText;
+    private SourceText SourceText => sourceText ?? new SourceText(string.Empty, string.Empty);
 
     public BinderResult Bind(SyntaxTree syntaxTree)
     {
@@ -37,7 +38,7 @@ public sealed class Binder
             case ExpressionStatementSyntax expressionStatement:
                 return new BoundExpressionStatement(BindExpression(expressionStatement.Expression));
             default:
-                return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Error));
+                throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
         }
     }
 
@@ -63,20 +64,21 @@ public sealed class Binder
         var initializer = BindExpression(declaration.Initializer);
         var type = initializer.Type;
 
+        VariableSymbol? declaredSymbol = null;
         if (!string.IsNullOrEmpty(name))
         {
             var symbol = new VariableSymbol(name, isMutable, type);
-
-            if (!scope.TryDeclare(symbol))
+            declaredSymbol = scope.TryDeclare(symbol);
+            if (declaredSymbol is null)
             {
                 diagnostics.Add(Diagnostic.Error(
-                    sourceText ?? new SourceText(string.Empty, string.Empty),
+                    SourceText,
                     declaration.IdentifierToken.Span,
                     $"Variable '{name}' is already declared in this scope."));
             }
         }
 
-        var declaredSymbol = scope.TryLookup(name) ?? new VariableSymbol(name, isMutable, type);
+        declaredSymbol ??= new VariableSymbol(name, isMutable, type);
         return new BoundVariableDeclaration(declaredSymbol, initializer);
     }
 
@@ -97,7 +99,7 @@ public sealed class Binder
             case ParenthesizedExpressionSyntax parenthesized:
                 return BindExpression(parenthesized.Expression);
             default:
-                return new BoundLiteralExpression(null, TypeSymbol.Error);
+                throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
         }
     }
 
@@ -135,7 +137,7 @@ public sealed class Binder
         if (left.Type != TypeSymbol.Error && right.Type != TypeSymbol.Error)
         {
             diagnostics.Add(Diagnostic.Error(
-                sourceText ?? new SourceText(string.Empty, string.Empty),
+                SourceText,
                 binary.OperatorToken.Span,
                 $"Operator '{binary.OperatorToken.Text}' is not defined for types '{left.Type}' and '{right.Type}'."));
         }
@@ -154,7 +156,7 @@ public sealed class Binder
         if (operand.Type != TypeSymbol.Error)
         {
             diagnostics.Add(Diagnostic.Error(
-                sourceText ?? new SourceText(string.Empty, string.Empty),
+                SourceText,
                 unary.OperatorToken.Span,
                 $"Operator '{unary.OperatorToken.Text}' is not defined for type '{operand.Type}'."));
         }
@@ -169,7 +171,7 @@ public sealed class Binder
         if (symbol is null)
         {
             diagnostics.Add(Diagnostic.Error(
-                sourceText ?? new SourceText(string.Empty, string.Empty),
+                SourceText,
                 nameExpression.IdentifierToken.Span,
                 $"Undefined variable '{name}'."));
             return new BoundLiteralExpression(null, TypeSymbol.Error);
@@ -186,7 +188,7 @@ public sealed class Binder
         if (symbol is null)
         {
             diagnostics.Add(Diagnostic.Error(
-                sourceText ?? new SourceText(string.Empty, string.Empty),
+                SourceText,
                 assignment.IdentifierToken.Span,
                 $"Undefined variable '{name}'."));
             return BindExpression(assignment.Expression);
@@ -195,7 +197,7 @@ public sealed class Binder
         if (!symbol.IsMutable)
         {
             diagnostics.Add(Diagnostic.Error(
-                sourceText ?? new SourceText(string.Empty, string.Empty),
+                SourceText,
                 assignment.IdentifierToken.Span,
                 $"Variable '{name}' is immutable."));
         }
@@ -204,7 +206,7 @@ public sealed class Binder
         if (boundExpression.Type != symbol.Type && boundExpression.Type != TypeSymbol.Error && symbol.Type != TypeSymbol.Error)
         {
             diagnostics.Add(Diagnostic.Error(
-                sourceText ?? new SourceText(string.Empty, string.Empty),
+                SourceText,
                 assignment.IdentifierToken.Span,
                 $"Cannot assign expression of type '{boundExpression.Type}' to variable of type '{symbol.Type}'."));
         }

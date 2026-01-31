@@ -11,15 +11,15 @@ public sealed class BoundScope
         Parent = parent;
     }
 
-    public bool TryDeclare(VariableSymbol symbol)
+    public VariableSymbol? TryDeclare(VariableSymbol symbol)
     {
         if (symbols.ContainsKey(symbol.Name))
         {
-            return false;
+            return null;
         }
 
         symbols[symbol.Name] = symbol;
-        return true;
+        return symbol;
     }
 
     public VariableSymbol? TryLookup(string name)

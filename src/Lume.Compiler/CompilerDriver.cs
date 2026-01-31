@@ -23,7 +23,7 @@ public sealed class CompilerDriver
         }
 
         var emitter = new Emitter();
-        var generatedCode = emitter.Emit(syntaxTree.Root);
+        var generatedCode = emitter.Emit(bindResult.Program);
         return CompilationResult.CreateSuccess(generatedCode, syntaxTree);
     }
 }

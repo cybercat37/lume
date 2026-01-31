@@ -72,6 +72,8 @@ public sealed class Interpreter
                 case BoundExpressionStatement expressionStatement:
                     EvaluateExpression(expressionStatement.Expression);
                     return;
+                default:
+                    throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
             }
         }
 
@@ -97,7 +99,7 @@ public sealed class Interpreter
                 case BoundBinaryExpression binary:
                     return EvaluateBinaryExpression(binary);
                 default:
-                    return null;
+                    throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
             }
         }
 

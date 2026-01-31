@@ -20,26 +20,45 @@ public sealed class Lexer
 
     public SyntaxToken Lex()
     {
-        if (IsAtEnd())
+        while (true)
         {
-            return new SyntaxToken(TokenKind.EndOfFile, new TextSpan(position, 0), string.Empty, null);
-        }
+            if (IsAtEnd())
+            {
+                return new SyntaxToken(TokenKind.EndOfFile, new TextSpan(position, 0), string.Empty, null);
+            }
 
-        if (IsLineBreak(Current()))
-        {
-            return LexNewLine();
-        }
+            if (IsLineBreak(Current()))
+            {
+                return LexNewLine();
+            }
 
-        SkipWhitespace();
+            SkipWhitespace();
 
-        if (IsAtEnd())
-        {
-            return new SyntaxToken(TokenKind.EndOfFile, new TextSpan(position, 0), string.Empty, null);
-        }
+            if (IsAtEnd())
+            {
+                return new SyntaxToken(TokenKind.EndOfFile, new TextSpan(position, 0), string.Empty, null);
+            }
 
-        if (IsLineBreak(Current()))
-        {
-            return LexNewLine();
+            if (IsLineBreak(Current()))
+            {
+                return LexNewLine();
+            }
+
+            if (IsCommentStart())
+            {
+                if (Peek(1) == '/')
+                {
+                    SkipSingleLineComment();
+                }
+                else
+                {
+                    SkipMultiLineComment();
+                }
+
+                continue;
+            }
+
+            break;
         }
 
         var start = position;
@@ -162,14 +181,15 @@ public sealed class Lexer
                 }
 
                 var escaped = Current();
-                if (escaped == '"' || escaped == '\\')
+                builder.Append(escaped switch
                 {
-                    builder.Append(escaped);
-                    Next();
-                    continue;
-                }
-
-                builder.Append(escaped);
+                    '"' => '"',
+                    '\\' => '\\',
+                    'n' => '\n',
+                    't' => '\t',
+                    'r' => '\r',
+                    _ => escaped
+                });
                 Next();
                 continue;
             }
@@ -208,6 +228,42 @@ public sealed class Lexer
         {
             Next();
         }
+    }
+
+    private bool IsCommentStart() =>
+        Current() == '/' && (Peek(1) == '/' || Peek(1) == '*');
+
+    private void SkipSingleLineComment()
+    {
+        Next();
+        Next();
+
+        while (!IsAtEnd() && !IsLineBreak(Current()))
+        {
+            Next();
+        }
+    }
+
+    private void SkipMultiLineComment()
+    {
+        var start = position;
+        Next();
+        Next();
+
+        while (!IsAtEnd())
+        {
+            if (Current() == '*' && Peek(1) == '/')
+            {
+                Next();
+                Next();
+                return;
+            }
+
+            Next();
+        }
+
+        var span = new TextSpan(start, Math.Max(1, position - start));
+        diagnostics.Add(Diagnostic.Error(sourceText, span, "Unterminated block comment."));
     }
 
     private char Current() =>

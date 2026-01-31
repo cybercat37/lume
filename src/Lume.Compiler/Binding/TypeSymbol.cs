@@ -15,4 +15,14 @@ public sealed class TypeSymbol
     public static TypeSymbol Error { get; } = new("Error");
 
     public override string ToString() => Name;
+
+    public override bool Equals(object? obj)
+    {
+        return obj is TypeSymbol other && string.Equals(Name, other.Name, StringComparison.Ordinal);
+    }
+
+    public override int GetHashCode()
+    {
+        return StringComparer.Ordinal.GetHashCode(Name);
+    }
 }
