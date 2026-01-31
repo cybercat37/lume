@@ -11,6 +11,27 @@ public sealed class Parser
     private readonly IReadOnlyList<SyntaxToken> tokens;
     private readonly List<Diagnostic> diagnostics;
     private int position;
+    private static readonly HashSet<TokenKind> StatementStartTokens = new()
+    {
+        TokenKind.OpenBrace,
+        TokenKind.LetKeyword,
+        TokenKind.PrintKeyword,
+        TokenKind.Identifier,
+        TokenKind.TrueKeyword,
+        TokenKind.FalseKeyword,
+        TokenKind.NumberLiteral,
+        TokenKind.StringLiteral,
+        TokenKind.OpenParen,
+        TokenKind.Plus,
+        TokenKind.Minus
+    };
+
+    private static readonly HashSet<TokenKind> BlockSyncTokens = new()
+    {
+        TokenKind.CloseBrace,
+        TokenKind.NewLine,
+        TokenKind.Semicolon
+    };
 
     public Parser(SourceText sourceText, IReadOnlyList<SyntaxToken> tokens)
     {
@@ -34,8 +55,16 @@ public sealed class Parser
             while (Current().Kind != TokenKind.EndOfFile)
             {
                 var start = position;
-                var statement = ParseStatement();
-                statements.Add(statement);
+                if (!IsStatementStart(Current().Kind))
+                {
+                    diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("statement", Current())));
+                    SynchronizeStatement();
+                }
+                else
+                {
+                    var statement = ParseStatement();
+                    statements.Add(statement);
+                }
                 ConsumeSeparators();
 
                 if (position == start)
@@ -113,8 +142,16 @@ public sealed class Parser
         while (Current().Kind != TokenKind.CloseBrace && Current().Kind != TokenKind.EndOfFile)
         {
             var start = position;
-            var statement = ParseStatement();
-            statements.Add(statement);
+            if (!IsStatementStart(Current().Kind))
+            {
+                diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("statement", Current())));
+                SynchronizeBlockStatement();
+            }
+            else
+            {
+                var statement = ParseStatement();
+                statements.Add(statement);
+            }
             ConsumeSeparators();
 
             if (position == start)
@@ -191,7 +228,12 @@ public sealed class Parser
             case TokenKind.Identifier:
                 return new NameExpressionSyntax(NextToken());
             default:
-                var missing = MatchToken(TokenKind.NumberLiteral, "expression");
+                diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("expression", Current())));
+                var missing = SyntaxToken.Missing(TokenKind.NumberLiteral, Current().Position);
+                if (Current().Kind != TokenKind.EndOfFile)
+                {
+                    NextToken();
+                }
                 return new LiteralExpressionSyntax(missing);
         }
     }
@@ -215,7 +257,7 @@ public sealed class Parser
         diagnostics.Add(Diagnostic.Error(
             sourceText,
             current.Span,
-            $"Expected {expectedDescription}."));
+            UnexpectedTokenMessage(expectedDescription, current)));
 
         return SyntaxToken.Missing(kind, current.Position);
     }
@@ -238,6 +280,42 @@ public sealed class Parser
         var current = Current();
         position++;
         return current;
+    }
+
+    private static bool IsStatementStart(TokenKind kind) =>
+        StatementStartTokens.Contains(kind);
+
+    private void SynchronizeStatement()
+    {
+        while (Current().Kind != TokenKind.EndOfFile && !IsStatementStart(Current().Kind))
+        {
+            if (Current().Kind == TokenKind.NewLine || Current().Kind == TokenKind.Semicolon)
+            {
+                ConsumeSeparators();
+                return;
+            }
+
+            NextToken();
+        }
+    }
+
+    private void SynchronizeBlockStatement()
+    {
+        while (Current().Kind != TokenKind.EndOfFile)
+        {
+            if (BlockSyncTokens.Contains(Current().Kind) || IsStatementStart(Current().Kind))
+            {
+                return;
+            }
+
+            NextToken();
+        }
+    }
+
+    private static string UnexpectedTokenMessage(string expectedDescription, SyntaxToken actual)
+    {
+        var tokenText = string.IsNullOrEmpty(actual.Text) ? actual.Kind.ToString() : actual.Text;
+        return $"Expected {expectedDescription}, found '{tokenText}'.";
     }
 
     private static int GetBinaryOperatorPrecedence(TokenKind kind)

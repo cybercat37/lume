@@ -129,11 +129,12 @@ Follow the existing conventions visible in the C# files.
 - Keep changes scoped; avoid unrelated refactors unless required by the task.
 
 ## Roadmap (12 main steps)
-See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, and `STEP2_CORE_SYNTAX.md` for Step 2.
+See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `STEP2_CORE_SYNTAX.md` for Step 2, and `STEP3_PARSER_ROBUSTNESS.md` for Step 3.
 
 ### Current progress
 - Step 1 (Pipeline base): complete
 - Step 2 (Core syntax): complete
+- Step 3 (Parser robustness): not started
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file

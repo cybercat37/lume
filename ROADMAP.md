@@ -24,6 +24,7 @@ Each step is meant to be completed sequentially and validated with tests.
    - Parser recovers from at least 3 common error patterns.
    - Diagnostics include expected token/context.
    - Failing input still yields a syntax tree.
+   - See `STEP3_PARSER_ROBUSTNESS.md` for the 12 sub-steps.
 
 4) Binding and scope
    Symbol resolution, scope rules, and semantic diagnostics.
@@ -91,3 +92,4 @@ Each step is meant to be completed sequentially and validated with tests.
 ## Current progress
 - Step 1: complete (see `STEP1_PIPELINE.md`)
 - Step 2: complete (see `STEP2_CORE_SYNTAX.md`)
+- Step 3: not started (see `STEP3_PARSER_ROBUSTNESS.md`)
