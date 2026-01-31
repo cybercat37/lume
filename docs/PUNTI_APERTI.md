@@ -19,7 +19,6 @@ pub fn greet(name: String) {
 ```
 
 **Da decidere:**
-- [ ] Return implicito (ultima espressione) o esplicito (`return`)?
 - [x] Return implicito (ultima espressione); `return` consentito per early exit.
 - [x] Funzioni senza return type hanno tipo `Unit`.
 - [x] Parametri opzionali/default values: no (per ora).
@@ -35,7 +34,6 @@ items.map(fn(x) { x * 2 })
 ```
 
 **Da decidere:**
-- [ ] Sintassi abbreviata per lambda single-expression?
 - [x] Sintassi abbreviata per lambda single-expression: sì (es. `fn(x) => x * 2`).
 - [x] Cattura variabili: by value.
 - [x] Cattura di `mut` permessa: no.
@@ -132,10 +130,10 @@ data.transform().validate().save()
 | `Unit` | Tipo vuoto (nessun valore) |
 
 **Da decidere:**
-- [ ] `Float`/`Double` incluso?
-- [ ] Dimensione di `Int` (32 o 64 bit)?
-- [ ] `Char` separato o solo `String`?
-- [ ] `Byte` / `UInt`?
+- [x] `Float`/`Double` incluso: sì (Double), ma dopo.
+- [x] Dimensione di `Int`: 64-bit.
+- [x] `Char` separato o solo `String`: solo `String` per ora.
+- [x] `Byte` / `UInt`: no per ora.
 
 ---
 
@@ -156,10 +154,10 @@ user.name
 ```
 
 **Da decidere:**
-- [ ] Keyword `type` o `record`?
-- [ ] Costruttore automatico?
-- [ ] Update syntax (`{ ...user, age: 31 }`)?
-- [ ] Destructuring in pattern match?
+- [x] Keyword per records: `type`.
+- [x] Costruttore automatico: sì.
+- [x] Update syntax (`{ ...user, age: 31 }`): sì.
+- [x] Destructuring in pattern match: sì.
 
 ---
 
@@ -182,8 +180,8 @@ match s {
 ```
 
 **Da decidere:**
-- [ ] Sintassi per varianti con/senza payload?
-- [ ] Associated values come Rust o come Gleam?
+- [x] Sintassi varianti con/senza payload: come Rust/Gleam (`Variant` / `Variant(value)`).
+- [x] Associated values: stile Rust/Gleam con payload tra parentesi.
 
 ---
 
@@ -198,9 +196,9 @@ type Box<T> {
 ```
 
 **Da decidere:**
-- [ ] Sintassi `<T>` o `[T]`?
-- [ ] Constraints/bounds (`<T: Comparable>`)?
-- [ ] Inferenza di tipo per generics?
+- [x] Sintassi generics: `<T>`.
+- [x] Constraints/bounds: non ora.
+- [x] Inferenza di tipo per generics: sì, dove possibile.
 
 ---
 
@@ -212,8 +210,8 @@ type Handler = fn(Request) -> Response
 ```
 
 **Da decidere:**
-- [ ] Alias sono distinti o equivalenti al tipo base?
-- [ ] Newtype pattern supportato?
+- [x] Alias equivalenti al tipo base.
+- [x] Newtype pattern: non ora.
 
 ---
 
@@ -227,9 +225,9 @@ let first = items[0]  // Oppure items.get(0)?
 ```
 
 **Da decidere:**
-- [ ] List immutabile di default?
-- [ ] Indexing con `[]` o solo metodi?
-- [ ] Out of bounds: panic o Result?
+- [x] List immutabile di default: sì.
+- [x] Indexing con `[]`: sì.
+- [x] Out of bounds: Result (niente panic silenzioso).
 
 ---
 
@@ -240,8 +238,8 @@ let ages = { "Alice": 30, "Bob": 25 }
 ```
 
 **Da decidere:**
-- [ ] Sintassi literal per mappe?
-- [ ] Chiavi: solo String o qualsiasi hashable?
+- [x] Sintassi literal per mappe: sì.
+- [x] Chiavi: solo String per ora.
 
 ---
 
@@ -253,9 +251,9 @@ let (x, y) = pair
 ```
 
 **Da decidere:**
-- [ ] Tuple incluse?
-- [ ] Destructuring nelle let?
-- [ ] Accesso con `.0`, `.1` o solo destructuring?
+- [x] Tuple incluse: sì.
+- [x] Destructuring nelle let: sì.
+- [x] Accesso: solo destructuring (no `.0/.1` per ora).
 
 ---
 
@@ -275,17 +273,17 @@ let msg = f"Hello {name}, you are {age} years old"
 ```
 
 **Da decidere:**
-- [ ] Interpolazione con `{}` o `${}`?
-- [ ] Prefisso `f""` necessario?
-- [ ] Espressioni dentro interpolazione (`{x + 1}`)?
+- [x] Interpolazione con `{}`.
+- [x] Prefisso `f""` necessario.
+- [x] Espressioni dentro interpolazione: sì.
 
 ---
 
 ### 5.2 Operazioni
 
 **Da decidere:**
-- [ ] Concatenazione: `+` o `++` o metodo?
-- [ ] `String.length`, `String.split`, etc. in stdlib?
+- [x] Concatenazione: `+`.
+- [x] `String.length`, `String.split`, etc. in stdlib: sì.
 
 ---
 
@@ -304,19 +302,19 @@ let x = math.add(1, 2)
 ```
 
 **Da decidere:**
-- [ ] Un file = un modulo?
-- [ ] Moduli annidati?
-- [ ] `import` vs `use`?
-- [ ] Aliasing (`import math as m`)?
-- [ ] Import selettivo (`import math.{add, sub}`)?
+- [x] Un file = un modulo: sì.
+- [x] Moduli annidati: no per ora.
+- [x] Keyword: `import`.
+- [x] Aliasing (`import math as m`): sì.
+- [x] Import selettivo (`import math.{add, sub}`): sì.
 
 ---
 
 ### 6.2 Visibilità
 
 **Da decidere:**
-- [ ] Solo `pub` e privato?
-- [ ] `pub(module)` per visibilità interna?
+- [x] Solo `pub` e privato.
+- [x] `pub(module)`: no per ora.
 
 ---
 
@@ -334,18 +332,18 @@ let x = math.add(1, 2)
 | Guard | `x if x > 0` |
 
 **Da decidere:**
-- [ ] Rest pattern (`..`) per ignorare campi?
-- [ ] Guards (`if condition`)?
-- [ ] Range pattern (`1..10`)?
-- [ ] List pattern (`[head, ..tail]`)?
+- [x] Rest pattern (`..`): sì.
+- [x] Guards (`if condition`): sì.
+- [x] Range pattern (`1..10`): no per ora.
+- [x] List pattern (`[head, ..tail]`): sì.
 
 ---
 
 ### 7.2 Exhaustiveness
 
 **Da decidere:**
-- [ ] Warning o errore per match non esaustivo?
-- [ ] `_` obbligatorio o opzionale come catch-all?
+- [x] Match non esaustivo: errore.
+- [x] `_` catch-all: opzionale (ma consigliato).
 
 ---
 
@@ -361,9 +359,9 @@ type Option<T> {
 ```
 
 **Da decidere:**
-- [ ] Built-in o definito in stdlib?
-- [ ] Operatore `?` funziona anche su Option?
-- [ ] `.unwrap()` esiste? (panic se None)
+- [x] Option: definito in stdlib.
+- [x] Operatore `?` funziona anche su Option: sì.
+- [x] `.unwrap()` esiste (panic su None): sì.
 
 ---
 
@@ -377,9 +375,9 @@ type Result<T, E> {
 ```
 
 **Da decidere:**
-- [ ] `Error` o `Err` come nome?
-- [ ] Tipo errore standard? (`type Error = String`?)
-- [ ] `.unwrap()` esiste?
+- [x] Nome variante: `Error`.
+- [x] Tipo errore standard: `type Error = String` (per ora).
+- [x] `.unwrap()` esiste (panic su Error): sì.
 
 ---
 
@@ -395,7 +393,7 @@ type Result<T, E> {
 ```
 
 **Da decidere:**
-- [ ] Commenti annidati permessi?
+- [x] Commenti annidati: no.
 
 ---
 
@@ -412,9 +410,9 @@ pub fn add(a: Int, b: Int) -> Int { a + b }
 ```
 
 **Da decidere:**
-- [ ] `///` o `/** */` per doc?
-- [ ] Formato (Markdown)?
-- [ ] Tool per generare docs?
+- [x] Doc comments: `///`.
+- [x] Formato: Markdown.
+- [x] Tool per generare docs: sì, ma dopo.
 
 ---
 
@@ -428,7 +426,7 @@ let x = 2  // Permesso?
 ```
 
 **Da decidere:**
-- [ ] Shadowing permesso nello stesso scope?
+- [x] Shadowing nello stesso scope: no.
 
 ---
 
@@ -451,8 +449,8 @@ fn is_odd(n: Int) -> Bool {
 ```
 
 **Da decidere:**
-- [ ] Funzioni si vedono prima della definizione?
-- [ ] Keyword per forward declaration?
+- [x] Funzioni visibili prima della definizione: sì (supporto mutual recursion).
+- [x] Forward declaration keyword: no.
 
 ---
 
@@ -467,8 +465,8 @@ pub fn old_fn() { ... }
 ```
 
 **Da decidere:**
-- [ ] Sistema di attributi incluso?
-- [ ] Sintassi `@attr` o `#[attr]`?
+- [x] Sistema di attributi: sì, ma dopo.
+- [x] Sintassi: `@attr`.
 
 ---
 
