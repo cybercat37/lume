@@ -35,4 +35,32 @@ public class LexerStringTests
 
         Assert.NotEmpty(lexer.Diagnostics);
     }
+
+    [Fact]
+    public void Identifier_with_underscore_is_tokenized()
+    {
+        // Gli underscore devono essere supportati negli identificatori
+        // my_var, _private, camelCase_with_underscore sono tutti validi
+        var sourceText = new SourceText("my_var", "test.lume");
+        var lexer = new Lexer(sourceText);
+
+        var token = lexer.Lex();
+
+        Assert.Equal(TokenKind.Identifier, token.Kind);
+        Assert.Equal("my_var", token.Text);
+        Assert.Empty(lexer.Diagnostics);
+    }
+
+    [Fact]
+    public void Identifier_starting_with_underscore_is_tokenized()
+    {
+        var sourceText = new SourceText("_private", "test.lume");
+        var lexer = new Lexer(sourceText);
+
+        var token = lexer.Lex();
+
+        Assert.Equal(TokenKind.Identifier, token.Kind);
+        Assert.Equal("_private", token.Text);
+        Assert.Empty(lexer.Diagnostics);
+    }
 }

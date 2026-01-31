@@ -64,9 +64,9 @@ public sealed class Lexer
         var start = position;
         var current = Current();
 
-        if (char.IsLetter(current))
+        if (IsIdentifierStart(current))
         {
-            while (char.IsLetterOrDigit(Current()))
+            while (IsIdentifierPart(Current()))
             {
                 Next();
             }
@@ -298,4 +298,10 @@ public sealed class Lexer
             _ => TokenKind.Identifier
         };
     }
+
+    private static bool IsIdentifierStart(char c) =>
+        char.IsLetter(c) || c == '_';
+
+    private static bool IsIdentifierPart(char c) =>
+        char.IsLetterOrDigit(c) || c == '_';
 }

@@ -25,6 +25,7 @@ interoperable with existing C# code.
 
 - Statement terminators are optional; newlines end statements by default.
 - Semicolons are permitted as explicit separators (useful inside blocks).
+- Identifiers may include underscores (`_`) and may start with `_`.
 
 ---
 
