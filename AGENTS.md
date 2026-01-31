@@ -106,6 +106,7 @@ Follow the existing conventions visible in the C# files.
 - Keep tests small and focused on a single behavior.
 - Prefer Arrange/Act/Assert separation with blank lines.
 - Use `Assert.*` rather than custom assertion helpers unless repeated.
+- Test files are prefixed by step/sub-step (e.g., `02_10_PrecedenceTests.cs`) to map coverage to the roadmap.
 
 ### Logging and output
 - CLI output: user-facing messages to `Console.WriteLine`.
@@ -132,7 +133,7 @@ See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, a
 
 ### Current progress
 - Step 1 (Pipeline base): complete
-- Step 2 (Core syntax): not started
+- Step 2 (Core syntax): complete
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file

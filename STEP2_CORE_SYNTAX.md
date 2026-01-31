@@ -66,4 +66,4 @@ Goal: add core language constructs (numbers, variables, assignments, blocks, and
     - Success and failure cases covered for literals, assignments, and blocks.
 
 ## Status
-- Steps 1-12: not started
+- Steps 1-12: complete
