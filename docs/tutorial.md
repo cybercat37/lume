@@ -784,12 +784,13 @@ numbers.each(fn(x) { sum = sum + x })
 
 ## 15. Implementation Status (Summary)
 
-### ✅ Implemented (Steps 1-7)
+### ✅ Implemented (Steps 1-10)
 
 - Base Lexer and Parser
 - Variables (`let`, `let mut`)
 - Primitive types (`Int`, `Bool`, `String`)
-- Operators (arithmetic, logical, comparison)
+- Arithmetic operators (`+`, `-`, `*`, `/`)
+- Unary operators (`-`, `+`)
 - Blocks and scope
 - Comments (planned, not yet implemented)
 - String escape sequences
@@ -797,7 +798,9 @@ numbers.each(fn(x) { sum = sum + x })
 - Base type checking
 - Interpreter runtime
 - Code generation (C# emission)
-- Some builtin functions (`print`, `println`, `input`)
+- Builtin functions (`print`, `println`, `input`, `len`, `abs`, `min`, `max`)
+- CLI commands (`check`, `build`, `run`)
+- Test infrastructure (golden files, diagnostic snapshots)
 
 ### 🔜 Planned
 

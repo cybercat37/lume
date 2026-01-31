@@ -104,3 +104,4 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 7: complete (see `STEP7_CODEGEN.md`)
 - Step 8: complete (see `STEP8_STDLIB.md`)
 - Step 9: complete (see `STEP9_CLI_UX.md`)
+- Step 10: complete (see `STEP10_TEST_HARDENING.md`)

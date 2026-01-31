@@ -28,6 +28,18 @@ public sealed class Binder
         return new BinderResult(new BoundProgram(statements), allDiagnostics);
     }
 
+    public BinderResult BindCached(SyntaxTree syntaxTree, BindingCache cache)
+    {
+        if (cache.TryGet(syntaxTree, out var cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        var result = Bind(syntaxTree);
+        cache.Store(syntaxTree, result);
+        return result;
+    }
+
     private BoundStatement BindStatement(StatementSyntax statement)
     {
         switch (statement)

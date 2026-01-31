@@ -1,4 +1,4 @@
-# Lume Language Specification (v0.1 – Draft)
+# Lume Language Specification (v0.2 – Draft)
 
 Lume is a modern, Gleam-inspired programming language designed for .NET.
 It takes inspiration from Gleam's elegant approach to error handling and
@@ -392,4 +392,4 @@ let result = par compute(data)?
 
 ---
 
-Status: Draft v0.1
+Status: Draft v0.2

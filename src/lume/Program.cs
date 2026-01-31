@@ -7,7 +7,7 @@ public class Program
 {
     public static int Main(string[] args)
     {
-        const string usage = "Usage: lume <build|run|check> <file.lume> [--out <dir>] [--quiet] [--verbose]";
+        const string usage = "Usage: lume <build|run|check> <file.lume> [--out <dir>] [--quiet] [--verbose] [--cache]";
 
         if (args.Length == 1)
         {
@@ -43,6 +43,7 @@ public class Program
         var outputDir = "out";
         var quiet = false;
         var verbose = false;
+        var useCache = false;
 
         for (var i = 2; i < args.Length; i++)
         {
@@ -78,6 +79,12 @@ public class Program
                 continue;
             }
 
+            if (argument == "--cache")
+            {
+                useCache = true;
+                continue;
+            }
+
             Console.Error.WriteLine(usage);
             return 1;
         }
@@ -97,7 +104,9 @@ public class Program
         var source = File.ReadAllText(inputPath);
 
         var compiler = new CompilerDriver();
-        var result = compiler.Compile(source, inputPath);
+        var result = useCache
+            ? compiler.CompileCached(source, inputPath, new CompilerCache())
+            : compiler.Compile(source, inputPath);
 
         if (!result.Success)
         {

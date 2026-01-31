@@ -45,7 +45,7 @@ print counter
 
 ## Status
 
-**In Development** — Steps 1-9 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available.
+**In Development** — Steps 1-10 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots.
 
 ### Currently Implemented ✅
 
@@ -63,6 +63,7 @@ print counter
 - Code generation (emits C#)
 - Builtin functions: `print`, `println`, `input`, `len`, `abs`, `min`, `max`
 - CLI commands: `check`, `build`, `run` with options
+- Test infrastructure: golden files and diagnostic snapshots
 
 ### Coming Soon 🔜
 
@@ -124,8 +125,13 @@ dotnet run --project src/lume -- build path/to/file.lume
 - `--out <dir>` — Override output directory (default: `out`)
 - `--quiet` — Suppress non-error output
 - `--verbose` — Include extra context
+- `--cache` — Enable compilation cache for repeated builds
 - `--help` or `-h` — Show usage information
 - `--version` — Show version
+
+### Performance Notes
+
+You can use `--cache` during `check`, `build`, or `run` to reuse parse/bind/emit work in the same process.
 
 ### Run Tests
 
@@ -160,7 +166,7 @@ The implementation follows a 12-step roadmap:
 7. ✅ **Code Generation v1** — C# code emission
 8. ✅ **Standard Library** — Basic builtins (`print`, `println`, `input`, `len`, `abs`, `min`, `max`)
 9. ✅ **CLI UX** — Commands `check`, `build`, `run` with options (`--out`, `--quiet`, `--verbose`, `--help`, `--version`)
-10. 🔜 **Test Hardening** — Golden files, fuzzing
+10. ✅ **Test Hardening** — Golden files for codegen, snapshot tests for diagnostics
 11. 🔜 **Performance** — Incremental compilation, caching
 12. 🔜 **Tooling** — Packaging, distribution, CI
 

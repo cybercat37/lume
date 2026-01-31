@@ -22,6 +22,7 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 - `dotnet run --project src/lume -- build path/to/file.lume`
 - `dotnet run --project src/lume -- run path/to/file.lume`
 - `dotnet run --project src/lume -- check path/to/file.lume`
+- `dotnet run --project src/lume -- check path/to/file.lume --cache`
 - `make compile FILE=path/to/file.lume`
 - `make run FILE=path/to/file.lume`
 

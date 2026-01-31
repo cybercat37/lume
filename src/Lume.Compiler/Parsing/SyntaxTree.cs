@@ -42,4 +42,16 @@ public sealed class SyntaxTree
 
         return new SyntaxTree(sourceText, root, diagnostics);
     }
+
+    public static SyntaxTree ParseCached(SourceText sourceText, SyntaxTreeCache cache)
+    {
+        if (cache.TryGet(sourceText.Text, out var cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        var tree = Parse(sourceText);
+        cache.Store(sourceText.Text, tree);
+        return tree;
+    }
 }

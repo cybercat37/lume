@@ -27,6 +27,18 @@ public sealed class Emitter
         return builder.ToString();
     }
 
+    public string EmitCached(BoundProgram program, EmitCache cache)
+    {
+        if (cache.TryGet(program, out var cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        var code = Emit(program);
+        cache.Store(program, code);
+        return code;
+    }
+
     private static void WriteStatement(IndentedWriter writer, BoundStatement statement)
     {
         switch (statement)
