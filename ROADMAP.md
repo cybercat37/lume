@@ -92,4 +92,4 @@ Each step is meant to be completed sequentially and validated with tests.
 ## Current progress
 - Step 1: complete (see `STEP1_PIPELINE.md`)
 - Step 2: complete (see `STEP2_CORE_SYNTAX.md`)
-- Step 3: not started (see `STEP3_PARSER_ROBUSTNESS.md`)
+- Step 3: complete (see `STEP3_PARSER_ROBUSTNESS.md`)

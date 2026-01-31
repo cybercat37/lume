@@ -64,4 +64,4 @@ Goal: improve parser resilience with recovery, clearer diagnostics, and consiste
     - Tests verify parsing continues after errors.
 
 ## Status
-- Steps 1-12: not started
+- Steps 1-12: complete
