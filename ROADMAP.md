@@ -40,6 +40,7 @@ Each step is meant to be completed sequentially and validated with tests.
    - Type checker enforces rules for literals and assignments.
    - Implicit conversions are explicit in diagnostics.
    - Tests cover valid/invalid type scenarios.
+   - See `STEP5_TYPE_SYSTEM.md` for the 12 sub-steps.
 
 6) Interpreter runtime
    Execute AST directly for fast feedback and feature validation.
@@ -95,3 +96,4 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 2: complete (see `STEP2_CORE_SYNTAX.md`)
 - Step 3: complete (see `STEP3_PARSER_ROBUSTNESS.md`)
 - Step 4: complete (see `STEP4_BINDING_SCOPE.md`)
+- Step 5: not started (see `STEP5_TYPE_SYSTEM.md`)

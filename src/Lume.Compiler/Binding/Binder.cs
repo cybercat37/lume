@@ -37,7 +37,7 @@ public sealed class Binder
             case ExpressionStatementSyntax expressionStatement:
                 return new BoundExpressionStatement(BindExpression(expressionStatement.Expression));
             default:
-                return new BoundExpressionStatement(new BoundLiteralExpression(null));
+                return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Error));
         }
     }
 
@@ -60,9 +60,12 @@ public sealed class Binder
     {
         var name = declaration.IdentifierToken.Text;
         var isMutable = declaration.MutKeyword is not null;
+        var initializer = BindExpression(declaration.Initializer);
+        var type = initializer.Type;
+
         if (!string.IsNullOrEmpty(name))
         {
-            var symbol = new VariableSymbol(name, isMutable);
+            var symbol = new VariableSymbol(name, isMutable, type);
 
             if (!scope.TryDeclare(symbol))
             {
@@ -73,8 +76,7 @@ public sealed class Binder
             }
         }
 
-        var initializer = BindExpression(declaration.Initializer);
-        var declaredSymbol = scope.TryLookup(name) ?? new VariableSymbol(name, isMutable);
+        var declaredSymbol = scope.TryLookup(name) ?? new VariableSymbol(name, isMutable, type);
         return new BoundVariableDeclaration(declaredSymbol, initializer);
     }
 
@@ -83,22 +85,81 @@ public sealed class Binder
         switch (expression)
         {
             case LiteralExpressionSyntax literal:
-                return new BoundLiteralExpression(literal.LiteralToken.Value);
+                return BindLiteralExpression(literal);
             case NameExpressionSyntax name:
                 return BindNameExpression(name);
             case AssignmentExpressionSyntax assignment:
                 return BindAssignmentExpression(assignment);
             case BinaryExpressionSyntax binary:
-                return new BoundBinaryExpression(
-                    BindExpression(binary.Left),
-                    BindExpression(binary.Right));
+                return BindBinaryExpression(binary);
             case UnaryExpressionSyntax unary:
-                return new BoundUnaryExpression(BindExpression(unary.Operand));
+                return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
                 return BindExpression(parenthesized.Expression);
             default:
-                return new BoundLiteralExpression(null);
+                return new BoundLiteralExpression(null, TypeSymbol.Error);
         }
+    }
+
+    private BoundExpression BindLiteralExpression(LiteralExpressionSyntax literal)
+    {
+        var value = literal.LiteralToken.Value;
+        if (value is int)
+        {
+            return new BoundLiteralExpression(value, TypeSymbol.Int);
+        }
+
+        if (value is bool)
+        {
+            return new BoundLiteralExpression(value, TypeSymbol.Bool);
+        }
+
+        if (value is string)
+        {
+            return new BoundLiteralExpression(value, TypeSymbol.String);
+        }
+
+        return new BoundLiteralExpression(value, TypeSymbol.Error);
+    }
+
+    private BoundExpression BindBinaryExpression(BinaryExpressionSyntax binary)
+    {
+        var left = BindExpression(binary.Left);
+        var right = BindExpression(binary.Right);
+
+        if (left.Type == TypeSymbol.Int && right.Type == TypeSymbol.Int)
+        {
+            return new BoundBinaryExpression(left, binary.OperatorToken.Kind, right, TypeSymbol.Int);
+        }
+
+        if (left.Type != TypeSymbol.Error && right.Type != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                sourceText ?? new SourceText(string.Empty, string.Empty),
+                binary.OperatorToken.Span,
+                $"Operator '{binary.OperatorToken.Text}' is not defined for types '{left.Type}' and '{right.Type}'."));
+        }
+
+        return new BoundBinaryExpression(left, binary.OperatorToken.Kind, right, TypeSymbol.Error);
+    }
+
+    private BoundExpression BindUnaryExpression(UnaryExpressionSyntax unary)
+    {
+        var operand = BindExpression(unary.Operand);
+        if (operand.Type == TypeSymbol.Int)
+        {
+            return new BoundUnaryExpression(operand, unary.OperatorToken.Kind, TypeSymbol.Int);
+        }
+
+        if (operand.Type != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                sourceText ?? new SourceText(string.Empty, string.Empty),
+                unary.OperatorToken.Span,
+                $"Operator '{unary.OperatorToken.Text}' is not defined for type '{operand.Type}'."));
+        }
+
+        return new BoundUnaryExpression(operand, unary.OperatorToken.Kind, TypeSymbol.Error);
     }
 
     private BoundExpression BindNameExpression(NameExpressionSyntax nameExpression)
@@ -111,7 +172,7 @@ public sealed class Binder
                 sourceText ?? new SourceText(string.Empty, string.Empty),
                 nameExpression.IdentifierToken.Span,
                 $"Undefined variable '{name}'."));
-            return new BoundLiteralExpression(null);
+            return new BoundLiteralExpression(null, TypeSymbol.Error);
         }
 
         return new BoundNameExpression(symbol);
@@ -140,6 +201,14 @@ public sealed class Binder
         }
 
         var boundExpression = BindExpression(assignment.Expression);
+        if (boundExpression.Type != symbol.Type && boundExpression.Type != TypeSymbol.Error && symbol.Type != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                sourceText ?? new SourceText(string.Empty, string.Empty),
+                assignment.IdentifierToken.Span,
+                $"Cannot assign expression of type '{boundExpression.Type}' to variable of type '{symbol.Type}'."));
+        }
+
         return new BoundAssignmentExpression(symbol, boundExpression);
     }
 }
