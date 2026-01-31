@@ -2,7 +2,7 @@ using Lume.Compiler.Parsing;
 using Lume.Compiler.Syntax;
 using Lume.Compiler.Text;
 
-public class ParserExpressionTests
+public class LiteralExpressionTests
 {
     [Fact]
     public void Numeric_literal_parses_as_literal_expression()

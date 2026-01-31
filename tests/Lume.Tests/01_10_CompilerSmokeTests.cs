@@ -1,5 +1,4 @@
 using Lume.Compiler;
-using Xunit;
 
 public class CompilerSmokeTests
 {

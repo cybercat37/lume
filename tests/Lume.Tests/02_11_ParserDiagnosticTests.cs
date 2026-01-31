@@ -1,7 +1,7 @@
 using Lume.Compiler.Parsing;
 using Lume.Compiler.Text;
 
-public class ParserMissingParenTests
+public class ParserDiagnosticTests
 {
     [Fact]
     public void Missing_close_paren_produces_diagnostic()

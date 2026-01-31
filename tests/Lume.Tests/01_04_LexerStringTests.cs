@@ -1,7 +1,7 @@
 using Lume.Compiler.Lexing;
 using Lume.Compiler.Text;
 
-public class LexerTests
+public class LexerStringTests
 {
     [Fact]
     public void String_literal_is_tokenized()

@@ -1,7 +1,7 @@
 using Lume.Compiler.Lexing;
 using Lume.Compiler.Text;
 
-public class LexerPunctuationTests
+public class PunctuationLexerTests
 {
     [Fact]
     public void Punctuation_tokens_are_lexed()

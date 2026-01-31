@@ -2,7 +2,7 @@ using Lume.Compiler.Parsing;
 using Lume.Compiler.Syntax;
 using Lume.Compiler.Text;
 
-public class ParserTests
+public class ParserPrintTests
 {
     [Fact]
     public void Print_statement_builds_ast()

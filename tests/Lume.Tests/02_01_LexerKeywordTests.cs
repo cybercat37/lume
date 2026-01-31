@@ -1,12 +1,12 @@
 using Lume.Compiler.Lexing;
 using Lume.Compiler.Text;
 
-public class LexerNumberTests
+public class LexerKeywordTests
 {
     [Fact]
-    public void Number_literal_is_tokenized()
+    public void Boolean_keywords_are_tokenized()
     {
-        var sourceText = new SourceText("print 123", "test.lume");
+        var sourceText = new SourceText("print true", "test.lume");
         var lexer = new Lexer(sourceText);
 
         var tokens = new List<SyntaxToken>();
@@ -18,8 +18,7 @@ public class LexerNumberTests
         } while (token.Kind != TokenKind.EndOfFile);
 
         Assert.Equal(TokenKind.PrintKeyword, tokens[0].Kind);
-        Assert.Equal(TokenKind.NumberLiteral, tokens[1].Kind);
-        Assert.Equal(123, tokens[1].Value);
+        Assert.Equal(TokenKind.TrueKeyword, tokens[1].Kind);
         Assert.Equal(TokenKind.EndOfFile, tokens[^1].Kind);
     }
 }
