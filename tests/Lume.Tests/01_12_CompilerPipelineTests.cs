@@ -13,7 +13,7 @@ public class CompilerPipelineTests
         Assert.Empty(result.Diagnostics);
         Assert.Contains("Console.WriteLine(\"hello\");", result.GeneratedCode);
 
-        var statement = Assert.IsType<PrintStatementSyntax>(result.SyntaxTree.Root.Statement);
+        var statement = Assert.IsType<PrintStatementSyntax>(result.SyntaxTree.Root.Statements.Single());
         var literal = Assert.IsType<LiteralExpressionSyntax>(statement.Expression);
         Assert.Equal("hello", literal.LiteralToken.Value);
     }

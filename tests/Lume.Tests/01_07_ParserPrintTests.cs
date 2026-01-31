@@ -10,7 +10,7 @@ public class ParserPrintTests
         var sourceText = new SourceText("print \"hello\"", "test.lume");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 
-        var statement = Assert.IsType<PrintStatementSyntax>(syntaxTree.Root.Statement);
+        var statement = Assert.IsType<PrintStatementSyntax>(syntaxTree.Root.Statements.Single());
         var literal = Assert.IsType<LiteralExpressionSyntax>(statement.Expression);
 
         Assert.Equal("hello", literal.LiteralToken.Value);

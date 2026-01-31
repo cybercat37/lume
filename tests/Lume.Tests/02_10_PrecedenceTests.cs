@@ -11,7 +11,7 @@ public class PrecedenceTests
         var sourceText = new SourceText("print 1 + 2 * 3", "test.lume");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 
-        var statement = Assert.IsType<PrintStatementSyntax>(syntaxTree.Root.Statement);
+        var statement = Assert.IsType<PrintStatementSyntax>(syntaxTree.Root.Statements.Single());
         var addition = Assert.IsType<BinaryExpressionSyntax>(statement.Expression);
 
         Assert.Equal(TokenKind.Plus, addition.OperatorToken.Kind);
@@ -26,7 +26,7 @@ public class PrecedenceTests
         var sourceText = new SourceText("print -1 * 2", "test.lume");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 
-        var statement = Assert.IsType<PrintStatementSyntax>(syntaxTree.Root.Statement);
+        var statement = Assert.IsType<PrintStatementSyntax>(syntaxTree.Root.Statements.Single());
         var multiply = Assert.IsType<BinaryExpressionSyntax>(statement.Expression);
 
         Assert.Equal(TokenKind.Star, multiply.OperatorToken.Kind);

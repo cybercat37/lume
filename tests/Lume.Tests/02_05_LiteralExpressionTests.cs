@@ -10,7 +10,7 @@ public class LiteralExpressionTests
         var sourceText = new SourceText("print 42", "test.lume");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 
-        var statement = Assert.IsType<PrintStatementSyntax>(syntaxTree.Root.Statement);
+        var statement = Assert.IsType<PrintStatementSyntax>(syntaxTree.Root.Statements.Single());
         var literal = Assert.IsType<LiteralExpressionSyntax>(statement.Expression);
 
         Assert.Equal(42, literal.LiteralToken.Value);

@@ -24,10 +24,29 @@ public sealed class Parser
     public CompilationUnitSyntax ParseCompilationUnit()
     {
         ConsumeSeparators();
-        var statement = ParseStatement();
-        ConsumeSeparators();
+        var statements = new List<StatementSyntax>();
+        if (Current().Kind == TokenKind.EndOfFile)
+        {
+            diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, "Expected statement."));
+        }
+        else
+        {
+            while (Current().Kind != TokenKind.EndOfFile)
+            {
+                var start = position;
+                var statement = ParseStatement();
+                statements.Add(statement);
+                ConsumeSeparators();
+
+                if (position == start)
+                {
+                    NextToken();
+                }
+            }
+        }
+
         var endOfFileToken = MatchToken(TokenKind.EndOfFile, "end of file");
-        return new CompilationUnitSyntax(statement, endOfFileToken);
+        return new CompilationUnitSyntax(statements, endOfFileToken);
     }
 
     private StatementSyntax ParseStatement()

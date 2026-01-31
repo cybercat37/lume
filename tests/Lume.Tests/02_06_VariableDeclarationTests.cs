@@ -10,7 +10,7 @@ public class VariableDeclarationTests
         var sourceText = new SourceText("let x = 1", "test.lume");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 
-        var statement = Assert.IsType<VariableDeclarationSyntax>(syntaxTree.Root.Statement);
+        var statement = Assert.IsType<VariableDeclarationSyntax>(syntaxTree.Root.Statements.Single());
 
         Assert.Equal("x", statement.IdentifierToken.Text);
         Assert.Empty(syntaxTree.Diagnostics);
@@ -22,7 +22,7 @@ public class VariableDeclarationTests
         var sourceText = new SourceText("let mut x = 1", "test.lume");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 
-        var statement = Assert.IsType<VariableDeclarationSyntax>(syntaxTree.Root.Statement);
+        var statement = Assert.IsType<VariableDeclarationSyntax>(syntaxTree.Root.Statements.Single());
 
         Assert.Equal("x", statement.IdentifierToken.Text);
         Assert.Empty(syntaxTree.Diagnostics);

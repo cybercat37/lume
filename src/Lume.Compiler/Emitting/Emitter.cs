@@ -7,9 +7,7 @@ public sealed class Emitter
 {
     public string Emit(CompilationUnitSyntax root)
     {
-        var statement = root.Statement as PrintStatementSyntax;
-        var expression = statement?.Expression;
-        var expressionText = RenderLiteralExpression(expression);
+        var statements = root.Statements;
 
         var builder = new StringBuilder();
         builder.AppendLine("using System;");
@@ -18,7 +16,16 @@ public sealed class Emitter
         builder.AppendLine("{");
         builder.AppendLine("    static void Main()");
         builder.AppendLine("    {");
-        builder.AppendLine($"        Console.WriteLine({expressionText});");
+        foreach (var statement in statements)
+        {
+            if (statement is not PrintStatementSyntax printStatement)
+            {
+                continue;
+            }
+
+            var expressionText = RenderLiteralExpression(printStatement.Expression);
+            builder.AppendLine($"        Console.WriteLine({expressionText});");
+        }
         builder.AppendLine("    }");
         builder.AppendLine("}");
 

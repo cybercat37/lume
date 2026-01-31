@@ -10,7 +10,7 @@ public class BlockStatementTests
         var sourceText = new SourceText("{ print \"a\"; print \"b\"; }", "test.lume");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 
-        var block = Assert.IsType<BlockStatementSyntax>(syntaxTree.Root.Statement);
+        var block = Assert.IsType<BlockStatementSyntax>(syntaxTree.Root.Statements.Single());
 
         Assert.Equal(2, block.Statements.Count);
         Assert.Empty(syntaxTree.Diagnostics);
@@ -27,7 +27,7 @@ print ""b""
 ", "test.lume");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 
-        var block = Assert.IsType<BlockStatementSyntax>(syntaxTree.Root.Statement);
+        var block = Assert.IsType<BlockStatementSyntax>(syntaxTree.Root.Statements.Single());
 
         Assert.Equal(2, block.Statements.Count);
         Assert.Empty(syntaxTree.Diagnostics);
