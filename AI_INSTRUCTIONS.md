@@ -31,7 +31,6 @@ This file provides guidance for AI assistants working on this repository.
 - Semicolons allowed as explicit separators.
 - Errors should surface via diagnostics (not exceptions).
 - `match` v1 supports literals, `_`, identifiers, and tuples.
-- Comments are intentionally not part of the language.
 
 ## Tests and docs
 - Keep tests small and focused on a single behavior.

@@ -194,22 +194,7 @@ let x = 10
 
 ---
 
-### 2.5 Comments
-
-```axom
-// Single-line comment
-
-/* Multi-line
-   comment */
-
-// Comments are not nested
-```
-
-**Status**: 🔜 Planned (`//` and `/* */` not yet implemented)
-
----
-
-### 2.6 Intent Annotations
+### 2.5 Intent Annotations
 
 Intent annotations are built-in attributes used for diagnostics and documentation.
 
@@ -229,7 +214,7 @@ Annotations have no runtime effect. Tooling may warn if intent does not match in
 
 ---
 
-### 2.7 String Literals and Escape Sequences
+### 2.6 String Literals and Escape Sequences
 
 ```axom
 let newline = "line1\nline2"

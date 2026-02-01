@@ -72,7 +72,6 @@ This section captures agreed design choices to guide implementation.
 - Result error variant is `Error`; default error type is `String` for now.
 
 ### Comments & Docs
-- Comments are intentionally not part of the language.
 - Doc comments use `///` with Markdown; doc tooling later.
 
 ### Intent Annotations (Planned)

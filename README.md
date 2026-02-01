@@ -1,6 +1,6 @@
 # Axom
 
-A modern, Gleam-inspired programming language with native .NET interoperability.
+A modern programming language with native .NET interoperability.
 
 ## Overview
 
@@ -105,7 +105,6 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Modules and imports
 - Structured concurrency
 - String interpolation
-- Comments (`//`, `/* */`)
 
 ## Building and Running
 
