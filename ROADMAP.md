@@ -1,6 +1,6 @@
-# Lume Roadmap (14 Main Steps)
+# Axom Roadmap (14 Main Steps)
 
-This roadmap defines the major milestones for building the Lume compiler/runtime/CLI.
+This roadmap defines the major milestones for building the Axom compiler/runtime/CLI.
 Each step is meant to be completed sequentially and validated with tests.
 
 1) Pipeline base

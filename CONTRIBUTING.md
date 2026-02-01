@@ -1,6 +1,6 @@
-# Contributing to Lume
+# Contributing to Axom
 
-Thank you for your interest in contributing to Lume! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Axom! This document provides guidelines and information for contributors.
 
 ## How to Contribute
 

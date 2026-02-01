@@ -1,0 +1,34 @@
+namespace Axom.Compiler.Lexing;
+
+public enum TokenKind
+{
+    BadToken,
+    EndOfFile,
+    NewLine,
+    Identifier,
+    PrintKeyword,
+    PrintlnKeyword,
+    InputKeyword,
+    LetKeyword,
+    MutKeyword,
+    FnKeyword,
+    ReturnKeyword,
+    TrueKeyword,
+    FalseKeyword,
+    NumberLiteral,
+    StringLiteral,
+    EqualsToken,
+    Arrow,
+    ArrowType,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Comma,
+    Colon,
+    OpenParen,
+    CloseParen,
+    OpenBrace,
+    CloseBrace,
+    Semicolon
+}

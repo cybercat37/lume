@@ -1,16 +1,16 @@
 # AGENTS.md
 
-This repository is a .NET 8 solution for the Lume compiler/runtime/CLI.
+This repository is a .NET 8 solution for the Axom compiler/runtime/CLI.
 Use this guide for consistent commands and code style when working here.
 
 See `AI_INSTRUCTIONS.md` for AI-specific workflow guidance.
 
 ## Repository layout
-- `Lume.sln` is the solution root.
-- `src/Lume.Compiler` holds compiler logic.
-- `src/Lume.Runtime` holds runtime pieces.
-- `src/lume` is the CLI application.
-- `tests/Lume.Tests` contains xUnit tests.
+- `Axom.sln` is the solution root.
+- `src/Axom.Compiler` holds compiler logic.
+- `src/Axom.Runtime` holds runtime pieces.
+- `src/axom` is the CLI application.
+- `tests/Axom.Tests` contains xUnit tests.
 
 ## Build, run, test
 Preferred entry points are the Makefile targets or `dotnet` commands.
@@ -18,32 +18,32 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 ### Build
 - `make build` (wraps `dotnet build`)
 - `dotnet build`
-- `dotnet build Lume.sln`
+- `dotnet build Axom.sln`
 
 ### Run the CLI
-- `dotnet run --project src/lume -- build path/to/file.lume`
-- `dotnet run --project src/lume -- run path/to/file.lume`
-- `dotnet run --project src/lume -- check path/to/file.lume`
-- `dotnet run --project src/lume -- check path/to/file.lume --cache`
-- `make compile FILE=path/to/file.lume`
-- `make run FILE=path/to/file.lume`
+- `dotnet run --project src/axom -- build path/to/file.axom`
+- `dotnet run --project src/axom -- run path/to/file.axom`
+- `dotnet run --project src/axom -- check path/to/file.axom`
+- `dotnet run --project src/axom -- check path/to/file.axom --cache`
+- `make compile FILE=path/to/file.axom`
+- `make run FILE=path/to/file.axom`
 
 ### Test
 - `make test` (wraps `dotnet test`)
 - `make test-hardening` (golden + snapshot tests)
 - `make test-pipeline` (runs `CompilerPipelineTests.Compile_print_string_generates_console_write`)
 - `dotnet test`
-- `dotnet test Lume.sln`
-- `dotnet test tests/Lume.Tests/Lume.Tests.csproj`
+- `dotnet test Axom.sln`
+- `dotnet test tests/Axom.Tests/Axom.Tests.csproj`
 
 ### Fuzz
 - `make fuzz` (short fuzz run)
-- `dotnet run --project tests/Lume.Fuzz -- --iterations 1000 --max-length 128 --seed 123`
+- `dotnet run --project tests/Axom.Fuzz -- --iterations 1000 --max-length 128 --seed 123`
 
 ### Tooling/Release
-- `dotnet pack src/lume -c Release`
-- `dotnet publish src/lume -c Release -o out/publish`
-- `dotnet nuget push src/lume/bin/Release/*.nupkg -k <API_KEY> -s https://api.nuget.org/v3/index.json`
+- `dotnet pack src/axom -c Release`
+- `dotnet publish src/axom -c Release -o out/publish`
+- `dotnet nuget push src/axom/bin/Release/*.nupkg -k <API_KEY> -s https://api.nuget.org/v3/index.json`
 
 ### CI
 - GitHub Actions workflow: `.github/workflows/ci.yml` runs build, tests, hardening, and fuzz.
@@ -52,11 +52,11 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 Use xUnit filters via `dotnet test --filter`.
 
 - Filter by fully qualified name (best signal):
-  - `dotnet test tests/Lume.Tests/Lume.Tests.csproj --filter "FullyQualifiedName~CompilerSmokeTests.Empty_source_produces_error"`
+  - `dotnet test tests/Axom.Tests/Axom.Tests.csproj --filter "FullyQualifiedName~CompilerSmokeTests.Empty_source_produces_error"`
 - Filter by class name:
-  - `dotnet test tests/Lume.Tests/Lume.Tests.csproj --filter "FullyQualifiedName~CompilerSmokeTests"`
+  - `dotnet test tests/Axom.Tests/Axom.Tests.csproj --filter "FullyQualifiedName~CompilerSmokeTests"`
 - Filter by method name:
-  - `dotnet test tests/Lume.Tests/Lume.Tests.csproj --filter "Name~Empty_source_produces_error"`
+  - `dotnet test tests/Axom.Tests/Axom.Tests.csproj --filter "Name~Empty_source_produces_error"`
 
 ### Lint/format
 No dedicated lint/format command is configured in this repo.
@@ -78,7 +78,7 @@ Follow the existing conventions visible in the C# files.
 - Implicit usings are enabled (`<ImplicitUsings>enable</ImplicitUsings>`).
 
 ### Files, namespaces, and layout
-- Use file-scoped namespaces: `namespace Lume.Compiler;`.
+- Use file-scoped namespaces: `namespace Axom.Compiler;`.
 - Keep one public type per file when practical.
 - Match file names to type names (e.g., `CompilerDriver` in `CompilerDriver.cs`).
 - Use Unix line endings and 4-space indentation.

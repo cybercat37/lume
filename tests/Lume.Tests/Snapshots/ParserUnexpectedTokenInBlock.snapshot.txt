@@ -1,2 +1,0 @@
-test.lume(2,1): Error: Expected statement, found ')'.
-test.lume(2,1): Error: Expected statement, found ')'.

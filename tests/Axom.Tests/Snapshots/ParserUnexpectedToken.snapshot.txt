@@ -1,0 +1,2 @@
+test.axom(1,6): Error: Expected expression, found 'EndOfFile'.
+test.axom(1,6): Error: Expected expression, found 'EndOfFile'.

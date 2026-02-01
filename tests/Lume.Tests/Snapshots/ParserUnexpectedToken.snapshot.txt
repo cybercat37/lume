@@ -1,2 +1,0 @@
-test.lume(1,6): Error: Expected expression, found 'EndOfFile'.
-test.lume(1,6): Error: Expected expression, found 'EndOfFile'.

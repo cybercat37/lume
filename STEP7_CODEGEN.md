@@ -50,7 +50,7 @@ Goal: generate robust C# output from the bound program with correct semantics.
 10) CLI integration
     Ensure CLI uses new codegen path for build.
     DoD:
-    - `lume build` uses codegen output.
+    - `axom build` uses codegen output.
 
 11) Golden tests
     Add golden tests for codegen output.

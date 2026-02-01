@@ -1,10 +1,10 @@
-# Lume Language Specification (v0.2 – Draft)
+# Axom Language Specification (v0.2 – Draft)
 
-Lume is a modern, Gleam-inspired programming language designed for .NET.
+Axom is a modern, Gleam-inspired programming language designed for .NET.
 It takes inspiration from Gleam's elegant approach to error handling and
 concurrency, while providing native interoperability with the .NET ecosystem.
 
-Lume is a minimal, opinionated language focused on simplicity, explicit
+Axom is a minimal, opinionated language focused on simplicity, explicit
 error handling, and structured concurrency, while remaining fully
 interoperable with existing C# code.
 
@@ -158,7 +158,7 @@ String literals support the following escape sequences:
 
 ### 2.1 Result and Option
 
-Lume uses explicit types for failure:
+Axom uses explicit types for failure:
 
 - `Result<T, E> = Ok(T) | Error(E)`
 - `Option<T> = Some(T) | None`
@@ -178,7 +178,7 @@ For Result:
 
 Example:
 
-```lume
+```axom
 pub fn load(id: Int) -> Result<User, Err> {
   let raw = db.get(id)?
   Ok(parse(raw)?)
@@ -194,7 +194,7 @@ pub fn load(id: Int) -> Result<User, Err> {
 - Non-exhaustive matches are compile-time errors
 - Works on Result, Option, and sum types
 
-```lume
+```axom
 let message = match result {
   Ok(value) -> f"Got: {value}"
   Error(e) -> f"Error: {e}"
@@ -205,11 +205,11 @@ let message = match result {
 
 ### 2.4 .NET Exception Interop
 
-Lume does not expose try/catch in the core language.
+Axom does not expose try/catch in the core language.
 
 Interop with .NET exceptions is explicit via runtime helpers:
 
-```lume
+```axom
 let x = DotNet.try(() => SomeApi.Call())?
 ```
 
@@ -219,7 +219,7 @@ let x = DotNet.try(() => SomeApi.Call())?
 
 ### 3.1 No Traditional Control Structures
 
-Lume intentionally omits `if`, `else`, `while`, `for`, and `loop`.
+Axom intentionally omits `if`, `else`, `while`, `for`, and `loop`.
 
 This is a deliberate design choice to enforce:
 - Exhaustive handling via pattern matching
@@ -232,7 +232,7 @@ This is a deliberate design choice to enforce:
 
 All conditional logic uses `match`:
 
-```lume
+```axom
 let message = match x > 5 {
   true -> "large"
   false -> "small"
@@ -247,7 +247,7 @@ Pattern matching must be exhaustive. The compiler rejects non-exhaustive matches
 
 Custom iteration uses tail-recursive functions:
 
-```lume
+```axom
 fn countdown(n: Int) {
   match n {
     0 -> println "done"
@@ -267,7 +267,7 @@ The compiler optimizes tail calls to prevent stack overflow.
 
 For collections, use iterator combinators:
 
-```lume
+```axom
 // Iterate with side effects
 items.each(fn(x) { println x })
 
@@ -305,7 +305,7 @@ All bindings are immutable by default.
 
 ### 4.2 Local Mutability
 
-```lume
+```axom
 let mut x = 0
 x = x + 1
 ```
@@ -374,7 +374,7 @@ Fire-and-forget is intentionally impossible.
 
 ### 5.5 CPU Parallelism
 
-```lume
+```axom
 let result = par compute(data)?
 ```
 

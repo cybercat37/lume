@@ -8,10 +8,10 @@ Goal: introduce basic performance improvements and caching without changing lang
    - Document baseline commands.
 
 Baseline commands:
-- `dotnet run --project src/lume -- check hello.lume`
-- `dotnet run --project src/lume -- build hello.lume`
-- `dotnet run --project src/lume -- run hello.lume`
-- `dotnet test tests/Lume.Tests/Lume.Tests.csproj --filter "FullyQualifiedName~CompilerPipelineTests"`
+- `dotnet run --project src/axom -- check hello.axom`
+- `dotnet run --project src/axom -- build hello.axom`
+- `dotnet run --project src/axom -- run hello.axom`
+- `dotnet test tests/Axom.Tests/Axom.Tests.csproj --filter "FullyQualifiedName~CompilerPipelineTests"`
 
 2) Parser allocation review
    Identify hot allocations in lexer/parser.

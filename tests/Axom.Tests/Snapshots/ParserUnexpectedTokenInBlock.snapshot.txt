@@ -1,0 +1,2 @@
+test.axom(2,1): Error: Expected statement, found ')'.
+test.axom(2,1): Error: Expected statement, found ')'.

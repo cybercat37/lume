@@ -1,1 +1,0 @@
-test.lume(1,7): Error: Undefined variable 'x'.

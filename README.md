@@ -1,10 +1,10 @@
-# Lume
+# Axom
 
 A modern, Gleam-inspired programming language with native .NET interoperability.
 
 ## Overview
 
-Lume is a minimal, opinionated language for .NET focused on simplicity, explicit error handling, and structured concurrency, while remaining fully interoperable with existing C# code.
+Axom is a minimal, opinionated language for .NET focused on simplicity, explicit error handling, and structured concurrency, while remaining fully interoperable with existing C# code.
 
 ## Core Principles
 
@@ -19,23 +19,23 @@ Lume is a minimal, opinionated language for .NET focused on simplicity, explicit
 
 ### Hello World
 
-```lume
-print "Hello, Lume!"
+```axom
+print "Hello, Axom!"
 ```
 
 Run it:
 
 ```bash
-make run FILE=hello.lume
+make run FILE=hello.axom
 # or
-dotnet run --project src/lume -- run hello.lume
+dotnet run --project src/axom -- run hello.axom
 ```
 
 ### Example Programs
 
 **Functions and lambdas**
 
-```lume
+```axom
 fn add(x: Int, y: Int) => x + y
 
 let inc = fn(x: Int) => x + 1
@@ -45,14 +45,14 @@ print inc(2)
 
 **Input and string helpers**
 
-```lume
+```axom
 let name = input()
 print len(name)
 ```
 
 **Arithmetic utilities**
 
-```lume
+```axom
 print abs(-10)
 print min(3, 7)
 print max(3, 7)
@@ -113,18 +113,18 @@ make build
 dotnet build
 ```
 
-### Run a Lume Program
+### Run a Axom Program
 
 ```bash
-make run FILE=path/to/file.lume
+make run FILE=path/to/file.axom
 # or
-dotnet run --project src/lume -- run path/to/file.lume
+dotnet run --project src/axom -- run path/to/file.axom
 ```
 
-### Check a Lume Program
+### Check a Axom Program
 
 ```bash
-dotnet run --project src/lume -- check path/to/file.lume
+dotnet run --project src/axom -- check path/to/file.axom
 ```
 
 Validates the source code without generating output files.
@@ -132,9 +132,9 @@ Validates the source code without generating output files.
 ### Compile to C#
 
 ```bash
-make compile FILE=path/to/file.lume
+make compile FILE=path/to/file.axom
 # or
-dotnet run --project src/lume -- build path/to/file.lume
+dotnet run --project src/axom -- build path/to/file.axom
 ```
 
 ### CLI Options
@@ -161,27 +161,27 @@ dotnet test
 ### Install CLI (dotnet tool)
 
 ```bash
-dotnet tool install -g Lume.Cli
+dotnet tool install -g Axom.CLi
 # or (local tool manifest)
 dotnet new tool-manifest
-dotnet tool install --local Lume.Cli
+dotnet tool install --local Axom.CLi
 ```
 
 ### Shell Completions
 
-- Bash: `source docs/completions/lume.bash`
+- Bash: `source docs/completions/axom.bash`
 - Zsh: `autoload -U compinit && compinit` then `fpath+=($PWD/docs/completions)`
-- PowerShell: `. $PWD/docs/completions/lume.ps1`
+- PowerShell: `. $PWD/docs/completions/axom.ps1`
 
 ### Golden/Snapshot Updates
 
-Golden and snapshot files live under `tests/Lume.Tests/Golden` and `tests/Lume.Tests/Snapshots`.
+Golden and snapshot files live under `tests/Axom.Tests/Golden` and `tests/Axom.Tests/Snapshots`.
 To update them, run the relevant tests, then replace the `.golden.cs` or `.snapshot.txt`
 files with the new expected output.
 
 ## Documentation
 
-- **[Language Tutorial](docs/tutorial.md)** — Learn Lume with examples
+- **[Language Tutorial](docs/tutorial.md)** — Learn Axom with examples
 - **[Language Specification](docs/spec.md)** — Complete language reference
 - **[Roadmap](ROADMAP.md)** — Implementation progress and plans
 
@@ -208,7 +208,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed progress.
 
 ### No Traditional Control Flow
 
-Lume intentionally omits `if`, `while`, `for`, and `loop`. Instead:
+Axom intentionally omits `if`, `while`, `for`, and `loop`. Instead:
 
 - **Pattern matching** with `match` for all branching
 - **Tail recursion** for custom iteration
@@ -216,7 +216,7 @@ Lume intentionally omits `if`, `while`, `for`, and `loop`. Instead:
 
 ### Explicit Error Handling
 
-```lume
+```axom
 // Planned syntax
 pub fn load(id: Int) -> Result<User, String> {
   let raw = db.get(id)?
@@ -228,7 +228,7 @@ Errors are values (`Result`/`Option`), not exceptions.
 
 ### Immutability by Default
 
-```lume
+```axom
 let x = 10        // Immutable
 let mut y = 20    // Mutable (scope-local only)
 y = y + 1
@@ -236,7 +236,7 @@ y = y + 1
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines on how to contribute to Lume.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines on how to contribute to Axom.
 
 ## License
 

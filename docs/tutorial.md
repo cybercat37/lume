@@ -1,6 +1,6 @@
-# Lume Tutorial
+# Axom Tutorial
 
-Concise tutorial for experienced developers who want to learn Lume quickly.
+Concise tutorial for experienced developers who want to learn Axom quickly.
 
 > **Status note**: This tutorial covers all language features as per the specification. Implemented features are marked with ✅, planned ones with 🔜.
 
@@ -10,30 +10,30 @@ Concise tutorial for experienced developers who want to learn Lume quickly.
 
 ### Hello World
 
-```lume
-print "Hello, Lume!"
+```axom
+print "Hello, Axom!"
 ```
 
 Run the code:
 
 ```bash
 # With Makefile
-make run FILE=hello.lume
+make run FILE=hello.axom
 
 # Or with dotnet
-dotnet run --project src/lume -- run hello.lume
+dotnet run --project src/axom -- run hello.axom
 ```
 
 You can also validate without generating output:
 
 ```bash
-dotnet run --project src/lume -- check hello.lume
+dotnet run --project src/axom -- check hello.axom
 ```
 
 Build to C# without running:
 
 ```bash
-dotnet run --project src/lume -- build hello.lume
+dotnet run --project src/axom -- build hello.axom
 ```
 
 **Status**: ✅ Implemented
@@ -44,7 +44,7 @@ dotnet run --project src/lume -- build hello.lume
 
 **Functions and lambdas**
 
-```lume
+```axom
 fn add(x: Int, y: Int) => x + y
 
 let inc = fn(x: Int) => x + 1
@@ -54,14 +54,14 @@ print inc(2)
 
 **Input and string helpers**
 
-```lume
+```axom
 let name = input()
 print len(name)
 ```
 
 **Arithmetic utilities**
 
-```lume
+```axom
 print abs(-10)
 print min(3, 7)
 print max(3, 7)
@@ -69,7 +69,7 @@ print max(3, 7)
 
 **Mutable variable with block scope**
 
-```lume
+```axom
 let mut total = 0
 {
   let x = 10
@@ -89,15 +89,15 @@ print total
 
 Variables are immutable by default:
 
-```lume
+```axom
 let x = 42
-let name = "Lume"
+let name = "Axom"
 let is_active = true
 ```
 
 For mutable variables, use `let mut`:
 
-```lume
+```axom
 let mut counter = 0
 counter = counter + 1
 ```
@@ -122,7 +122,7 @@ counter = counter + 1
 
 #### Arithmetic
 
-```lume
+```axom
 let sum = 10 + 5
 let diff = 10 - 5
 let prod = 10 * 5
@@ -132,7 +132,7 @@ let rem = 10 % 3
 
 #### Comparison
 
-```lume
+```axom
 let eq = 5 == 5
 let ne = 5 != 3
 let lt = 3 < 5
@@ -143,7 +143,7 @@ let ge = 5 >= 3
 
 #### Logical
 
-```lume
+```axom
 let and = true && false
 let or = true || false
 let not = !false
@@ -151,7 +151,7 @@ let not = !false
 
 #### Strings
 
-```lume
+```axom
 let msg = "Hello" + " " + "World"
 ```
 
@@ -163,7 +163,7 @@ let msg = "Hello" + " " + "World"
 
 Blocks create local scopes:
 
-```lume
+```axom
 let x = 10
 {
   let y = 20
@@ -178,7 +178,7 @@ let x = 10
 
 ### 2.5 Comments
 
-```lume
+```axom
 // Single-line comment
 
 /* Multi-line
@@ -195,7 +195,7 @@ let x = 10
 
 Intent annotations are built-in attributes used for diagnostics and documentation.
 
-```lume
+```axom
 @intent("Validate and normalize inputs")
 {
   let name = input()
@@ -213,7 +213,7 @@ Annotations have no runtime effect. Tooling may warn if intent does not match in
 
 ### 2.7 String Literals and Escape Sequences
 
-```lume
+```axom
 let newline = "line1\nline2"
 let tab = "col1\tcol2"
 let quote = "He said \"Hello\""
@@ -228,7 +228,7 @@ let backslash = "path\\to\\file"
 
 ### 3.1 No If/While/For
 
-Lume **does not have** `if`, `else`, `while`, `for`, or `loop`. This is an intentional design choice.
+Axom **does not have** `if`, `else`, `while`, `for`, or `loop`. This is an intentional design choice.
 
 **Status**: 🔜 Design finalized, future implementation
 
@@ -238,7 +238,7 @@ Lume **does not have** `if`, `else`, `while`, `for`, or `loop`. This is an inten
 
 All control flow uses `match`:
 
-```lume
+```axom
 let message = match x > 5 {
   true -> "large"
   false -> "small"
@@ -247,7 +247,7 @@ let message = match x > 5 {
 
 Pattern matching must be exhaustive:
 
-```lume
+```axom
 let result = match value {
   Ok(x) -> f"Got: {x}"
   Error(e) -> f"Error: {e}"
@@ -262,7 +262,7 @@ let result = match value {
 
 For custom iteration, use tail-recursive functions:
 
-```lume
+```axom
 fn countdown(n: Int) {
   match n {
     0 -> println "done"
@@ -284,7 +284,7 @@ The compiler optimizes tail calls to prevent stack overflow.
 
 For collections, use iterator combinators:
 
-```lume
+```axom
 items.each(fn(x) { println x })
 
 let doubled = items.map(fn(x) { x * 2 })
@@ -304,7 +304,7 @@ range(1, 10).each(fn(i) { println i })
 
 ### 4.1 Basic Definition
 
-```lume
+```axom
 fn add(a: Int, b: Int) -> Int {
   a + b
 }
@@ -318,7 +318,7 @@ Return is implicit from the last expression. Explicit `return` is allowed for ea
 
 ### 4.2 Functions without Return Type
 
-```lume
+```axom
 fn greet(name: String) {
   println f"Hello, {name}!"
 }
@@ -332,14 +332,14 @@ Functions without a return type have type `Unit`.
 
 ### 4.3 Lambdas
 
-```lume
+```axom
 let double = fn(x: Int) => x * 2
 let result = double(5)
 ```
 
 Multi-line lambdas:
 
-```lume
+```axom
 let process = fn(x: Int) {
   let doubled = x * 2
   doubled + 1
@@ -352,7 +352,7 @@ let process = fn(x: Int) {
 
 ### 4.4 Top-level Statements
 
-```lume
+```axom
 let x = 10
 print x
 ```
@@ -367,7 +367,7 @@ print x
 
 ### 5.1 Records
 
-```lume
+```axom
 type User {
   name: String
   age: Int
@@ -383,7 +383,7 @@ let name = user.name
 
 ### 5.2 Sum Types (Enums with Payload)
 
-```lume
+```axom
 type Result<T, E> {
   Ok(T)
   Error(E)
@@ -399,7 +399,7 @@ let failure = Error("Something went wrong")
 
 ### 5.3 Generics
 
-```lume
+```axom
 fn identity<T>(x: T) -> T {
   x
 }
@@ -414,7 +414,7 @@ let str = identity("hello")
 
 ### 5.4 Tuples
 
-```lume
+```axom
 let pair = (1, "hello")
 let (x, y) = pair
 ```
@@ -427,9 +427,9 @@ let (x, y) = pair
 
 ### 6.1 Result and Option
 
-Lume uses explicit types for error handling:
+Axom uses explicit types for error handling:
 
-```lume
+```axom
 type Result<T, E> {
   Ok(T)
   Error(E)
@@ -451,7 +451,7 @@ Functions that may fail **must** return `Result` or `Option`. Exceptions are not
 
 The postfix operator `?` works on both `Result` and `Option`:
 
-```lume
+```axom
 pub fn load(id: Int) -> Result<User, String> {
   let raw = db.get(id)?
   Ok(parse(raw)?)
@@ -475,7 +475,7 @@ Semantics:
 
 ### 6.3 Pattern Matching on Errors
 
-```lume
+```axom
 let message = match result {
   Ok(value) -> f"Got: {value}"
   Error(e) -> f"Error: {e}"
@@ -493,7 +493,7 @@ let name = match maybe_name {
 
 ### 6.4 .unwrap()
 
-```lume
+```axom
 let value = result.unwrap()
 let name = option.unwrap()
 ```
@@ -506,9 +506,9 @@ Use only when you're certain there won't be an error.
 
 ### 6.5 .NET Exception Interop
 
-Lume does not expose try/catch in the core language. Interop with .NET exceptions is explicit:
+Axom does not expose try/catch in the core language. Interop with .NET exceptions is explicit:
 
-```lume
+```axom
 let x = DotNet.try(() => SomeApi.Call())?
 ```
 
@@ -520,7 +520,7 @@ let x = DotNet.try(() => SomeApi.Call())?
 
 ### 7.1 List
 
-```lume
+```axom
 let numbers = [1, 2, 3, 4, 5]
 let first = numbers[0]?
 ```
@@ -533,7 +533,7 @@ Lists are immutable by default.
 
 ### 7.2 Map
 
-```lume
+```axom
 let map = {
   "name" -> "Alice",
   "age" -> "30"
@@ -549,7 +549,7 @@ Keys are `String` only for now.
 
 ### 7.3 Iterator Combinators
 
-```lume
+```axom
 [1, 2, 3].each(fn(x) { println x })
 
 let doubled = [1, 2, 3].map(fn(x) { x * 2 })
@@ -565,7 +565,7 @@ let evens = [1, 2, 3, 4].filter(fn(x) { x % 2 == 0 })
 
 ### 7.4 Range
 
-```lume
+```axom
 range(1, 10).each(fn(i) { println i })
 ```
 
@@ -577,7 +577,7 @@ range(1, 10).each(fn(i) { println i })
 
 ### 8.1 One File = One Module
 
-Each `.lume` file is a module. No nested modules for now.
+Each `.axom` file is a module. No nested modules for now.
 
 **Status**: 🔜 Planned
 
@@ -585,7 +585,7 @@ Each `.lume` file is a module. No nested modules for now.
 
 ### 8.2 Import
 
-```lume
+```axom
 import std.io
 import std.collections as coll
 import std.math.{max, min}
@@ -597,7 +597,7 @@ import std.math.{max, min}
 
 ### 8.3 Visibility
 
-```lume
+```axom
 pub fn public_function() { }
 fn private_function() { }
 ```
@@ -626,7 +626,7 @@ Backend mapping:
 
 Sequential calls to suspensive functions implicitly await:
 
-```lume
+```axom
 let data = fetch_data()
 let processed = process(data)
 ```
@@ -637,7 +637,7 @@ let processed = process(data)
 
 ### 9.3 Structured Concurrency
 
-```lume
+```axom
 scope {
   let task1 = spawn compute1()
   let task2 = spawn compute2()
@@ -664,7 +664,7 @@ Fire-and-forget is intentionally impossible.
 
 ### 9.5 CPU Parallelism
 
-```lume
+```axom
 let result = par compute(data)?
 ```
 
@@ -680,7 +680,7 @@ let result = par compute(data)?
 
 All bindings are immutable by default:
 
-```lume
+```axom
 let x = 10
 ```
 
@@ -690,7 +690,7 @@ let x = 10
 
 ### 10.2 Local Mutability
 
-```lume
+```axom
 let mut counter = 0
 counter = counter + 1
 ```
@@ -706,7 +706,7 @@ counter = counter + 1
 
 Provided by runtime:
 
-```lume
+```axom
 let cell = Cell.new(0)
 cell.set(10)
 let value = cell.get()
@@ -728,7 +728,7 @@ Builders must be "frozen" to produce immutable values.
 
 ### 11.1 Direct Calls
 
-```lume
+```axom
 let result = System.Console.ReadLine()
 let number = Int32.Parse("42")
 ```
@@ -755,7 +755,7 @@ Generated code compiles to standard .NET assemblies.
 
 ## 12. String Interpolation
 
-```lume
+```axom
 let name = "Alice"
 let age = 30
 let msg = f"Hello, {name}! You are {age} years old."
@@ -770,7 +770,7 @@ let msg = f"Hello, {name}! You are {age} years old."
 ### 13.1 Error Handling
 
 ✅ **Prefer** `Result`/`Option` and pattern matching:
-```lume
+```axom
 match result {
   Ok(value) -> process(value)
   Error(e) -> handle_error(e)
@@ -778,7 +778,7 @@ match result {
 ```
 
 ❌ **Avoid** `.unwrap()` unless necessary:
-```lume
+```axom
 let value = result.unwrap()
 ```
 
@@ -787,7 +787,7 @@ let value = result.unwrap()
 ### 13.2 Control Flow
 
 ✅ **Use** `match` for all conditions:
-```lume
+```axom
 let message = match condition {
   true -> "yes"
   false -> "no"
@@ -801,12 +801,12 @@ let message = match condition {
 ### 13.3 Iteration
 
 ✅ **Prefer** iterator combinators:
-```lume
+```axom
 let sum = numbers.fold(0, fn(acc, x) { acc + x })
 ```
 
 ✅ **Use** tail recursion for custom iteration:
-```lume
+```axom
 fn countdown(n: Int) {
   match n {
     0 -> done()
@@ -823,12 +823,12 @@ fn countdown(n: Int) {
 ### 13.4 Mutability
 
 ✅ **Maintain** immutability by default:
-```lume
+```axom
 let x = compute()
 ```
 
 ✅ **Use** `let mut` only for local accumulators:
-```lume
+```axom
 let mut sum = 0
 numbers.each(fn(x) { sum = sum + x })
 ```

@@ -16,7 +16,7 @@ Decision:
    - Version source of truth documented.
 
 Decision:
-- SemVer in `src/lume/lume.csproj` (`<Version>`).
+- SemVer in `src/axom/axom.csproj` (`<Version>`).
 - Tag releases as `vX.Y.Z` matching the tool version.
 
 3) `dotnet tool` packaging (optional)
@@ -25,7 +25,7 @@ Decision:
    - Tool package builds locally.
 
 Command:
-- `dotnet pack src/lume -c Release`
+- `dotnet pack src/axom -c Release`
 
 4) Release build profile
    Add a release build command/profile.
@@ -33,7 +33,7 @@ Command:
    - `dotnet publish` instructions documented.
 
 Command:
-- `dotnet publish src/lume -c Release -o out/publish`
+- `dotnet publish src/axom -c Release -o out/publish`
 
 5) CI build/test workflow
    Add CI workflow for build + test.
@@ -56,9 +56,9 @@ Command:
    - Output is versioned and reproducible.
 
 Commands:
-- `dotnet publish src/lume -c Release -r linux-x64 -o out/publish/linux-x64`
-- `dotnet publish src/lume -c Release -r win-x64 -o out/publish/win-x64`
-- `dotnet publish src/lume -c Release -r osx-x64 -o out/publish/osx-x64`
+- `dotnet publish src/axom -c Release -r linux-x64 -o out/publish/linux-x64`
+- `dotnet publish src/axom -c Release -r win-x64 -o out/publish/win-x64`
+- `dotnet publish src/axom -c Release -r osx-x64 -o out/publish/osx-x64`
 
 9) CLI help polish
    Improve `--help` content and command descriptions.
@@ -77,7 +77,7 @@ Commands:
 
 Notes:
 - LICENSE: Apache-2.0.
-- Tool metadata set in `src/lume/lume.csproj`.
+- Tool metadata set in `src/axom/axom.csproj`.
 
 12) Documentation
     Update AGENTS/README with tooling and CI usage.
