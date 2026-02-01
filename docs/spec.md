@@ -1,4 +1,4 @@
-# Axom Language Specification (v0.2 – Draft)
+# Axom Language Specification (v0.4 – Draft)
 
 Axom is a modern programming language designed for .NET. It is intentionally
 small, with a clear bias toward explicit flow, predictable semantics, and

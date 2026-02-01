@@ -3,7 +3,7 @@
   "isRoot": true,
   "tools": {
     "axom.cli": {
-      "version": "0.3.0-rc1",
+      "version": "0.4.0-alpha.2",
       "commands": [
         "axom"
       ]
