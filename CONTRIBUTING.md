@@ -26,7 +26,6 @@ If you encounter a bug, have a question, or want to suggest an improvement:
 
 - Follow the existing code style and conventions
 - Write clear, self-documenting code
-- Add comments for complex logic or non-obvious behavior
 - Keep functions focused and small where possible
 
 ### Commit Messages
@@ -47,7 +46,30 @@ Write commit messages in English using imperative mood:
 
 ## Getting Started
 
-The project is currently in early design phase. The language specification is being developed in [`docs/spec.md`](docs/spec.md). As implementation begins, this guide will be updated with build instructions and development setup.
+Axom is an active .NET 8 project with a working compiler, CLI, and tests.
+
+### Build
+
+```
+make build
+```
+
+### Tests
+
+```
+make test
+```
+
+Run a single test:
+
+```
+dotnet test tests/Axom.Tests/Axom.Tests.csproj --filter "FullyQualifiedName~ClassName.MethodName"
+```
+
+### Docs
+
+- Language spec: `docs/spec.md`
+- Roadmap: `docs/roadmap/ROADMAP.md`
 
 ## Questions?
 

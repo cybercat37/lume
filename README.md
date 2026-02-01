@@ -28,8 +28,8 @@ print "Hello, Axom!"
 Run it:
 
 ```bash
-make run FILE=hello.axom
-# or
+axom run hello.axom
+# or (from source)
 dotnet run --project src/axom -- run hello.axom
 ```
 
@@ -145,14 +145,16 @@ dotnet build
 ### Run a Axom Program
 
 ```bash
-make run FILE=path/to/file.axom
-# or
+axom run path/to/file.axom
+# or (from source)
 dotnet run --project src/axom -- run path/to/file.axom
 ```
 
 ### Check a Axom Program
 
 ```bash
+axom check path/to/file.axom
+# or (from source)
 dotnet run --project src/axom -- check path/to/file.axom
 ```
 
@@ -161,8 +163,8 @@ Validates the source code without generating output files.
 ### Compile to C#
 
 ```bash
-make compile FILE=path/to/file.axom
-# or
+axom build path/to/file.axom
+# or (from source)
 dotnet run --project src/axom -- build path/to/file.axom
 ```
 
@@ -190,10 +192,10 @@ dotnet test
 ### Install CLI (dotnet tool)
 
 ```bash
-dotnet tool install -g Axom.CLi
+dotnet tool install -g Axom.CLI --prerelease
 # or (local tool manifest)
 dotnet new tool-manifest
-dotnet tool install --local Axom.CLi
+dotnet tool install --local Axom.CLI --prerelease
 ```
 
 ### Shell Completions

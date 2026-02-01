@@ -19,23 +19,22 @@ print "Hello, Axom!"
 Run the code:
 
 ```bash
-# With Makefile
-make run FILE=hello.axom
+axom run hello.axom
 
-# Or with dotnet
+# Or from source
 dotnet run --project src/axom -- run hello.axom
 ```
 
 You can also validate without generating output:
 
 ```bash
-dotnet run --project src/axom -- check hello.axom
+axom check hello.axom
 ```
 
 Build to C# without running:
 
 ```bash
-dotnet run --project src/axom -- build hello.axom
+axom build hello.axom
 ```
 
 ### Install via NuGet (dotnet tool)

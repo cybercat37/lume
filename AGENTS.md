@@ -3,7 +3,7 @@
 This repository is a .NET 8 solution for the Axom compiler/runtime/CLI.
 Use this guide for consistent commands and code style when working here.
 
-See `AI_INSTRUCTIONS.md` for AI-specific workflow guidance.
+This file is the canonical AI workflow guidance.
 
 ## Repository layout
 - `Axom.sln` is the solution root.
@@ -21,12 +21,17 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 - `dotnet build Axom.sln`
 
 ### Run the CLI
-- `dotnet run --project src/axom -- build path/to/file.axom`
-- `dotnet run --project src/axom -- run path/to/file.axom`
-- `dotnet run --project src/axom -- check path/to/file.axom`
-- `dotnet run --project src/axom -- check path/to/file.axom --cache`
-- `make compile FILE=path/to/file.axom`
-- `make run FILE=path/to/file.axom`
+- If the NuGet tool is installed:
+  - `axom build path/to/file.axom`
+  - `axom run path/to/file.axom`
+  - `axom check path/to/file.axom`
+- From source:
+  - `dotnet run --project src/axom -- build path/to/file.axom`
+  - `dotnet run --project src/axom -- run path/to/file.axom`
+  - `dotnet run --project src/axom -- check path/to/file.axom`
+  - `dotnet run --project src/axom -- check path/to/file.axom --cache`
+  - `make compile FILE=path/to/file.axom`
+  - `make run FILE=path/to/file.axom`
 
 ### Test
 - `make test` (wraps `dotnet test`)
