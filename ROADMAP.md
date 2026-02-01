@@ -1,4 +1,4 @@
-# Lume Roadmap (12 Main Steps)
+# Lume Roadmap (14 Main Steps)
 
 This roadmap defines the major milestones for building the Lume compiler/runtime/CLI.
 Each step is meant to be completed sequentially and validated with tests.
@@ -94,6 +94,22 @@ Each step is meant to be completed sequentially and validated with tests.
    - Versioning policy documented.
    - Examples verified as part of build/test.
 
+13) Functions and lambdas
+   Named functions, lambdas, returns, and call expressions.
+   Definition of Done:
+   - Parser/binder support function declarations and lambdas.
+   - Interpreter and codegen support function calls.
+   - Tests cover end-to-end behavior.
+   - See `STEP13_FUNCTIONS.md` for sub-steps.
+
+14) Intent annotations
+   Built-in `@intent("...")` for semantic documentation.
+   Definition of Done:
+   - Intent annotations parse and bind.
+   - Diagnostics for intent/effect mismatches.
+   - Tooling can emit intent summaries.
+   - See `STEP14_INTENT.md` for sub-steps.
+
 ## Current progress
 - Step 1: complete (see `STEP1_PIPELINE.md`)
 - Step 2: complete (see `STEP2_CORE_SYNTAX.md`)
@@ -107,3 +123,5 @@ Each step is meant to be completed sequentially and validated with tests.
 - Step 10: complete (see `STEP10_TEST_HARDENING.md`)
 - Step 11: complete (see `STEP11_PERFORMANCE.md`)
 - Step 12: complete (see `STEP12_TOOLING.md`)
+- Step 13: complete (see `STEP13_FUNCTIONS.md`)
+- Step 14: pending (see `STEP14_INTENT.md`)

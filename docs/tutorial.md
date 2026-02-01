@@ -191,7 +191,27 @@ let x = 10
 
 ---
 
-### 2.6 String Literals and Escape Sequences
+### 2.6 Intent Annotations
+
+Intent annotations are built-in attributes used for diagnostics and documentation.
+
+```lume
+@intent("Validate and normalize inputs")
+{
+  let name = input()
+  print len(name)
+}
+
+let user_id @intent("Lookup user id") = input()
+```
+
+Annotations have no runtime effect. Tooling may warn if intent does not match inferred effects.
+
+**Status**: 🔜 Planned
+
+---
+
+### 2.7 String Literals and Escape Sequences
 
 ```lume
 let newline = "line1\nline2"

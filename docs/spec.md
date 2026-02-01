@@ -74,10 +74,26 @@ This section captures agreed design choices to guide implementation.
 - Comments are intentionally not part of the language.
 - Doc comments use `///` with Markdown; doc tooling later.
 
+### Intent Annotations (Planned)
+- Intent annotations are structured metadata, not general-purpose comments.
+- Syntax: `@intent("...")` where the argument is a string literal.
+- May appear on blocks and `let` bindings; function-level intent is a future extension.
+- No runtime effect; only used for diagnostics, tooling, and documentation.
+- Tooling may warn if intent does not match inferred effects (db/network/fs/time/random).
+- `@intent` is a built-in attribute; user-defined attributes use `@attr` later.
+
+Syntax sketch (planned):
+
+```
+IntentAnnotation := "@intent" "(" StringLiteral ")"
+Block := IntentAnnotation? "{" Statements "}"
+LetStmt := "let" Identifier IntentAnnotation? "=" Expression
+```
+
 ### Misc
 - Shadowing in the same scope is not allowed.
 - Mutual recursion is allowed; no forward-declare keyword.
-- Attributes use `@attr`, planned for later.
+- Attributes use `@attr`, planned for later (besides built-in `@intent`).
 
 ---
 
