@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "axom.cli": {
+      "version": "0.3.0-rc1",
+      "commands": [
+        "axom"
+      ]
+    }
+  }
+}

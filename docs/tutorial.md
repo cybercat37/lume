@@ -36,6 +36,24 @@ Build to C# without running:
 dotnet run --project src/axom -- build hello.axom
 ```
 
+### Install via NuGet (dotnet tool)
+
+If you want the CLI without cloning the repo, install the tool from NuGet:
+
+```bash
+dotnet tool install --global Axom.CLI --prerelease
+axom --version
+axom run hello.axom
+```
+
+To update later:
+
+```bash
+dotnet tool update --global Axom.CLI --prerelease
+```
+
+See `examples/nuget-tool/README.md` for a local tool manifest example.
+
 **Status**: 🔜 Planned (Step 15: Pattern match v1)
 
 ---
