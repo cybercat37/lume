@@ -1,0 +1,35 @@
+{
+  "name": "axom-language",
+  "displayName": "Axom Language",
+  "description": "Basic syntax highlighting for Axom (.axom).",
+  "version": "0.1.0",
+  "publisher": "cybercat37",
+  "engines": {
+    "vscode": "^1.86.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "axom",
+        "aliases": [
+          "Axom",
+          "axom"
+        ],
+        "extensions": [
+          ".axom"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "axom",
+        "scopeName": "source.axom",
+        "path": "./syntaxes/axom.tmLanguage.json"
+      }
+    ]
+  }
+}

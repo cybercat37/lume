@@ -58,6 +58,14 @@ print min(3, 7)
 print max(3, 7)
 ```
 
+### Editor Support (VS Code)
+
+There is a minimal local VS Code extension for Axom syntax highlighting:
+
+1. Open the Command Palette.
+2. Run `Developer: Install Extension from Location...`.
+3. Select `tools/vscode-axom`.
+
 ## Status
 
 **In Development** — Steps 1-12 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots, plus compilation caching and tooling support.
