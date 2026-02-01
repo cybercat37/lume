@@ -254,6 +254,9 @@ Temporary Items
 *.swo
 *~
 
+# Secrets
+api.key
+
 # OS generated files
 Thumbs.db
 .DS_Store

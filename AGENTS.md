@@ -41,6 +41,8 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 - `dotnet run --project tests/Axom.Fuzz -- --iterations 1000 --max-length 128 --seed 123`
 
 ### Tooling/Release
+- `make pack` (wraps `dotnet pack src/axom -c Release`)
+- `make publish PACKAGE=path/to/*.nupkg` (requires `api.key`)
 - `dotnet pack src/axom -c Release`
 - `dotnet publish src/axom -c Release -o out/publish`
 - `dotnet nuget push src/axom/bin/Release/*.nupkg -k <API_KEY> -s https://api.nuget.org/v3/index.json`

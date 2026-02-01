@@ -1,4 +1,4 @@
-.PHONY: build test test-pipeline test-hardening fuzz run demo clean help
+.PHONY: build test test-pipeline test-hardening fuzz run demo clean pack publish help
 
 # Default target
 help:
@@ -11,6 +11,8 @@ help:
 	@echo "  make run FILE=hello.axom - Compile and run a Axom file"
 	@echo "  make compile FILE=hello.axom - Compile a Axom file (build only)"
 	@echo "  make demo      - Run a quick demo (print \"ciao\")"
+	@echo "  make pack      - Build the NuGet package (tool)"
+	@echo "  make publish PACKAGE=... - Push NuGet package"
 	@echo "  make clean      - Clean build artifacts"
 	@echo "  make help       - Show this help message"
 
@@ -54,6 +56,22 @@ run:
 demo:
 	@printf 'print "ciao"\n' > out/demo.axom
 	dotnet run --project src/axom -- run out/demo.axom
+
+# Build the NuGet package
+pack:
+	dotnet pack src/axom -c Release
+
+# Push the NuGet package
+publish:
+	@if [ ! -f api.key ]; then \
+		echo "Missing api.key file (NuGet API key)."; \
+		exit 1; \
+	fi
+	@if ! ls $(PACKAGE) >/dev/null 2>&1; then \
+		echo "Package not found. Use PACKAGE=path/to/*.nupkg"; \
+		exit 1; \
+	fi
+	dotnet nuget push $(PACKAGE) -k "$$(< api.key)" -s https://api.nuget.org/v3/index.json --skip-duplicate
 
 # Clean build artifacts
 clean:
