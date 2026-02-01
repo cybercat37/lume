@@ -60,6 +60,25 @@ print min(3, 7)
 print max(3, 7)
 ```
 
+**Match as control flow**
+
+```axom
+let message = match count {
+  0 -> "none"
+  _ -> "some"
+}
+print message
+```
+
+**Tuple patterns**
+
+```axom
+print match (1, 2) {
+  (a, b) -> a + b
+  _ -> 0
+}
+```
+
 ### Editor Support (VS Code)
 
 There is a minimal local VS Code extension for Axom syntax highlighting:
