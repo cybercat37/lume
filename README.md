@@ -1,10 +1,12 @@
 # Axom
 
+Axom — deliberate code, explicit flow.
+
 A modern programming language with native .NET interoperability.
 
 ## Overview
 
-Axom is a minimal, opinionated language for .NET focused on simplicity, explicit error handling, and structured concurrency, while remaining fully interoperable with existing C# code.
+Axom is a minimal, opinionated language for .NET focused on clarity over cleverness. It favors a small, consistent surface area, explicit error handling, and control flow that reads like a set of decisions instead of a chain of incidental mechanics. The goal is to make programs predictable to read, easy to reason about, and still fully interoperable with existing C# code.
 
 ## Core Principles
 

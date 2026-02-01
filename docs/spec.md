@@ -1,12 +1,13 @@
 # Axom Language Specification (v0.2 – Draft)
 
-Axom is a modern, Gleam-inspired programming language designed for .NET.
-It takes inspiration from Gleam's elegant approach to error handling and
-concurrency, while providing native interoperability with the .NET ecosystem.
+Axom is a modern programming language designed for .NET. It is intentionally
+small, with a clear bias toward explicit flow, predictable semantics, and
+systems that are easy to reason about in large codebases.
 
-Axom is a minimal, opinionated language focused on simplicity, explicit
-error handling, and structured concurrency, while remaining fully
-interoperable with existing C# code.
+Axom favors a compact surface area over a large feature set. It elevates
+explicit error handling, puts control flow in `match`, and keeps the runtime
+model straightforward, while remaining fully interoperable with existing C#
+code.
 
 ---
 

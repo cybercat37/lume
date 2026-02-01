@@ -2,6 +2,8 @@
 
 Concise tutorial for experienced developers who want to learn Axom quickly.
 
+Axom favors explicit flow and a compact language surface. Instead of many branching constructs, it centers on `match` and a few orthogonal concepts, so behavior stays obvious at a glance.
+
 > **Status note**: This tutorial covers all language features as per the specification. Implemented features are marked with ✅, planned ones with 🔜.
 
 ---
