@@ -37,32 +37,40 @@ exhaustiveness and strong diagnostics.
    - Arm expression types are unified or produce a diagnostic.
    - `match` expression has a final resolved type.
 
-6) Exhaustiveness and unreachable diagnostics
+6) Tuple literals and destructuring (follow-up)
+   Ensure tuples are supported outside of match, including destructuring.
+   DoD:
+   - Tuple literals parse and bind (`(1, 2)`), including nested tuples.
+   - `let (x, y) = value` destructures tuples with arity checks.
+   - Interpreter/codegen support tuple construction/destructuring.
+   - Diagnostics for tuple arity mismatch and non-tuple destructuring.
+
+7) Exhaustiveness and unreachable diagnostics
    Enforce exhaustive matching for supported pattern sets.
    DoD:
    - Missing cases produce a diagnostic with a summary of uncovered patterns.
    - Unreachable arms are reported.
    - Literal and wildcard cases are supported for v1.
 
-7) Interpreter semantics
+8) Interpreter semantics
    Execute `match` with correct short-circuiting.
    DoD:
    - First matching arm is evaluated; others are skipped.
    - Bound pattern variables evaluate to matched values.
 
-8) Code generation
+9) Code generation
    Emit valid C# for `match` expressions.
    DoD:
    - Generated code preserves arm order and semantics.
    - Diagnostics for unsupported patterns are surfaced before emit.
 
-9) Tests
+10) Tests
    Add parser, binder, and execution tests.
    DoD:
    - Tests cover literals, wildcards, tuples, and identifier binding.
    - Exhaustiveness and unreachable diagnostics are snapshot tested.
 
-10) Documentation
+11) Documentation
    Update tutorial/spec to reflect implemented `match` behavior.
    DoD:
    - Examples compile and run.

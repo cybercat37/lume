@@ -47,13 +47,13 @@ tight enough for end-to-end tests and docs updates.
    - Tests cover identity-style and nested generic scenarios.
 
 5) Tuples and destructuring
-   Introduce tuple literals and simple destructuring.
+   Introduce tuple literals, match patterns, and destructuring.
    Definition of Done:
-   - Syntax: `(1, "hi")` and `let (x, y) = pair`.
-   - Type checker validates tuple shapes and element access.
-   - Interpreter/codegen support tuple construction and destructuring.
-   - Diagnostics for arity mismatches and invalid patterns.
-   - Tests cover tuple usage in expressions and bindings.
+    - Syntax: `(1, "hi")` and `let (x, y) = pair`.
+    - Type checker validates tuple shapes and element access.
+    - Interpreter/codegen support tuple construction and destructuring.
+    - Diagnostics for arity mismatches and invalid patterns.
+    - Tests cover tuple usage in expressions, match patterns, and bindings.
 
 6) Error handling core
    Implement `Result`/`Option` idioms and propagation.
