@@ -3,6 +3,8 @@
 This repository is a .NET 8 solution for the Lume compiler/runtime/CLI.
 Use this guide for consistent commands and code style when working here.
 
+See `AI_INSTRUCTIONS.md` for AI-specific workflow guidance.
+
 ## Repository layout
 - `Lume.sln` is the solution root.
 - `src/Lume.Compiler` holds compiler logic.
