@@ -8,7 +8,7 @@ public class CliEndToEndTests
     [Fact]
     public void Build_then_run_produces_expected_output()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_e2e_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_e2e_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "println 1");

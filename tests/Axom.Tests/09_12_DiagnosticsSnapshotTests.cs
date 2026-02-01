@@ -86,7 +86,7 @@ public class DiagnosticsSnapshotTests
     [Fact]
     public void Cli_check_diagnostics_match_snapshot()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_snapshot_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_snapshot_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print x");

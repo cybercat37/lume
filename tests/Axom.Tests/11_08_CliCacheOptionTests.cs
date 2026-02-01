@@ -8,7 +8,7 @@ public class CliCacheOptionTests
     [Fact]
     public void Check_with_cache_succeeds()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_cache_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_cache_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print 1");

@@ -8,7 +8,7 @@ public class CliCheckCommandTests
     [Fact]
     public void Check_valid_file_returns_zero_and_does_not_write_output()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_check_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_check_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print 1");
@@ -47,7 +47,7 @@ public class CliCheckCommandTests
     [Fact]
     public void Check_invalid_file_returns_error_and_writes_diagnostics()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_check_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_check_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print x");

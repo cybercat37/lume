@@ -8,7 +8,7 @@ public class CliVerbosityTests
     [Fact]
     public void Build_quiet_suppresses_success_output()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_quiet_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_quiet_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print 1");
@@ -47,7 +47,7 @@ public class CliVerbosityTests
     [Fact]
     public void Build_verbose_includes_output_path()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_verbose_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_verbose_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print 1");

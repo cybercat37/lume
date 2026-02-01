@@ -28,10 +28,10 @@ public class Program
                     break;
                 case "--help":
                 case "-h":
-                    Console.WriteLine("Usage: lume-fuzz [--iterations N] [--max-length N] [--seed N]");
+                    Console.WriteLine("Usage: axom-fuzz [--iterations N] [--max-length N] [--seed N]");
                     return 0;
                 default:
-                    Console.Error.WriteLine("Usage: lume-fuzz [--iterations N] [--max-length N] [--seed N]");
+                    Console.Error.WriteLine("Usage: axom-fuzz [--iterations N] [--max-length N] [--seed N]");
                     return 1;
             }
         }

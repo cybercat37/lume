@@ -8,7 +8,7 @@ public class CliDiagnosticsFormattingTests
     [Fact]
     public void Check_outputs_diagnostics_with_location_and_severity()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_diag_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_diag_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print x");

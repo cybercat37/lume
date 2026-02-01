@@ -60,7 +60,7 @@ public class CliExitCodeTests
     [Fact]
     public void Conflicting_verbosity_flags_return_error()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_exit_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_exit_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print 1");
@@ -95,7 +95,7 @@ public class CliExitCodeTests
     [Fact]
     public void Missing_out_value_returns_error()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_exit_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_exit_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print 1");

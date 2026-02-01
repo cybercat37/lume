@@ -8,7 +8,7 @@ public class CliOutOptionTests
     [Fact]
     public void Build_writes_output_to_custom_directory()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_out_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_out_{Guid.NewGuid():N}");
         var outputDir = Path.Combine(tempDir, "custom");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
@@ -49,7 +49,7 @@ public class CliOutOptionTests
     [Fact]
     public void Run_uses_custom_output_directory()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_out_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_out_{Guid.NewGuid():N}");
         var outputDir = Path.Combine(tempDir, "custom");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");

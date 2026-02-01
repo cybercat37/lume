@@ -8,7 +8,7 @@ public class CliPathHandlingTests
     [Fact]
     public void Check_accepts_relative_path_from_current_directory()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_path_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_path_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print 1");

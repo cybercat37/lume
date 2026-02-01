@@ -8,7 +8,7 @@ public class CliBuildCommandTests
     [Fact]
     public void Build_valid_file_writes_output_and_returns_zero()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_build_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_build_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print 1");
@@ -47,7 +47,7 @@ public class CliBuildCommandTests
     [Fact]
     public void Build_invalid_file_returns_error_and_does_not_write_output()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"lume_cli_build_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_build_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print x");
