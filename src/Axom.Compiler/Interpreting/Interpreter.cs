@@ -139,9 +139,38 @@ public sealed class Interpreter
             var value = EvaluateExpression(match.Expression);
             foreach (var arm in match.Arms)
             {
-                if (IsPatternMatch(arm.Pattern, value))
+                var bindings = new Dictionary<VariableSymbol, object?>();
+                if (TryMatchPattern(arm.Pattern, value, bindings))
                 {
-                    return EvaluateExpression(arm.Expression);
+                    var previousValues = new Dictionary<VariableSymbol, object?>();
+                    foreach (var binding in bindings)
+                    {
+                        if (values.TryGetValue(binding.Key, out var existing))
+                        {
+                            previousValues[binding.Key] = existing;
+                        }
+
+                        values[binding.Key] = binding.Value;
+                    }
+
+                    try
+                    {
+                        return EvaluateExpression(arm.Expression);
+                    }
+                    finally
+                    {
+                        foreach (var binding in bindings)
+                        {
+                            if (previousValues.TryGetValue(binding.Key, out var previous))
+                            {
+                                values[binding.Key] = previous;
+                            }
+                            else
+                            {
+                                values.Remove(binding.Key);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -149,7 +178,10 @@ public sealed class Interpreter
             return null;
         }
 
-        private static bool IsPatternMatch(BoundPattern pattern, object? value)
+        private static bool TryMatchPattern(
+            BoundPattern pattern,
+            object? value,
+            IDictionary<VariableSymbol, object?> bindings)
         {
             switch (pattern)
             {
@@ -157,6 +189,9 @@ public sealed class Interpreter
                     return true;
                 case BoundLiteralPattern literal:
                     return Equals(literal.Value, value);
+                case BoundIdentifierPattern identifier:
+                    bindings[identifier.Symbol] = value;
+                    return true;
                 default:
                     return false;
             }

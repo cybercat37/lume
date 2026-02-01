@@ -310,12 +310,15 @@ public sealed class Binder
         var valueExpression = BindExpression(match.Expression);
         var arms = new List<BoundMatchArm>();
         TypeSymbol? matchType = null;
+        var previousScope = scope;
 
         foreach (var arm in match.Arms)
         {
+            scope = new BoundScope(previousScope);
             var boundPattern = BindPattern(arm.Pattern, valueExpression.Type);
             var boundExpression = BindExpression(arm.Expression);
             arms.Add(new BoundMatchArm(boundPattern, boundExpression));
+            scope = previousScope;
 
             if (matchType is null)
             {
@@ -331,6 +334,7 @@ public sealed class Binder
             }
         }
 
+        ReportMatchDiagnostics(match, valueExpression.Type);
         matchType ??= TypeSymbol.Error;
         return new BoundMatchExpression(valueExpression, arms, matchType);
     }
@@ -352,9 +356,102 @@ public sealed class Binder
                 return new BoundLiteralPattern(value, type);
             case WildcardPatternSyntax:
                 return new BoundWildcardPattern(targetType);
+            case IdentifierPatternSyntax identifier:
+                var name = identifier.IdentifierToken.Text;
+                var symbol = new VariableSymbol(name, false, targetType);
+                var declared = scope.TryDeclare(symbol);
+                if (declared is null)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        identifier.IdentifierToken.Span,
+                        $"Pattern variable '{name}' is already declared in this scope."));
+                }
+
+                return new BoundIdentifierPattern(symbol, targetType);
             default:
                 return new BoundWildcardPattern(TypeSymbol.Error);
         }
+    }
+
+    private void ReportMatchDiagnostics(MatchExpressionSyntax match, TypeSymbol targetType)
+    {
+        if (targetType == TypeSymbol.Error)
+        {
+            return;
+        }
+
+        var seenLiterals = new HashSet<object?>();
+        var seenTrue = false;
+        var seenFalse = false;
+        var seenCatchAll = false;
+
+        foreach (var arm in match.Arms)
+        {
+            var pattern = arm.Pattern;
+            var isCatchAll = pattern is WildcardPatternSyntax or IdentifierPatternSyntax;
+            if (seenCatchAll)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    pattern.Span,
+                    "Unreachable match arm."));
+                continue;
+            }
+
+            if (isCatchAll)
+            {
+                seenCatchAll = true;
+                continue;
+            }
+
+            if (pattern is LiteralPatternSyntax literalPattern)
+            {
+                var value = literalPattern.LiteralToken.Value;
+                if (!seenLiterals.Add(value))
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        literalPattern.Span,
+                        "Duplicate match arm."));
+                }
+
+                if (value is bool boolValue)
+                {
+                    if (boolValue)
+                    {
+                        seenTrue = true;
+                    }
+                    else
+                    {
+                        seenFalse = true;
+                    }
+                }
+            }
+        }
+
+        if (seenCatchAll)
+        {
+            return;
+        }
+
+        if (targetType == TypeSymbol.Bool)
+        {
+            if (!seenTrue || !seenFalse)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    match.MatchKeyword.Span,
+                    "Non-exhaustive match expression."));
+            }
+
+            return;
+        }
+
+        diagnostics.Add(Diagnostic.Error(
+            SourceText,
+            match.MatchKeyword.Span,
+            "Non-exhaustive match expression."));
     }
 
     private static (object? Value, TypeSymbol Type) BindPatternLiteral(SyntaxToken token)

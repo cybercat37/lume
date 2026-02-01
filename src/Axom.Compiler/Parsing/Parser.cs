@@ -383,8 +383,7 @@ public sealed class Parser
                     return new WildcardPatternSyntax(identifier);
                 }
 
-                diagnostics.Add(Diagnostic.Error(sourceText, identifier.Span, $"Unexpected pattern '{identifier.Text}'."));
-                return new WildcardPatternSyntax(identifier);
+                return new IdentifierPatternSyntax(identifier);
             default:
                 diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("pattern", Current())));
                 var missing = SyntaxToken.Missing(TokenKind.Identifier, Current().Position);

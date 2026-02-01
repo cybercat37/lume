@@ -119,6 +119,7 @@ public sealed class Emitter
         {
             BoundWildcardPattern => "_",
             BoundLiteralPattern literal => FormatLiteral(literal.Value),
+            BoundIdentifierPattern identifier => $"var {EscapeIdentifier(identifier.Symbol.Name)}",
             _ => "_"
         };
         var expression = WriteExpression(arm.Expression);
