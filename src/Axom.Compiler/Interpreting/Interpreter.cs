@@ -129,9 +129,16 @@ public sealed class Interpreter
                     return EvaluateLambda(lambda);
                 case BoundMatchExpression match:
                     return EvaluateMatchExpression(match);
+                case BoundTupleExpression tuple:
+                    return EvaluateTupleExpression(tuple);
                 default:
                     throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
             }
+        }
+
+        private object? EvaluateTupleExpression(BoundTupleExpression tuple)
+        {
+            return tuple.Elements.Select(EvaluateExpression).ToArray();
         }
 
         private object? EvaluateMatchExpression(BoundMatchExpression match)
@@ -191,6 +198,26 @@ public sealed class Interpreter
                     return Equals(literal.Value, value);
                 case BoundIdentifierPattern identifier:
                     bindings[identifier.Symbol] = value;
+                    return true;
+                case BoundTuplePattern tuple:
+                    if (value is not object?[] elements)
+                    {
+                        return false;
+                    }
+
+                    if (elements.Length != tuple.Elements.Count)
+                    {
+                        return false;
+                    }
+
+                    for (var i = 0; i < elements.Length; i++)
+                    {
+                        if (!TryMatchPattern(tuple.Elements[i], elements[i], bindings))
+                        {
+                            return false;
+                        }
+                    }
+
                     return true;
                 default:
                     return false;

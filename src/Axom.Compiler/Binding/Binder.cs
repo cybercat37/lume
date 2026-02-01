@@ -248,6 +248,8 @@ public sealed class Binder
                 return BindBinaryExpression(binary);
             case MatchExpressionSyntax match:
                 return BindMatchExpression(match);
+            case TupleExpressionSyntax tuple:
+                return BindTupleExpression(tuple);
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
@@ -369,9 +371,57 @@ public sealed class Binder
                 }
 
                 return new BoundIdentifierPattern(symbol, targetType);
+            case TuplePatternSyntax tuple:
+                return BindTuplePattern(tuple, targetType);
             default:
                 return new BoundWildcardPattern(TypeSymbol.Error);
         }
+    }
+
+    private BoundPattern BindTuplePattern(TuplePatternSyntax tuple, TypeSymbol targetType)
+    {
+        if (targetType.TupleElementTypes is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                tuple.Span,
+                "Tuple pattern does not match non-tuple type."));
+            var fallback = tuple.Elements.Select(_ => new BoundWildcardPattern(TypeSymbol.Error)).ToList();
+            return new BoundTuplePattern(fallback, TypeSymbol.Error);
+        }
+
+        var elements = new List<BoundPattern>();
+        var expected = targetType.TupleElementTypes;
+        if (expected.Count != tuple.Elements.Count)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                tuple.Span,
+                "Tuple pattern arity does not match tuple value."));
+        }
+
+        for (var i = 0; i < tuple.Elements.Count; i++)
+        {
+            var elementType = i < expected.Count ? expected[i] : TypeSymbol.Error;
+            elements.Add(BindPattern(tuple.Elements[i], elementType));
+        }
+
+        return new BoundTuplePattern(elements, targetType);
+    }
+
+    private BoundExpression BindTupleExpression(TupleExpressionSyntax tuple)
+    {
+        var elements = new List<BoundExpression>();
+        var elementTypes = new List<TypeSymbol>();
+        foreach (var element in tuple.Elements)
+        {
+            var bound = BindExpression(element);
+            elements.Add(bound);
+            elementTypes.Add(bound.Type);
+        }
+
+        var tupleType = TypeSymbol.Tuple(elementTypes);
+        return new BoundTupleExpression(elements, tupleType);
     }
 
     private void ReportMatchDiagnostics(MatchExpressionSyntax match, TypeSymbol targetType)
@@ -389,7 +439,7 @@ public sealed class Binder
         foreach (var arm in match.Arms)
         {
             var pattern = arm.Pattern;
-            var isCatchAll = pattern is WildcardPatternSyntax or IdentifierPatternSyntax;
+            var isCatchAll = IsCatchAllPattern(pattern);
             if (seenCatchAll)
             {
                 diagnostics.Add(Diagnostic.Error(
@@ -452,6 +502,17 @@ public sealed class Binder
             SourceText,
             match.MatchKeyword.Span,
             "Non-exhaustive match expression."));
+    }
+
+    private static bool IsCatchAllPattern(PatternSyntax pattern)
+    {
+        return pattern switch
+        {
+            WildcardPatternSyntax => true,
+            IdentifierPatternSyntax => true,
+            TuplePatternSyntax tuple => tuple.Elements.All(IsCatchAllPattern),
+            _ => false
+        };
     }
 
     private static (object? Value, TypeSymbol Type) BindPatternLiteral(SyntaxToken token)

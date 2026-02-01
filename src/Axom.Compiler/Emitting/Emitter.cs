@@ -101,6 +101,7 @@ public sealed class Emitter
             BoundFunctionExpression function => EscapeIdentifier(function.Function.Name),
             BoundLambdaExpression lambda => WriteLambdaExpression(lambda),
             BoundMatchExpression match => WriteMatchExpression(match, parentPrecedence),
+            BoundTupleExpression tuple => WriteTupleExpression(tuple),
             _ => throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}")
         };
     }
@@ -115,15 +116,27 @@ public sealed class Emitter
 
     private static string WriteMatchArm(BoundMatchArm arm)
     {
-        var pattern = arm.Pattern switch
+        var pattern = WritePattern(arm.Pattern);
+        var expression = WriteExpression(arm.Expression);
+        return $"{pattern} => {expression}";
+    }
+
+    private static string WritePattern(BoundPattern pattern)
+    {
+        return pattern switch
         {
             BoundWildcardPattern => "_",
             BoundLiteralPattern literal => FormatLiteral(literal.Value),
             BoundIdentifierPattern identifier => $"var {EscapeIdentifier(identifier.Symbol.Name)}",
+            BoundTuplePattern tuple => $"({string.Join(", ", tuple.Elements.Select(WritePattern))})",
             _ => "_"
         };
-        var expression = WriteExpression(arm.Expression);
-        return $"{pattern} => {expression}";
+    }
+
+    private static string WriteTupleExpression(BoundTupleExpression tuple)
+    {
+        var elements = string.Join(", ", tuple.Elements.Select(WriteExpression));
+        return $"({elements})";
     }
 
     private static string WriteCallExpression(BoundCallExpression call)
@@ -251,6 +264,12 @@ public sealed class Emitter
 
     private static string TypeToCSharp(TypeSymbol type)
     {
+        if (type.TupleElementTypes is not null)
+        {
+            var elementTypes = type.TupleElementTypes.Select(TypeToCSharp);
+            return $"({string.Join(", ", elementTypes)})";
+        }
+
         if (type.ParameterTypes is not null)
         {
             var parameterTypes = type.ParameterTypes.Select(TypeToCSharp).ToList();

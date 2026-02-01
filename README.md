@@ -80,6 +80,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - String concatenation (`+`)
 - Blocks and scoped variables
 - Functions and lambdas (`fn`, `return`)
+- Pattern matching v1 (`match` with literals, `_`, identifiers, tuples)
 - String escape sequences (`\n`, `\t`, `\r`, `\"`, `\\`)
 - Binding and scope resolution
 - Type checking
@@ -95,7 +96,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 
 - Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
 - Logical operators (`&&`, `||`, `!`)
-- Pattern matching (`match`)
+- Pattern matching (guards, lists, sum types)
 - Records and Sum types
 - Generics
 - `Result`/`Option` and error propagation (`?`)

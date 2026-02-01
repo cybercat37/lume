@@ -84,6 +84,45 @@ public class DiagnosticsSnapshotTests
     }
 
     [Fact]
+    public void Match_non_exhaustive_diagnostic_matches_snapshot()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("let result = match true { true -> 1 }", "test.axom");
+
+        Assert.False(result.Success);
+
+        var snapshot = Snapshots.Read("MatchNonExhaustive.snapshot.txt");
+        var actual = Snapshots.Format(result.Diagnostics);
+        Assert.Equal(snapshot, actual);
+    }
+
+    [Fact]
+    public void Match_unreachable_arm_diagnostic_matches_snapshot()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("let result = match 1 { _ -> 1; 2 -> 2 }", "test.axom");
+
+        Assert.False(result.Success);
+
+        var snapshot = Snapshots.Read("MatchUnreachableArm.snapshot.txt");
+        var actual = Snapshots.Format(result.Diagnostics);
+        Assert.Equal(snapshot, actual);
+    }
+
+    [Fact]
+    public void Match_tuple_arity_diagnostic_matches_snapshot()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("let result = match (1, 2) { (x, y, z) -> x; _ -> 0 }", "test.axom");
+
+        Assert.False(result.Success);
+
+        var snapshot = Snapshots.Read("MatchTupleArity.snapshot.txt");
+        var actual = Snapshots.Format(result.Diagnostics);
+        Assert.Equal(snapshot, actual);
+    }
+
+    [Fact]
     public void Cli_check_diagnostics_match_snapshot()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_snapshot_{Guid.NewGuid():N}");

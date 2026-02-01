@@ -62,8 +62,9 @@ This section captures agreed design choices to guide implementation.
 - Visibility: `pub` or private only.
 
 ### Pattern Matching
-- Supports rest patterns (`..`), guards, and list patterns; no range patterns yet.
+- Current implementation supports literal, `_`, identifier, and tuple patterns.
 - Non-exhaustive match is an error; `_` is optional but recommended.
+- Guards, list patterns, and rest patterns are planned.
 
 ### Option/Result
 - Option/Result live in stdlib; `?` applies only to `Result`.
@@ -192,12 +193,12 @@ pub fn load(id: Int) -> Result<User, Err> {
 
 - `match` expressions must be exhaustive
 - Non-exhaustive matches are compile-time errors
-- Works on Result, Option, and sum types
+- Current implementation works on literals and tuples
 
 ```axom
-let message = match result {
-  Ok(value) -> f"Got: {value}"
-  Error(e) -> f"Error: {e}"
+let message = match count {
+  0 -> "none"
+  _ -> "some"
 }
 ```
 
@@ -233,7 +234,7 @@ This is a deliberate design choice to enforce:
 All conditional logic uses `match`:
 
 ```axom
-let message = match x > 5 {
+let message = match flag {
   true -> "large"
   false -> "small"
 }

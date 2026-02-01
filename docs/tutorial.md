@@ -54,7 +54,7 @@ dotnet tool update --global Axom.CLI --prerelease
 
 See `examples/nuget-tool/README.md` for a local tool manifest example.
 
-**Status**: 🔜 Planned (Step 15: Pattern match v1)
+**Status**: ✅ Implemented (match v1: literals, wildcard, identifier, tuples)
 
 ---
 
@@ -257,22 +257,24 @@ Axom **does not have** `if`, `else`, `while`, `for`, or `loop`. This is an inten
 All control flow uses `match`:
 
 ```axom
-let message = match x > 5 {
-  true -> "large"
-  false -> "small"
+let message = match count {
+  0 -> "none"
+  _ -> "some"
 }
 ```
 
-Pattern matching must be exhaustive:
+Supported patterns (v1): literals, `_`, identifiers, and tuples:
 
 ```axom
-let result = match value {
-  Ok(x) -> f"Got: {x}"
-  Error(e) -> f"Error: {e}"
+print match (1, 2) {
+  (a, b) -> a + b
+  _ -> 0
 }
 ```
 
-**Status**: ✅ Implemented
+Pattern matching must be exhaustive (use `_` when needed).
+
+**Status**: ✅ Implemented (subset)
 
 ---
 

@@ -309,6 +309,19 @@ public sealed class Parser
             case TokenKind.OpenParen:
                 var openParen = NextToken();
                 var expression = ParseExpression();
+                if (Current().Kind == TokenKind.Comma)
+                {
+                    var elements = new List<ExpressionSyntax> { expression };
+                    while (Current().Kind == TokenKind.Comma)
+                    {
+                        NextToken();
+                        elements.Add(ParseExpression());
+                    }
+
+                    var tupleCloseParen = MatchToken(TokenKind.CloseParen, ")");
+                    return new TupleExpressionSyntax(openParen, elements, tupleCloseParen);
+                }
+
                 var closeParen = MatchToken(TokenKind.CloseParen, ")");
                 return new ParenthesizedExpressionSyntax(openParen, expression, closeParen);
             case TokenKind.TrueKeyword:
@@ -376,6 +389,8 @@ public sealed class Parser
             case TokenKind.NumberLiteral:
             case TokenKind.StringLiteral:
                 return new LiteralPatternSyntax(NextToken());
+            case TokenKind.OpenParen:
+                return ParseTuplePattern();
             case TokenKind.Identifier:
                 var identifier = NextToken();
                 if (identifier.Text == "_")
@@ -393,6 +408,29 @@ public sealed class Parser
                 }
                 return new WildcardPatternSyntax(missing);
         }
+    }
+
+    private PatternSyntax ParseTuplePattern()
+    {
+        var openParen = MatchToken(TokenKind.OpenParen, "(");
+        var first = ParsePattern();
+        if (Current().Kind != TokenKind.Comma)
+        {
+            var closeParen = MatchToken(TokenKind.CloseParen, ")");
+            return first is TuplePatternSyntax
+                ? new TuplePatternSyntax(openParen, ((TuplePatternSyntax)first).Elements, closeParen)
+                : first;
+        }
+
+        var elements = new List<PatternSyntax> { first };
+        while (Current().Kind == TokenKind.Comma)
+        {
+            NextToken();
+            elements.Add(ParsePattern());
+        }
+
+        var close = MatchToken(TokenKind.CloseParen, ")");
+        return new TuplePatternSyntax(openParen, elements, close);
     }
 
     private ExpressionSyntax ParseCallExpression(ExpressionSyntax callee)

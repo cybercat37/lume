@@ -48,12 +48,12 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
 - `dotnet nuget push src/axom/bin/Release/*.nupkg -k <API_KEY> -s https://api.nuget.org/v3/index.json`
 
 ### Versioning
-- Use SemVer with prerelease tags (e.g., `0.4.0-alpha.1`, `0.3.0-rc1`).
+- Use SemVer with prerelease tags (e.g., `0.4.0-alpha.2`, `0.3.0-rc1`).
 - **Source of truth** for the tool package version is `src/axom/axom.csproj` (`<Version>`).
 - Git tags must follow `v<Version>` and should match the package version when cutting a release.
 - Record the current values here to avoid ambiguity:
-  - CLI package version: `0.3.0-rc1` (`src/axom/axom.csproj`)
-  - Latest tag: `v0.4.0-alpha.1`
+  - CLI package version: `0.4.0-alpha.2` (`src/axom/axom.csproj`)
+  - Latest tag: `v0.4.0-alpha.2`
 
 ### CI
 - GitHub Actions workflow: `.github/workflows/ci.yml` runs build, tests, hardening, and fuzz.

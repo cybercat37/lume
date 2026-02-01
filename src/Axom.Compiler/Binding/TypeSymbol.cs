@@ -7,12 +7,18 @@ public sealed class TypeSymbol
     public string Name { get; }
     public IReadOnlyList<TypeSymbol>? ParameterTypes { get; }
     public TypeSymbol? ReturnType { get; }
+    public IReadOnlyList<TypeSymbol>? TupleElementTypes { get; }
 
-    private TypeSymbol(string name, IReadOnlyList<TypeSymbol>? parameterTypes = null, TypeSymbol? returnType = null)
+    private TypeSymbol(
+        string name,
+        IReadOnlyList<TypeSymbol>? parameterTypes = null,
+        TypeSymbol? returnType = null,
+        IReadOnlyList<TypeSymbol>? tupleElementTypes = null)
     {
         Name = name;
         ParameterTypes = parameterTypes;
         ReturnType = returnType;
+        TupleElementTypes = tupleElementTypes;
     }
 
     public static TypeSymbol Int { get; } = new("Int");
@@ -26,6 +32,13 @@ public sealed class TypeSymbol
         var signature = string.Join(", ", parameterTypes.Select(type => type.Name));
         var name = $"fn({signature}) -> {returnType.Name}";
         return new TypeSymbol(name, parameterTypes, returnType);
+    }
+
+    public static TypeSymbol Tuple(IReadOnlyList<TypeSymbol> elementTypes)
+    {
+        var signature = string.Join(", ", elementTypes.Select(type => type.Name));
+        var name = $"({signature})";
+        return new TypeSymbol(name, tupleElementTypes: elementTypes);
     }
 
     public override string ToString() => Name;
