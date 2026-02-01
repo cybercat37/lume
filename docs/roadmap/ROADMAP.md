@@ -89,4 +89,4 @@ tight enough for end-to-end tests and docs updates.
 
 ## Status tracking
 - Update progress per step as features land.
-- See `STEP15_PATTERN_MATCH.md` for the next detailed step breakdown.
+- See `docs/roadmap/STEP15_PATTERN_MATCH.md` for the next detailed step breakdown.
