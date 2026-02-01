@@ -8,3 +8,11 @@ let m = max(2, abs(-3))
 println m
 
 println min(1, 2)
+
+let size = match 3 {
+  0 -> "none"
+  1 -> "one"
+  _ -> "many"
+}
+
+println size

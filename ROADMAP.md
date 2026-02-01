@@ -1,127 +1,92 @@
-# Axom Roadmap (14 Main Steps)
+# Axom Roadmap (v0.5 – Next Minor)
 
-This roadmap defines the major milestones for building the Axom compiler/runtime/CLI.
-Each step is meant to be completed sequentially and validated with tests.
+This roadmap defines the next minor release after v0.4. It focuses on
+language features already outlined in the spec/tutorial and keeps scope
+tight enough for end-to-end tests and docs updates.
 
-1) Pipeline base
-   Lexer, parser, AST, diagnostics, minimal emitter.
+## Baseline
+- Steps 1–13 are complete (pipeline through functions/lambdas).
+- Step 14 (Intent annotations) is pending and deferred past v0.5.
+
+## v0.5 Goals (medium detail)
+
+1) Pattern match v1
+   Implement `match` as the primary branching construct.
    Definition of Done:
-   - All sub-steps in `STEP1_PIPELINE.md` complete.
-   - `dotnet test` passes with new pipeline tests.
-   - `make test-pipeline` validates Step 1 end-to-end (`CompilerPipelineTests.Compile_print_string_generates_console_write`).
+   - Parser supports `match` with arms and `->` result expressions.
+   - Binder/type checker validate arm patterns and types.
+   - Exhaustiveness and unreachable arm diagnostics are enforced.
+   - Interpreter/codegen execute `match` with correct semantics.
+   - Tests cover literals, wildcards, nested patterns, and diagnostics.
 
-2) Core syntax expansion
-   Numeric literals, variables, assignments, block statements, and basic expressions.
+2) Records (product types) v1
+   Add `type` records, construction, and field access.
    Definition of Done:
-   - Parser handles new syntax with diagnostics.
-   - Binder validates symbol usage and reports errors.
-   - Tests cover happy paths and failure cases.
-   - See `STEP2_CORE_SYNTAX.md` for the 12 sub-steps.
+   - Syntax: `type User { name: String, age: Int }` with trailing commas allowed.
+   - Binder/type checker validate field existence and initialization.
+   - Interpreter and codegen support record construction and field reads.
+   - Diagnostics for missing/duplicate fields and type mismatches.
+   - Tests cover construction, access, and failure cases.
 
-3) Parser robustness
-   Error recovery, synchronization points, and clear diagnostics.
+3) Sum types (enums with payload) v1
+   Add `type Result<T, E> { Ok(T) Error(E) }`-style declarations.
    Definition of Done:
-   - Parser recovers from at least 3 common error patterns.
-   - Diagnostics include expected token/context.
-   - Failing input still yields a syntax tree.
-   - See `STEP3_PARSER_ROBUSTNESS.md` for the 12 sub-steps.
+   - Parser handles variant declarations with optional payloads.
+   - Binder/type checker resolve constructors and payload types.
+   - Match exhaustiveness checks include sum type variants.
+   - Interpreter and codegen support constructing and matching on variants.
+   - Tests cover constructor calls, matches, and diagnostics.
 
-4) Binding and scope
-   Symbol resolution, scope rules, and semantic diagnostics.
+4) Generics v1
+   Enable minimal `<T>` generics for functions and types.
    Definition of Done:
-   - Nested scopes work with shadowing rules.
-   - Undefined symbols produce diagnostics with spans.
-   - Tests cover scope boundaries.
-   - See `STEP4_BINDING_SCOPE.md` for the 12 sub-steps.
+   - Parser supports generic parameters in type and function declarations.
+   - Type checker resolves generic instantiations and basic inference.
+   - Diagnostics for arity mismatches and unbound type parameters.
+   - Interpreter/codegen handle monomorphized or boxed generics consistently.
+   - Tests cover identity-style and nested generic scenarios.
 
-5) Type system foundation
-   Primitive types, conversions, type inference for literals and variables.
+5) Tuples and destructuring
+   Introduce tuple literals and simple destructuring.
    Definition of Done:
-   - Type checker enforces rules for literals and assignments.
-   - Implicit conversions are explicit in diagnostics.
-   - Tests cover valid/invalid type scenarios.
-   - See `STEP5_TYPE_SYSTEM.md` for the 12 sub-steps.
+   - Syntax: `(1, "hi")` and `let (x, y) = pair`.
+   - Type checker validates tuple shapes and element access.
+   - Interpreter/codegen support tuple construction and destructuring.
+   - Diagnostics for arity mismatches and invalid patterns.
+   - Tests cover tuple usage in expressions and bindings.
 
-6) Interpreter runtime
-   Execute AST directly for fast feedback and feature validation.
-   - See `STEP6_INTERPRETER.md` for the 12 sub-steps.
+6) Error handling core
+   Implement `Result`/`Option` idioms and propagation.
    Definition of Done:
-   - Interpreter can run a multi-statement program.
-   - Errors surface as diagnostics (not exceptions).
-   - Tests verify runtime outputs.
+   - Standard library exposes `Result` and `Option` constructors and helpers.
+   - Postfix `?` works for `Result` and `Option` with correct early return.
+   - `.unwrap()` available with clear diagnostics on misuse.
+   - Match examples in docs compile and run.
+   - Tests cover propagation, matching, and error diagnostics.
 
-7) Code generation v1
-   Structured output for multiple statements and typed values.
+7) Collections v1 + iterator combinators
+   Add basic list/map literals and iteration helpers.
    Definition of Done:
-   - Emitter supports statements, expressions, and types.
-   - Generated code compiles for supported programs.
-   - Tests validate emitted output.
-   - See `STEP7_CODEGEN.md` for the 12 sub-steps.
+   - List literal `[1, 2, 3]` and index access with diagnostics.
+   - Map literal `{ "k" -> "v" }` with String keys (initial restriction).
+   - Stdlib provides `each`, `map`, `fold`, `filter` for lists.
+   - Interpreter/codegen support list/map operations.
+   - Tests cover iteration semantics and out-of-range diagnostics.
 
-8) Standard library minimal
-   Console I/O, math, string helpers, and collections baseline.
+8) CLI args + docs sync
+   Wire program arguments and keep docs/spec aligned.
    Definition of Done:
-   - Minimal API surface documented.
-   - Library functions tested in integration tests.
-   - Usage errors provide clear diagnostics.
-   - See `STEP8_STDLIB.md` for the 12 sub-steps.
+   - CLI exposes argv to the program (design documented and tested).
+   - `docs/spec.md` and `docs/tutorial.md` updated with v0.5 features.
+   - README roadmap section reflects v0.5 scope and status.
 
-9) CLI UX expansion
-   Commands for check/format/run/build with rich diagnostics output.
-   Definition of Done:
-   - New CLI commands wired and documented.
-   - Non-zero exit codes for failures.
-   - Tests verify CLI output/exit codes.
+## Out of scope for v0.5
+- Intent annotations/effect validation (Step 14).
+- Structured concurrency (`scope`, `spawn`, `task.join`) and cancellation.
+- CPU parallelism (`par`) semantics and runtime.
+- .NET interop surface (direct calls/NuGet) beyond current codegen.
+- Advanced effect system beyond pragmatic diagnostics.
 
-10) Test strategy hardening
-   Golden files, snapshot tests, and parser fuzzing.
-   Definition of Done:
-   - Golden tests added for codegen outputs.
-   - Snapshot tests cover diagnostics formatting.
-   - Fuzzing runs in CI or pre-merge.
-
-11) Performance and caching
-   Incremental compilation, caching, and efficient parsing.
-   Definition of Done:
-   - Incremental parse/build works on unchanged input.
-   - Caching reduces repeated work measurably.
-   - Benchmarks captured for baseline.
-
-12) Tooling and distribution
-   Packaging, versioning, docs, examples, and CI.
-   Definition of Done:
-   - Release artifacts produced via CI.
-   - Versioning policy documented.
-   - Examples verified as part of build/test.
-
-13) Functions and lambdas
-   Named functions, lambdas, returns, and call expressions.
-   Definition of Done:
-   - Parser/binder support function declarations and lambdas.
-   - Interpreter and codegen support function calls.
-   - Tests cover end-to-end behavior.
-   - See `STEP13_FUNCTIONS.md` for sub-steps.
-
-14) Intent annotations
-   Built-in `@intent("...")` for semantic documentation.
-   Definition of Done:
-   - Intent annotations parse and bind.
-   - Diagnostics for intent/effect mismatches.
-   - Tooling can emit intent summaries.
-   - See `STEP14_INTENT.md` for sub-steps.
-
-## Current progress
-- Step 1: complete (see `STEP1_PIPELINE.md`)
-- Step 2: complete (see `STEP2_CORE_SYNTAX.md`)
-- Step 3: complete (see `STEP3_PARSER_ROBUSTNESS.md`)
-- Step 4: complete (see `STEP4_BINDING_SCOPE.md`)
-- Step 5: complete (see `STEP5_TYPE_SYSTEM.md`)
-- Step 6: complete (see `STEP6_INTERPRETER.md`)
-- Step 7: complete (see `STEP7_CODEGEN.md`)
-- Step 8: complete (see `STEP8_STDLIB.md`)
-- Step 9: complete (see `STEP9_CLI_UX.md`)
-- Step 10: complete (see `STEP10_TEST_HARDENING.md`)
-- Step 11: complete (see `STEP11_PERFORMANCE.md`)
-- Step 12: complete (see `STEP12_TOOLING.md`)
-- Step 13: complete (see `STEP13_FUNCTIONS.md`)
-- Step 14: pending (see `STEP14_INTENT.md`)
+## Status tracking
+- Update progress per step as features land.
+- See `STEP15_PATTERN_MATCH.md` for the next detailed step breakdown.

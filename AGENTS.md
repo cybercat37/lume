@@ -141,26 +141,13 @@ Follow the existing conventions visible in the C# files.
 - Use factory methods for controlled construction (see `Diagnostic.Error`).
 
 ## Special notes for agents
-- There are no Cursor or Copilot instruction files in this repo.
+- There are no Cursor rules in `.cursor/rules/` and no `.cursorrules` file.
+- There is no `.github/copilot-instructions.md` file.
 - Do not commit generated build artifacts (`bin/`, `obj/`, `out/`).
 - Keep changes scoped; avoid unrelated refactors unless required by the task.
 
-## Roadmap (12 main steps)
-See `ROADMAP.md` for the full 12-step program, `STEP1_PIPELINE.md` for Step 1, `STEP2_CORE_SYNTAX.md` for Step 2, `STEP3_PARSER_ROBUSTNESS.md` for Step 3, `STEP4_BINDING_SCOPE.md` for Step 4, `STEP5_TYPE_SYSTEM.md` for Step 5, `STEP6_INTERPRETER.md` for Step 6, `STEP7_CODEGEN.md` for Step 7, and `STEP8_STDLIB.md` for Step 8.
-
-### Current progress
-- Step 1 (Pipeline base): complete
-- Step 2 (Core syntax): complete
-- Step 3 (Parser robustness): complete
-- Step 4 (Binding and scope): complete
-- Step 5 (Type system): complete
-- Step 6 (Interpreter runtime): complete
-- Step 7 (Code generation v1): complete
-- Step 8 (Standard library minimal): complete
-- Step 9 (CLI UX): complete
-- Step 10 (Test hardening): complete
-- Step 11 (Performance): complete
-- Step 12 (Tooling): complete
+## Roadmap references
+- Language and feature roadmap lives in `ROADMAP.md` and `STEP*_*.md` docs.
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file

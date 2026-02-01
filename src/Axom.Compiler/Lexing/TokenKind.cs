@@ -13,6 +13,7 @@ public enum TokenKind
     MutKeyword,
     FnKeyword,
     ReturnKeyword,
+    MatchKeyword,
     TrueKeyword,
     FalseKeyword,
     NumberLiteral,

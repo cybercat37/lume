@@ -127,8 +127,38 @@ public sealed class Interpreter
                     return functionExpression.Function;
                 case BoundLambdaExpression lambda:
                     return EvaluateLambda(lambda);
+                case BoundMatchExpression match:
+                    return EvaluateMatchExpression(match);
                 default:
                     throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
+            }
+        }
+
+        private object? EvaluateMatchExpression(BoundMatchExpression match)
+        {
+            var value = EvaluateExpression(match.Expression);
+            foreach (var arm in match.Arms)
+            {
+                if (IsPatternMatch(arm.Pattern, value))
+                {
+                    return EvaluateExpression(arm.Expression);
+                }
+            }
+
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Non-exhaustive match expression."));
+            return null;
+        }
+
+        private static bool IsPatternMatch(BoundPattern pattern, object? value)
+        {
+            switch (pattern)
+            {
+                case BoundWildcardPattern:
+                    return true;
+                case BoundLiteralPattern literal:
+                    return Equals(literal.Value, value);
+                default:
+                    return false;
             }
         }
 

@@ -266,6 +266,7 @@ public sealed class Lexer
             "mut" => TokenKind.MutKeyword,
             "fn" => TokenKind.FnKeyword,
             "return" => TokenKind.ReturnKeyword,
+            "match" => TokenKind.MatchKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,
             _ => TokenKind.Identifier

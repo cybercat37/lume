@@ -100,8 +100,29 @@ public sealed class Emitter
             BoundCallExpression call => WriteCallExpression(call),
             BoundFunctionExpression function => EscapeIdentifier(function.Function.Name),
             BoundLambdaExpression lambda => WriteLambdaExpression(lambda),
+            BoundMatchExpression match => WriteMatchExpression(match, parentPrecedence),
             _ => throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}")
         };
+    }
+
+    private static string WriteMatchExpression(BoundMatchExpression match, int parentPrecedence)
+    {
+        var target = WriteExpression(match.Expression);
+        var arms = string.Join(", ", match.Arms.Select(WriteMatchArm));
+        var text = $"{target} switch {{ {arms} }}";
+        return WrapIfNeeded(text, 0, parentPrecedence);
+    }
+
+    private static string WriteMatchArm(BoundMatchArm arm)
+    {
+        var pattern = arm.Pattern switch
+        {
+            BoundWildcardPattern => "_",
+            BoundLiteralPattern literal => FormatLiteral(literal.Value),
+            _ => "_"
+        };
+        var expression = WriteExpression(arm.Expression);
+        return $"{pattern} => {expression}";
     }
 
     private static string WriteCallExpression(BoundCallExpression call)

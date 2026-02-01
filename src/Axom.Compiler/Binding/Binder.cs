@@ -1,5 +1,6 @@
 using System.Linq;
 using Axom.Compiler.Diagnostics;
+using Axom.Compiler.Lexing;
 using Axom.Compiler.Parsing;
 using Axom.Compiler.Syntax;
 using Axom.Compiler.Text;
@@ -245,6 +246,8 @@ public sealed class Binder
                 return BindAssignmentExpression(assignment);
             case BinaryExpressionSyntax binary:
                 return BindBinaryExpression(binary);
+            case MatchExpressionSyntax match:
+                return BindMatchExpression(match);
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
@@ -300,6 +303,79 @@ public sealed class Binder
         }
 
         return new BoundBinaryExpression(left, binary.OperatorToken.Kind, right, TypeSymbol.Error);
+    }
+
+    private BoundExpression BindMatchExpression(MatchExpressionSyntax match)
+    {
+        var valueExpression = BindExpression(match.Expression);
+        var arms = new List<BoundMatchArm>();
+        TypeSymbol? matchType = null;
+
+        foreach (var arm in match.Arms)
+        {
+            var boundPattern = BindPattern(arm.Pattern, valueExpression.Type);
+            var boundExpression = BindExpression(arm.Expression);
+            arms.Add(new BoundMatchArm(boundPattern, boundExpression));
+
+            if (matchType is null)
+            {
+                matchType = boundExpression.Type;
+            }
+            else if (matchType != boundExpression.Type && matchType != TypeSymbol.Error && boundExpression.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    arm.Expression.Span,
+                    "Match arms must have the same type."));
+                matchType = TypeSymbol.Error;
+            }
+        }
+
+        matchType ??= TypeSymbol.Error;
+        return new BoundMatchExpression(valueExpression, arms, matchType);
+    }
+
+    private BoundPattern BindPattern(PatternSyntax pattern, TypeSymbol targetType)
+    {
+        switch (pattern)
+        {
+            case LiteralPatternSyntax literal:
+                var (value, type) = BindPatternLiteral(literal.LiteralToken);
+                if (type != targetType && type != TypeSymbol.Error && targetType != TypeSymbol.Error)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        literal.LiteralToken.Span,
+                        $"Pattern type '{type}' does not match '{targetType}'."));
+                }
+
+                return new BoundLiteralPattern(value, type);
+            case WildcardPatternSyntax:
+                return new BoundWildcardPattern(targetType);
+            default:
+                return new BoundWildcardPattern(TypeSymbol.Error);
+        }
+    }
+
+    private static (object? Value, TypeSymbol Type) BindPatternLiteral(SyntaxToken token)
+    {
+        var value = token.Value;
+        if (value is int)
+        {
+            return (value, TypeSymbol.Int);
+        }
+
+        if (value is bool)
+        {
+            return (value, TypeSymbol.Bool);
+        }
+
+        if (value is string)
+        {
+            return (value, TypeSymbol.String);
+        }
+
+        return (value, TypeSymbol.Error);
     }
 
     private BoundExpression BindUnaryExpression(UnaryExpressionSyntax unary)

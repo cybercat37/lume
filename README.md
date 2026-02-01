@@ -187,22 +187,11 @@ files with the new expected output.
 
 ## Roadmap
 
-The implementation follows a 12-step roadmap:
+The current plan is the v0.5 roadmap (next minor release).
 
-1. ✅ **Pipeline Base** — Lexer, parser, AST, diagnostics, minimal emitter
-2. ✅ **Core Syntax** — Variables, assignments, blocks, expressions
-3. ✅ **Parser Robustness** — Error recovery and clear diagnostics
-4. ✅ **Binding & Scope** — Symbol resolution and scope rules
-5. ✅ **Type System** — Type checking and inference
-6. ✅ **Interpreter Runtime** — Direct AST execution
-7. ✅ **Code Generation v1** — C# code emission
-8. ✅ **Standard Library** — Basic builtins (`print`, `println`, `input`, `len`, `abs`, `min`, `max`)
-9. ✅ **CLI UX** — Commands `check`, `build`, `run` with options (`--out`, `--quiet`, `--verbose`, `--help`, `--version`)
-10. ✅ **Test Hardening** — Golden files for codegen, snapshot tests for diagnostics
-11. ✅ **Performance** — Incremental compilation, caching, guardrails
-12. ✅ **Tooling** — Dotnet tool packaging, CI workflow, completions
-
-See [ROADMAP.md](ROADMAP.md) for detailed progress.
+- ✅ Steps 1–13 complete (pipeline through functions/lambdas)
+- ⏭ Next step: **Pattern match v1** (see `STEP15_PATTERN_MATCH.md`)
+- 📍 Full plan: [ROADMAP.md](ROADMAP.md)
 
 ## Language Features
 

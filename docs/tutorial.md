@@ -36,7 +36,7 @@ Build to C# without running:
 dotnet run --project src/axom -- build hello.axom
 ```
 
-**Status**: ✅ Implemented
+**Status**: 🔜 Planned (Step 15: Pattern match v1)
 
 ---
 

@@ -19,6 +19,7 @@ public sealed class Parser
         TokenKind.PrintlnKeyword,
         TokenKind.FnKeyword,
         TokenKind.ReturnKeyword,
+        TokenKind.MatchKeyword,
         TokenKind.Identifier,
         TokenKind.InputKeyword,
         TokenKind.TrueKeyword,
@@ -326,6 +327,8 @@ public sealed class Parser
                 return new NameExpressionSyntax(NextToken());
             case TokenKind.FnKeyword:
                 return ParseLambdaExpression();
+            case TokenKind.MatchKeyword:
+                return ParseMatchExpression();
             default:
                 diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("expression", Current())));
                 var missing = SyntaxToken.Missing(TokenKind.NumberLiteral, Current().Position);
@@ -334,6 +337,62 @@ public sealed class Parser
                     NextToken();
                 }
                 return new LiteralExpressionSyntax(missing);
+        }
+    }
+
+    private ExpressionSyntax ParseMatchExpression()
+    {
+        var matchKeyword = MatchToken(TokenKind.MatchKeyword, "match");
+        var expression = ParseExpression();
+        var openBrace = MatchToken(TokenKind.OpenBrace, "{");
+        var arms = new List<MatchArmSyntax>();
+
+        ConsumeSeparators();
+        while (Current().Kind != TokenKind.CloseBrace && Current().Kind != TokenKind.EndOfFile)
+        {
+            var start = position;
+            var pattern = ParsePattern();
+            var arrowToken = MatchToken(TokenKind.ArrowType, "->");
+            var armExpression = ParseExpression();
+            arms.Add(new MatchArmSyntax(pattern, arrowToken, armExpression));
+            ConsumeSeparators();
+
+            if (position == start)
+            {
+                NextToken();
+            }
+        }
+
+        var closeBrace = MatchToken(TokenKind.CloseBrace, "}");
+        return new MatchExpressionSyntax(matchKeyword, expression, openBrace, arms, closeBrace);
+    }
+
+    private PatternSyntax ParsePattern()
+    {
+        switch (Current().Kind)
+        {
+            case TokenKind.TrueKeyword:
+            case TokenKind.FalseKeyword:
+            case TokenKind.NumberLiteral:
+            case TokenKind.StringLiteral:
+                return new LiteralPatternSyntax(NextToken());
+            case TokenKind.Identifier:
+                var identifier = NextToken();
+                if (identifier.Text == "_")
+                {
+                    return new WildcardPatternSyntax(identifier);
+                }
+
+                diagnostics.Add(Diagnostic.Error(sourceText, identifier.Span, $"Unexpected pattern '{identifier.Text}'."));
+                return new WildcardPatternSyntax(identifier);
+            default:
+                diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("pattern", Current())));
+                var missing = SyntaxToken.Missing(TokenKind.Identifier, Current().Position);
+                if (Current().Kind != TokenKind.EndOfFile)
+                {
+                    NextToken();
+                }
+                return new WildcardPatternSyntax(missing);
         }
     }
 
