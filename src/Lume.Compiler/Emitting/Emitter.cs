@@ -14,6 +14,11 @@ public sealed class Emitter
         builder.AppendLine();
         builder.AppendLine("class Program");
         builder.AppendLine("{");
+        foreach (var function in program.Functions)
+        {
+            WriteFunction(builder, function);
+            builder.AppendLine();
+        }
         builder.AppendLine("    static void Main()");
         builder.AppendLine("    {");
         var writer = new IndentedWriter(builder, 2);
@@ -62,6 +67,15 @@ public sealed class Emitter
             case BoundExpressionStatement expressionStatement:
                 writer.WriteLine($"{WriteExpression(expressionStatement.Expression)};");
                 return;
+            case BoundReturnStatement returnStatement:
+                if (returnStatement.Expression is null)
+                {
+                    writer.WriteLine("return;");
+                    return;
+                }
+
+                writer.WriteLine($"return {WriteExpression(returnStatement.Expression)};");
+                return;
             default:
                 throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
         }
@@ -84,6 +98,8 @@ public sealed class Emitter
             BoundBinaryExpression binary => WriteBinaryExpression(binary, parentPrecedence),
             BoundInputExpression => "Console.ReadLine()",
             BoundCallExpression call => WriteCallExpression(call),
+            BoundFunctionExpression function => EscapeIdentifier(function.Function.Name),
+            BoundLambdaExpression lambda => WriteLambdaExpression(lambda),
             _ => throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}")
         };
     }
@@ -91,17 +107,66 @@ public sealed class Emitter
     private static string WriteCallExpression(BoundCallExpression call)
     {
         var args = string.Join(", ", call.Arguments.Select(arg => WriteExpression(arg)));
-        return call.Function.Name switch
+        if (call.Callee is BoundFunctionExpression function && function.Function.IsBuiltin)
         {
-            "println" => $"Console.WriteLine({args})",
-            "print" => $"Console.WriteLine({args})",
-            "input" => "Console.ReadLine()",
-            "len" => $"{args}.Length",
-            "abs" => $"Math.Abs({args})",
-            "min" => $"Math.Min({args})",
-            "max" => $"Math.Max({args})",
-            _ => $"{EscapeIdentifier(call.Function.Name)}({args})"
-        };
+            return function.Function.Name switch
+            {
+                "println" => $"Console.WriteLine({args})",
+                "print" => $"Console.WriteLine({args})",
+                "input" => "Console.ReadLine()",
+                "len" => $"{args}.Length",
+                "abs" => $"Math.Abs({args})",
+                "min" => $"Math.Min({args})",
+                "max" => $"Math.Max({args})",
+                _ => $"{EscapeIdentifier(function.Function.Name)}({args})"
+            };
+        }
+
+        var calleeText = WriteExpression(call.Callee);
+        var wrapped = call.Callee is BoundNameExpression or BoundFunctionExpression
+            ? calleeText
+            : $"({calleeText})";
+        return $"{wrapped}({args})";
+    }
+
+    private static string WriteLambdaExpression(BoundLambdaExpression lambda)
+    {
+        var parameters = string.Join(", ", lambda.Parameters.Select(parameter =>
+            $"{TypeToCSharp(parameter.Type)} {EscapeIdentifier(parameter.Name)}"));
+
+        if (lambda.Body.Statements.Count == 1 && lambda.Body.Statements[0] is BoundReturnStatement returnStatement)
+        {
+            var expression = returnStatement.Expression is null
+                ? string.Empty
+                : WriteExpression(returnStatement.Expression);
+            return $"({parameters}) => {expression}".TrimEnd();
+        }
+
+        var builder = new StringBuilder();
+        builder.Append($"({parameters}) => ");
+        builder.AppendLine("{");
+        var writer = new IndentedWriter(builder, 2);
+        foreach (var statement in lambda.Body.Statements)
+        {
+            WriteStatement(writer, statement);
+        }
+        builder.Append("}");
+        return builder.ToString();
+    }
+
+    private static void WriteFunction(StringBuilder builder, BoundFunctionDeclaration function)
+    {
+        var returnType = TypeToCSharp(function.Symbol.ReturnType);
+        var parameters = string.Join(", ", function.Parameters.Select(parameter =>
+            $"{TypeToCSharp(parameter.Type)} {EscapeIdentifier(parameter.Name)}"));
+        builder.AppendLine($"    static {returnType} {EscapeIdentifier(function.Symbol.Name)}({parameters})");
+        builder.AppendLine("    {");
+        var writer = new IndentedWriter(builder, 2);
+        foreach (var statement in function.Body.Statements)
+        {
+            WriteStatement(writer, statement);
+        }
+        builder.AppendLine("    }");
     }
 
     private static string WriteBinaryExpression(BoundBinaryExpression binary, int parentPrecedence)
@@ -160,6 +225,36 @@ public sealed class Emitter
     private static string EscapeIdentifier(string name)
     {
         return CSharpKeywords.Contains(name) ? $"@{name}" : name;
+    }
+
+    private static string TypeToCSharp(TypeSymbol type)
+    {
+        if (type.ParameterTypes is not null)
+        {
+            var parameterTypes = type.ParameterTypes.Select(TypeToCSharp).ToList();
+            var returnType = type.ReturnType ?? TypeSymbol.Unit;
+            if (returnType == TypeSymbol.Unit)
+            {
+                if (parameterTypes.Count == 0)
+                {
+                    return "Action";
+                }
+
+                return $"Action<{string.Join(", ", parameterTypes)}>";
+            }
+
+            parameterTypes.Add(TypeToCSharp(returnType));
+            return $"Func<{string.Join(", ", parameterTypes)}>";
+        }
+
+        return type switch
+        {
+            var t when t == TypeSymbol.Int => "int",
+            var t when t == TypeSymbol.Bool => "bool",
+            var t when t == TypeSymbol.String => "string",
+            var t when t == TypeSymbol.Unit => "void",
+            _ => "object"
+        };
     }
 
     private static readonly HashSet<string> CSharpKeywords = new(StringComparer.Ordinal)

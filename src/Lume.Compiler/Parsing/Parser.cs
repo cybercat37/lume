@@ -17,6 +17,8 @@ public sealed class Parser
         TokenKind.LetKeyword,
         TokenKind.PrintKeyword,
         TokenKind.PrintlnKeyword,
+        TokenKind.FnKeyword,
+        TokenKind.ReturnKeyword,
         TokenKind.Identifier,
         TokenKind.InputKeyword,
         TokenKind.TrueKeyword,
@@ -88,8 +90,74 @@ public sealed class Parser
             TokenKind.LetKeyword => ParseVariableDeclaration(),
             TokenKind.PrintKeyword => ParsePrintStatement(),
             TokenKind.PrintlnKeyword => ParsePrintStatement(),
+            TokenKind.ReturnKeyword => ParseReturnStatement(),
+            TokenKind.FnKeyword when Peek(1).Kind == TokenKind.Identifier => ParseFunctionDeclaration(),
             _ => ParseExpressionStatement()
         };
+    }
+
+    private StatementSyntax ParseFunctionDeclaration()
+    {
+        var fnKeyword = MatchToken(TokenKind.FnKeyword, "fn");
+        var identifier = MatchToken(TokenKind.Identifier, "identifier");
+        var openParen = MatchToken(TokenKind.OpenParen, "(");
+        var parameters = ParseParameterList();
+        var closeParen = MatchToken(TokenKind.CloseParen, ")");
+
+        SyntaxToken? returnArrow = null;
+        TypeSyntax? returnType = null;
+        if (Current().Kind == TokenKind.ArrowType)
+        {
+            returnArrow = NextToken();
+            returnType = ParseTypeSyntax();
+        }
+
+        if (Current().Kind == TokenKind.Arrow)
+        {
+            var arrowToken = NextToken();
+            var expressionBody = ParseExpression();
+            return new FunctionDeclarationSyntax(
+                fnKeyword,
+                identifier,
+                openParen,
+                parameters,
+                closeParen,
+                returnArrow,
+                returnType,
+                arrowToken,
+                null,
+                expressionBody);
+        }
+
+        var bodyBlock = ParseBlockStatement();
+        return new FunctionDeclarationSyntax(
+            fnKeyword,
+            identifier,
+            openParen,
+            parameters,
+            closeParen,
+            returnArrow,
+            returnType,
+            null,
+            (BlockStatementSyntax)bodyBlock,
+            null);
+    }
+
+    private StatementSyntax ParseReturnStatement()
+    {
+        var returnKeyword = MatchToken(TokenKind.ReturnKeyword, "return");
+        ExpressionSyntax? expression = null;
+        if (!IsStatementTerminator(Current().Kind))
+        {
+            expression = ParseExpression();
+        }
+
+        if (Current().Kind == TokenKind.Semicolon)
+        {
+            NextToken();
+        }
+
+        return new ReturnStatementSyntax(returnKeyword, expression);
     }
 
     private StatementSyntax ParsePrintStatement()
@@ -203,7 +271,7 @@ public sealed class Parser
         }
         else
         {
-            left = ParsePrimaryExpression();
+            left = ParsePostfixExpression();
         }
 
         while (true)
@@ -222,6 +290,17 @@ public sealed class Parser
         return left;
     }
 
+    private ExpressionSyntax ParsePostfixExpression()
+    {
+        var expression = ParsePrimaryExpression();
+        while (Current().Kind == TokenKind.OpenParen)
+        {
+            expression = ParseCallExpression(expression);
+        }
+
+        return expression;
+    }
+
     private ExpressionSyntax ParsePrimaryExpression()
     {
         switch (Current().Kind)
@@ -237,9 +316,16 @@ public sealed class Parser
             case TokenKind.StringLiteral:
                 return new LiteralExpressionSyntax(NextToken());
             case TokenKind.InputKeyword:
+                if (Peek(1).Kind == TokenKind.OpenParen)
+                {
+                    return new NameExpressionSyntax(NextToken());
+                }
+
                 return new InputExpressionSyntax(NextToken());
             case TokenKind.Identifier:
-                return ParseNameOrCallExpression();
+                return new NameExpressionSyntax(NextToken());
+            case TokenKind.FnKeyword:
+                return ParseLambdaExpression();
             default:
                 diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("expression", Current())));
                 var missing = SyntaxToken.Missing(TokenKind.NumberLiteral, Current().Position);
@@ -251,14 +337,8 @@ public sealed class Parser
         }
     }
 
-    private ExpressionSyntax ParseNameOrCallExpression()
+    private ExpressionSyntax ParseCallExpression(ExpressionSyntax callee)
     {
-        var identifier = MatchToken(TokenKind.Identifier, "identifier");
-        if (Current().Kind != TokenKind.OpenParen)
-        {
-            return new NameExpressionSyntax(identifier);
-        }
-
         var openParen = MatchToken(TokenKind.OpenParen, "(");
         var arguments = new List<ExpressionSyntax>();
         if (Current().Kind != TokenKind.CloseParen)
@@ -277,7 +357,57 @@ public sealed class Parser
         }
 
         var closeParen = MatchToken(TokenKind.CloseParen, ")");
-        return new CallExpressionSyntax(identifier, openParen, arguments, closeParen);
+        return new CallExpressionSyntax(callee, openParen, arguments, closeParen);
+    }
+
+    private ExpressionSyntax ParseLambdaExpression()
+    {
+        var fnKeyword = MatchToken(TokenKind.FnKeyword, "fn");
+        var openParen = MatchToken(TokenKind.OpenParen, "(");
+        var parameters = ParseParameterList();
+        var closeParen = MatchToken(TokenKind.CloseParen, ")");
+
+        if (Current().Kind == TokenKind.Arrow)
+        {
+            var arrowToken = NextToken();
+            var expressionBody = ParseExpression();
+            return new LambdaExpressionSyntax(fnKeyword, openParen, parameters, closeParen, arrowToken, null, expressionBody);
+        }
+
+        var bodyBlock = ParseBlockStatement();
+        return new LambdaExpressionSyntax(fnKeyword, openParen, parameters, closeParen, null, (BlockStatementSyntax)bodyBlock, null);
+    }
+
+    private List<FunctionParameterSyntax> ParseParameterList()
+    {
+        var parameters = new List<FunctionParameterSyntax>();
+        if (Current().Kind == TokenKind.CloseParen)
+        {
+            return parameters;
+        }
+
+        do
+        {
+            var identifier = MatchToken(TokenKind.Identifier, "identifier");
+            var colon = MatchToken(TokenKind.Colon, ":");
+            var type = ParseTypeSyntax();
+            parameters.Add(new FunctionParameterSyntax(identifier, colon, type));
+
+            if (Current().Kind != TokenKind.Comma)
+            {
+                break;
+            }
+
+            NextToken();
+        } while (Current().Kind != TokenKind.CloseParen && Current().Kind != TokenKind.EndOfFile);
+
+        return parameters;
+    }
+
+    private TypeSyntax ParseTypeSyntax()
+    {
+        var identifier = MatchToken(TokenKind.Identifier, "type name");
+        return new NameTypeSyntax(identifier);
     }
 
     private void ConsumeSeparators()

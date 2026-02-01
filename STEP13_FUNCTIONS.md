@@ -63,4 +63,15 @@ Goal: introduce functions and lambdas with basic type inference and codegen/inte
    - Doc examples compile.
 
 ## Status
-- Sub-step 1: pending
+- Sub-step 1: complete
+- Sub-step 2: complete
+- Sub-step 3: complete
+- Sub-step 4: complete
+- Sub-step 5: complete
+- Sub-step 6: complete
+- Sub-step 7: complete
+- Sub-step 8: complete
+- Sub-step 9: complete
+- Sub-step 10: complete
+- Sub-step 11: complete
+- Sub-step 12: complete

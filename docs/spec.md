@@ -26,10 +26,11 @@ interoperable with existing C# code.
 This section captures agreed design choices to guide implementation.
 
 ### Functions
+- Parameters require type annotations: `fn add(x: Int, y: Int) -> Int { x + y }`.
 - Return is implicit from the last expression; `return` is allowed for early exit.
 - Functions without an explicit return type have type `Unit`.
 - No optional/default params or named arguments (for now).
-- Lambdas: `fn(x) => x * 2` for single-expression; captures by value only; no `mut` capture.
+- Lambdas: `fn(x: Int) => x * 2` for single-expression; captures by value only; no `mut` capture.
 - Top-level statements are allowed; `fn main()` is optional. CLI args later.
 
 ### Operators

@@ -40,6 +40,49 @@ dotnet run --project src/lume -- build hello.lume
 
 ---
 
+### Example Programs
+
+**Functions and lambdas**
+
+```lume
+fn add(x: Int, y: Int) => x + y
+
+let inc = fn(x: Int) => x + 1
+print add(1, 2)
+print inc(2)
+```
+
+**Input and string helpers**
+
+```lume
+let name = input()
+print len(name)
+```
+
+**Arithmetic utilities**
+
+```lume
+print abs(-10)
+print min(3, 7)
+print max(3, 7)
+```
+
+**Mutable variable with block scope**
+
+```lume
+let mut total = 0
+{
+  let x = 10
+  let y = 20
+  total = x + y
+}
+print total
+```
+
+**Status**: ✅ Implemented
+
+---
+
 ## 2. Fundamentals
 
 ### 2.1 Variables
@@ -71,7 +114,7 @@ counter = counter + 1
 | `Bool` | Boolean | `true`, `false` |
 | `String` | UTF-8 string | `"hello"` |
 
-**Status**: ✅ Implemented
+**Status**: 🔜 Planned
 
 ---
 
@@ -191,7 +234,7 @@ let result = match value {
 }
 ```
 
-**Status**: 🔜 Planned
+**Status**: ✅ Implemented
 
 ---
 
@@ -249,7 +292,7 @@ fn add(a: Int, b: Int) -> Int {
 
 Return is implicit from the last expression. Explicit `return` is allowed for early exit.
 
-**Status**: 🔜 Planned
+**Status**: ✅ Implemented
 
 ---
 
@@ -263,7 +306,7 @@ fn greet(name: String) {
 
 Functions without a return type have type `Unit`.
 
-**Status**: 🔜 Planned
+**Status**: ✅ Implemented
 
 ---
 
@@ -283,7 +326,7 @@ let process = fn(x: Int) {
 }
 ```
 
-**Status**: 🔜 Planned
+**Status**: ✅ Implemented
 
 ---
 
@@ -296,7 +339,7 @@ print x
 
 `fn main()` is optional. CLI arguments will be added in the future.
 
-**Status**: 🔜 Top-level statements planned
+**Status**: ✅ Implemented
 
 ---
 

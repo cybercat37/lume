@@ -5,23 +5,23 @@ namespace Lume.Compiler.Syntax;
 
 public sealed class CallExpressionSyntax : ExpressionSyntax
 {
-    public SyntaxToken FunctionToken { get; }
+    public ExpressionSyntax Callee { get; }
     public SyntaxToken OpenParenToken { get; }
     public IReadOnlyList<ExpressionSyntax> Arguments { get; }
     public SyntaxToken CloseParenToken { get; }
 
     public CallExpressionSyntax(
-        SyntaxToken functionToken,
+        ExpressionSyntax callee,
         SyntaxToken openParenToken,
         IReadOnlyList<ExpressionSyntax> arguments,
         SyntaxToken closeParenToken)
     {
-        FunctionToken = functionToken;
+        Callee = callee;
         OpenParenToken = openParenToken;
         Arguments = arguments;
         CloseParenToken = closeParenToken;
     }
 
     public override TextSpan Span =>
-        TextSpan.FromBounds(FunctionToken.Span.Start, CloseParenToken.Span.End);
+        TextSpan.FromBounds(Callee.Span.Start, CloseParenToken.Span.End);
 }

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Linq;
 using Lume.Compiler.Binding;
 using Lume.Compiler.Diagnostics;
 using Lume.Compiler.Parsing;
@@ -35,6 +36,7 @@ public sealed class Interpreter
     {
         private readonly BoundProgram program;
         private readonly Dictionary<VariableSymbol, object?> values;
+        private readonly Dictionary<FunctionSymbol, BoundFunctionDeclaration> functions;
         private readonly StringBuilder output;
         private readonly List<Diagnostic> diagnostics;
         private readonly Queue<string> inputBuffer;
@@ -43,6 +45,7 @@ public sealed class Interpreter
         {
             this.program = program;
             values = new Dictionary<VariableSymbol, object?>();
+            functions = program.Functions.ToDictionary(func => func.Symbol, func => func);
             output = new StringBuilder();
             diagnostics = new List<Diagnostic>();
             this.inputBuffer = inputBuffer;
@@ -85,6 +88,11 @@ public sealed class Interpreter
                 case BoundExpressionStatement expressionStatement:
                     EvaluateExpression(expressionStatement.Expression);
                     return;
+                case BoundReturnStatement returnStatement:
+                    var returnValue = returnStatement.Expression is null
+                        ? null
+                        : EvaluateExpression(returnStatement.Expression);
+                    throw new ReturnSignal(returnValue);
                 default:
                     throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
             }
@@ -115,6 +123,10 @@ public sealed class Interpreter
                     return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
                 case BoundCallExpression call:
                     return EvaluateCall(call);
+                case BoundFunctionExpression functionExpression:
+                    return functionExpression.Function;
+                case BoundLambdaExpression lambda:
+                    return EvaluateLambda(lambda);
                 default:
                     throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
             }
@@ -122,8 +134,35 @@ public sealed class Interpreter
 
         private object? EvaluateCall(BoundCallExpression call)
         {
+            var callee = EvaluateExpression(call.Callee);
             var arguments = call.Arguments.Select(EvaluateExpression).ToArray();
-            switch (call.Function.Name)
+            if (callee is FunctionSymbol functionSymbol)
+            {
+                if (functionSymbol.IsBuiltin)
+                {
+                    return EvaluateBuiltin(functionSymbol, arguments);
+                }
+
+                if (functions.TryGetValue(functionSymbol, out var declaration))
+                {
+                    return EvaluateUserFunction(declaration.Parameters, declaration.Body, arguments, new Dictionary<VariableSymbol, object?>());
+                }
+
+                return null;
+            }
+
+            if (callee is FunctionValue functionValue)
+            {
+                return EvaluateUserFunction(functionValue.Parameters, functionValue.Body, arguments, functionValue.Captures);
+            }
+
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Expression is not callable."));
+            return null;
+        }
+
+        private object? EvaluateBuiltin(FunctionSymbol functionSymbol, object?[] arguments)
+        {
+            switch (functionSymbol.Name)
             {
                 case "println":
                 case "print":
@@ -142,6 +181,82 @@ public sealed class Interpreter
                 default:
                     return null;
             }
+        }
+
+        private FunctionValue EvaluateLambda(BoundLambdaExpression lambda)
+        {
+            var captures = new Dictionary<VariableSymbol, object?>();
+            foreach (var capture in lambda.Captures)
+            {
+                if (values.TryGetValue(capture, out var value))
+                {
+                    captures[capture] = value;
+                }
+            }
+
+            return new FunctionValue(lambda.Parameters, lambda.Body, captures);
+        }
+
+        private object? EvaluateUserFunction(
+            IReadOnlyList<VariableSymbol> parameters,
+            BoundBlockStatement body,
+            object?[] arguments,
+            IDictionary<VariableSymbol, object?> captures)
+        {
+            var previousValues = new Dictionary<VariableSymbol, object?>();
+            var modifiedSymbols = new HashSet<VariableSymbol>();
+
+            foreach (var capture in captures)
+            {
+                if (values.TryGetValue(capture.Key, out var existing))
+                {
+                    previousValues[capture.Key] = existing;
+                }
+
+                values[capture.Key] = capture.Value;
+                modifiedSymbols.Add(capture.Key);
+            }
+
+            for (var i = 0; i < parameters.Count && i < arguments.Length; i++)
+            {
+                var parameter = parameters[i];
+                if (values.TryGetValue(parameter, out var existing))
+                {
+                    previousValues[parameter] = existing;
+                }
+
+                values[parameter] = arguments[i];
+                modifiedSymbols.Add(parameter);
+            }
+
+            object? result = null;
+            try
+            {
+                foreach (var statement in body.Statements)
+                {
+                    EvaluateStatement(statement);
+                }
+            }
+            catch (ReturnSignal signal)
+            {
+                result = signal.Value;
+            }
+            finally
+            {
+                foreach (var symbol in modifiedSymbols)
+                {
+                    if (previousValues.TryGetValue(symbol, out var previous))
+                    {
+                        values[symbol] = previous;
+                    }
+                    else
+                    {
+                        values.Remove(symbol);
+                    }
+                }
+            }
+
+            return result;
         }
 
         private object? EvaluateUnaryExpression(BoundUnaryExpression unary)
@@ -191,6 +306,33 @@ public sealed class Interpreter
                 bool boolValue => boolValue ? "true" : "false",
                 _ => value.ToString() ?? string.Empty
             };
+        }
+
+        private sealed class ReturnSignal : Exception
+        {
+            public object? Value { get; }
+
+            public ReturnSignal(object? value)
+            {
+                Value = value;
+            }
+        }
+
+        private sealed class FunctionValue
+        {
+            public IReadOnlyList<VariableSymbol> Parameters { get; }
+            public BoundBlockStatement Body { get; }
+            public IDictionary<VariableSymbol, object?> Captures { get; }
+
+            public FunctionValue(
+                IReadOnlyList<VariableSymbol> parameters,
+                BoundBlockStatement body,
+                IDictionary<VariableSymbol, object?> captures)
+            {
+                Parameters = parameters;
+                Body = body;
+                Captures = captures;
+            }
         }
     }
 }

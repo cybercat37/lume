@@ -81,12 +81,24 @@ public sealed class Lexer
         switch (current)
         {
             case '=':
+                if (Peek(1) == '>')
+                {
+                    position += 2;
+                    return new SyntaxToken(TokenKind.Arrow, new TextSpan(start, 2), "=>", null);
+                }
+
                 Next();
                 return new SyntaxToken(TokenKind.EqualsToken, new TextSpan(start, 1), "=", null);
             case '+':
                 Next();
                 return new SyntaxToken(TokenKind.Plus, new TextSpan(start, 1), "+", null);
             case '-':
+                if (Peek(1) == '>')
+                {
+                    position += 2;
+                    return new SyntaxToken(TokenKind.ArrowType, new TextSpan(start, 2), "->", null);
+                }
+
                 Next();
                 return new SyntaxToken(TokenKind.Minus, new TextSpan(start, 1), "-", null);
             case '*':
@@ -98,6 +110,9 @@ public sealed class Lexer
             case ',':
                 Next();
                 return new SyntaxToken(TokenKind.Comma, new TextSpan(start, 1), ",", null);
+            case ':':
+                Next();
+                return new SyntaxToken(TokenKind.Colon, new TextSpan(start, 1), ":", null);
             case '(':
                 Next();
                 return new SyntaxToken(TokenKind.OpenParen, new TextSpan(start, 1), "(", null);
@@ -249,6 +264,8 @@ public sealed class Lexer
             "input" => TokenKind.InputKeyword,
             "let" => TokenKind.LetKeyword,
             "mut" => TokenKind.MutKeyword,
+            "fn" => TokenKind.FnKeyword,
+            "return" => TokenKind.ReturnKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,
             _ => TokenKind.Identifier

@@ -31,16 +31,31 @@ make run FILE=hello.lume
 dotnet run --project src/lume -- run hello.lume
 ```
 
-### Example Program
+### Example Programs
+
+**Functions and lambdas**
 
 ```lume
-let mut counter = 0
-{
-  let x = 10
-  let y = 20
-  counter = x + y
-}
-print counter
+fn add(x: Int, y: Int) => x + y
+
+let inc = fn(x: Int) => x + 1
+print add(1, 2)
+print inc(2)
+```
+
+**Input and string helpers**
+
+```lume
+let name = input()
+print len(name)
+```
+
+**Arithmetic utilities**
+
+```lume
+print abs(-10)
+print min(3, 7)
+print max(3, 7)
 ```
 
 ## Status
@@ -56,6 +71,7 @@ print counter
 - Unary operators (`-`, `+`)
 - String concatenation (`+`)
 - Blocks and scoped variables
+- Functions and lambdas (`fn`, `return`)
 - String escape sequences (`\n`, `\t`, `\r`, `\"`, `\\`)
 - Binding and scope resolution
 - Type checking
@@ -72,7 +88,6 @@ print counter
 - Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
 - Logical operators (`&&`, `||`, `!`)
 - Pattern matching (`match`)
-- Functions and lambdas
 - Records and Sum types
 - Generics
 - `Result`/`Option` and error propagation (`?`)

@@ -1,3 +1,4 @@
+using System.Linq;
 using Lume.Compiler.Diagnostics;
 using Lume.Compiler.Parsing;
 using Lume.Compiler.Syntax;
@@ -11,21 +12,50 @@ public sealed class Binder
     private BoundScope scope = new(null);
     private SourceText? sourceText;
     private SourceText SourceText => sourceText ?? new SourceText(string.Empty, string.Empty);
+    private FunctionSymbol? currentFunction;
+    private readonly Stack<LambdaBindingContext> lambdaStack = new();
+    private List<TypeSymbol>? returnTypes;
+
+    private sealed class LambdaBindingContext
+    {
+        public BoundScope Scope { get; }
+        public HashSet<VariableSymbol> Captures { get; } = new();
+
+        public LambdaBindingContext(BoundScope scope)
+        {
+            Scope = scope;
+        }
+    }
 
     public BinderResult Bind(SyntaxTree syntaxTree)
     {
         sourceText = syntaxTree.SourceText;
+        scope = new BoundScope(null);
+        DeclareBuiltins();
+
         var statements = new List<BoundStatement>();
+        var functions = new List<BoundFunctionDeclaration>();
+
+        var functionDeclarations = syntaxTree.Root.Statements
+            .OfType<FunctionDeclarationSyntax>()
+            .ToList();
+        DeclareFunctionSymbols(functionDeclarations);
 
         foreach (var statement in syntaxTree.Root.Statements)
         {
+            if (statement is FunctionDeclarationSyntax functionDeclaration)
+            {
+                functions.Add(BindFunctionDeclaration(functionDeclaration));
+                continue;
+            }
+
             statements.Add(BindStatement(statement));
         }
 
         var allDiagnostics = syntaxTree.Diagnostics
             .Concat(diagnostics)
             .ToList();
-        return new BinderResult(new BoundProgram(statements), allDiagnostics);
+        return new BinderResult(new BoundProgram(functions, statements), allDiagnostics);
     }
 
     public BinderResult BindCached(SyntaxTree syntaxTree, BindingCache cache)
@@ -40,6 +70,47 @@ public sealed class Binder
         return result;
     }
 
+    private void DeclareBuiltins()
+    {
+        foreach (var function in BuiltinFunctions.All)
+        {
+            scope.TryDeclareFunction(function);
+        }
+    }
+
+    private void DeclareFunctionSymbols(IReadOnlyList<FunctionDeclarationSyntax> declarations)
+    {
+        foreach (var declaration in declarations)
+        {
+            var name = declaration.IdentifierToken.Text;
+            if (string.IsNullOrEmpty(name))
+            {
+                continue;
+            }
+
+            var parameters = new List<ParameterSymbol>();
+            foreach (var parameter in declaration.Parameters)
+            {
+                var type = BindType(parameter.Type);
+                parameters.Add(new ParameterSymbol(parameter.IdentifierToken.Text, type));
+            }
+
+            var returnType = declaration.ReturnType is null
+                ? TypeSymbol.Unit
+                : BindType(declaration.ReturnType);
+
+            var symbol = new FunctionSymbol(name, parameters, returnType);
+            var declared = scope.TryDeclareFunction(symbol);
+            if (declared is null)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    declaration.IdentifierToken.Span,
+                    $"Function '{name}' is already declared in this scope."));
+            }
+        }
+    }
+
     private BoundStatement BindStatement(StatementSyntax statement)
     {
         switch (statement)
@@ -50,6 +121,14 @@ public sealed class Binder
                 return BindVariableDeclaration(declaration);
             case PrintStatementSyntax print:
                 return new BoundPrintStatement(BindExpression(print.Expression));
+            case ReturnStatementSyntax returnStatement:
+                return BindReturnStatement(returnStatement);
+            case FunctionDeclarationSyntax:
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    statement.Span,
+                    "Function declarations are only allowed at the top level."));
+                return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Unit));
             case ExpressionStatementSyntax expressionStatement:
                 return new BoundExpressionStatement(BindExpression(expressionStatement.Expression));
             default:
@@ -70,6 +149,63 @@ public sealed class Binder
 
         scope = previousScope;
         return new BoundBlockStatement(statements);
+    }
+
+    private BoundFunctionDeclaration BindFunctionDeclaration(FunctionDeclarationSyntax declaration)
+    {
+        var name = declaration.IdentifierToken.Text;
+        var functionSymbol = scope.TryLookupFunction(name) ?? new FunctionSymbol(
+            name,
+            declaration.Parameters.Select(parameter => new ParameterSymbol(parameter.IdentifierToken.Text, BindType(parameter.Type))).ToList(),
+            declaration.ReturnType is null ? TypeSymbol.Unit : BindType(declaration.ReturnType));
+
+        var previousScope = scope;
+        var previousFunction = currentFunction;
+        var previousReturnTypes = returnTypes;
+        scope = new BoundScope(previousScope);
+        currentFunction = functionSymbol;
+        returnTypes = new List<TypeSymbol>();
+
+        var parameterSymbols = new List<VariableSymbol>();
+        foreach (var parameter in functionSymbol.Parameters)
+        {
+            var symbol = new VariableSymbol(parameter.Name, false, parameter.Type);
+            parameterSymbols.Add(symbol);
+            var declared = scope.TryDeclare(symbol);
+            if (declared is null)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    declaration.IdentifierToken.Span,
+                    $"Parameter '{parameter.Name}' is already declared in this scope."));
+            }
+        }
+
+        BoundBlockStatement body;
+        if (declaration.BodyExpression is not null)
+        {
+            var expression = BindExpression(declaration.BodyExpression);
+            returnTypes.Add(expression.Type);
+            body = new BoundBlockStatement(new BoundStatement[]
+            {
+                new BoundReturnStatement(expression)
+            });
+        }
+        else if (declaration.BodyBlock is not null)
+        {
+            body = ApplyImplicitReturn((BoundBlockStatement)BindBlockStatement(declaration.BodyBlock));
+        }
+        else
+        {
+            body = new BoundBlockStatement(Array.Empty<BoundStatement>());
+        }
+
+        InferAndValidateReturnType(functionSymbol, declaration.ReturnType is not null, body, declaration.IdentifierToken.Span);
+
+        currentFunction = previousFunction;
+        returnTypes = previousReturnTypes;
+        scope = previousScope;
+        return new BoundFunctionDeclaration(functionSymbol, parameterSymbols, body);
     }
 
     private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax declaration)
@@ -117,6 +253,8 @@ public sealed class Binder
                 return BindInputExpression();
             case CallExpressionSyntax call:
                 return BindCallExpression(call);
+            case LambdaExpressionSyntax lambda:
+                return BindLambdaExpression(lambda);
             default:
                 throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
         }
@@ -189,12 +327,20 @@ public sealed class Binder
         var symbol = scope.TryLookup(name);
         if (symbol is null)
         {
+            var functionSymbol = scope.TryLookupFunction(name);
+            if (functionSymbol is not null)
+            {
+                return new BoundFunctionExpression(functionSymbol);
+            }
+
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
                 nameExpression.IdentifierToken.Span,
                 $"Undefined variable '{name}'."));
             return new BoundLiteralExpression(null, TypeSymbol.Error);
         }
+
+        TrackLambdaCapture(symbol, nameExpression.IdentifierToken.Span);
 
         return new BoundNameExpression(symbol);
     }
@@ -235,50 +381,305 @@ public sealed class Binder
 
     private BoundExpression BindInputExpression()
     {
-        return new BoundCallExpression(BuiltinFunctions.Input, Array.Empty<BoundExpression>());
+        return new BoundInputExpression();
     }
 
     private BoundExpression BindCallExpression(CallExpressionSyntax call)
     {
-        var name = call.FunctionToken.Text;
-        if (!BuiltinFunctions.TryLookup(name, out var function) || function is null)
-        {
-            diagnostics.Add(Diagnostic.Error(
-                SourceText,
-                call.FunctionToken.Span,
-                $"Unknown function '{name}'."));
-            return new BoundLiteralExpression(null, TypeSymbol.Error);
-        }
-
+        var callee = BindExpression(call.Callee);
         var boundArguments = new List<BoundExpression>();
         foreach (var argument in call.Arguments)
         {
             boundArguments.Add(BindExpression(argument));
         }
-
-        if (function.ParameterTypes.Count != boundArguments.Count)
+        var parameterTypes = callee.Type.ParameterTypes;
+        if (parameterTypes is null)
         {
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
-                call.FunctionToken.Span,
-                $"Function '{name}' expects {function.ParameterTypes.Count} arguments."));
+                call.Span,
+                "Expression is not callable."));
+            return new BoundCallExpression(callee, boundArguments, TypeSymbol.Error);
+        }
+
+        if (parameterTypes.Count != boundArguments.Count)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                $"Function expects {parameterTypes.Count} arguments."));
         }
         else
         {
-            for (var i = 0; i < function.ParameterTypes.Count; i++)
+            for (var i = 0; i < parameterTypes.Count; i++)
             {
-                var expected = function.ParameterTypes[i];
+                var expected = parameterTypes[i];
                 var actual = boundArguments[i].Type;
                 if (expected != actual && actual != TypeSymbol.Error)
                 {
                     diagnostics.Add(Diagnostic.Error(
                         SourceText,
-                        call.FunctionToken.Span,
-                        $"Function '{name}' expects '{expected}' but got '{actual}'."));
+                        call.Span,
+                        $"Function expects '{expected}' but got '{actual}'."));
                 }
             }
         }
 
-        return new BoundCallExpression(function, boundArguments);
+        var returnType = callee.Type.ReturnType ?? TypeSymbol.Error;
+        return new BoundCallExpression(callee, boundArguments, returnType);
+    }
+
+    private BoundStatement BindReturnStatement(ReturnStatementSyntax returnStatement)
+    {
+        var expression = returnStatement.Expression is null
+            ? null
+            : BindExpression(returnStatement.Expression);
+        var expressionType = expression?.Type ?? TypeSymbol.Unit;
+
+        if (currentFunction is null && lambdaStack.Count == 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                returnStatement.ReturnKeyword.Span,
+                "Return statements are only allowed inside functions."));
+        }
+        else
+        {
+            returnTypes?.Add(expressionType);
+        }
+
+        return new BoundReturnStatement(expression);
+    }
+
+    private BoundExpression BindLambdaExpression(LambdaExpressionSyntax lambda)
+    {
+        var previousScope = scope;
+        scope = new BoundScope(previousScope);
+        var context = new LambdaBindingContext(scope);
+        lambdaStack.Push(context);
+
+        var parameterSymbols = new List<VariableSymbol>();
+        foreach (var parameter in lambda.Parameters)
+        {
+            var type = BindType(parameter.Type);
+            var symbol = new VariableSymbol(parameter.IdentifierToken.Text, false, type);
+            parameterSymbols.Add(symbol);
+            var declared = scope.TryDeclare(symbol);
+            if (declared is null)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    parameter.IdentifierToken.Span,
+                    $"Parameter '{parameter.IdentifierToken.Text}' is already declared in this scope."));
+            }
+        }
+
+        var previousFunction = currentFunction;
+        var previousReturnTypes = returnTypes;
+        currentFunction = null;
+        returnTypes = new List<TypeSymbol>();
+
+        BoundBlockStatement body;
+        if (lambda.BodyExpression is not null)
+        {
+            var expression = BindExpression(lambda.BodyExpression);
+            returnTypes.Add(expression.Type);
+            body = new BoundBlockStatement(new BoundStatement[]
+            {
+                new BoundReturnStatement(expression)
+            });
+        }
+        else if (lambda.BodyBlock is not null)
+        {
+            body = ApplyImplicitReturn((BoundBlockStatement)BindBlockStatement(lambda.BodyBlock));
+        }
+        else
+        {
+            body = new BoundBlockStatement(Array.Empty<BoundStatement>());
+        }
+
+        var functionType = InferReturnType(TypeSymbol.Unit, body, returnTypes, allowUnitFallback: true);
+        currentFunction = previousFunction;
+        returnTypes = previousReturnTypes;
+
+        lambdaStack.Pop();
+        scope = previousScope;
+
+        var captures = context.Captures.ToList();
+        var parameterTypes = parameterSymbols.Select(parameter => parameter.Type).ToList();
+        var lambdaType = TypeSymbol.Function(parameterTypes, functionType);
+        return new BoundLambdaExpression(parameterSymbols, body, captures, lambdaType);
+    }
+
+    private void TrackLambdaCapture(VariableSymbol symbol, TextSpan span)
+    {
+        if (lambdaStack.Count == 0)
+        {
+            return;
+        }
+
+        var context = lambdaStack.Peek();
+        if (IsDeclaredInScopeChain(scope, context.Scope, symbol))
+        {
+            return;
+        }
+
+        if (symbol.IsMutable)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                span,
+                $"Cannot capture mutable variable '{symbol.Name}' in lambda."));
+        }
+
+        context.Captures.Add(symbol);
+    }
+
+    private static bool IsDeclaredInScopeChain(BoundScope? current, BoundScope? stopScope, VariableSymbol symbol)
+    {
+        while (current is not null)
+        {
+            if (current.ContainsSymbol(symbol))
+            {
+                return true;
+            }
+
+            if (ReferenceEquals(current, stopScope))
+            {
+                break;
+            }
+
+            current = current.Parent;
+        }
+
+        return false;
+    }
+
+    private void InferAndValidateReturnType(
+        FunctionSymbol function,
+        bool hasAnnotatedReturnType,
+        BoundBlockStatement body,
+        TextSpan span)
+    {
+        var inferred = InferReturnType(function.ReturnType, body, returnTypes, allowUnitFallback: !hasAnnotatedReturnType);
+        if (inferred == TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                span,
+                $"Function '{function.Name}' has inconsistent return types."));
+        }
+
+        if (hasAnnotatedReturnType)
+        {
+            if (inferred != function.ReturnType && inferred != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    span,
+                    $"Function '{function.Name}' returns '{inferred}' but is declared as '{function.ReturnType}'."));
+            }
+
+            return;
+        }
+
+        function.SetReturnType(inferred);
+    }
+
+    private static TypeSymbol InferReturnType(
+        TypeSymbol declaredReturnType,
+        BoundBlockStatement body,
+        List<TypeSymbol>? collectedReturnTypes,
+        bool allowUnitFallback)
+    {
+        var returnCandidates = new List<TypeSymbol>();
+        if (collectedReturnTypes is not null)
+        {
+            returnCandidates.AddRange(collectedReturnTypes);
+        }
+
+        var implicitReturn = GetImplicitReturnType(body);
+        if (implicitReturn is not null)
+        {
+            returnCandidates.Add(implicitReturn);
+        }
+
+        if (returnCandidates.Count == 0)
+        {
+            return allowUnitFallback ? TypeSymbol.Unit : declaredReturnType;
+        }
+
+        var first = returnCandidates.First();
+        foreach (var candidate in returnCandidates.Skip(1))
+        {
+            if (candidate != first && candidate != TypeSymbol.Error)
+            {
+                return TypeSymbol.Error;
+            }
+        }
+
+        return first;
+    }
+
+    private static TypeSymbol? GetImplicitReturnType(BoundBlockStatement body)
+    {
+        if (body.Statements.Count == 0)
+        {
+            return null;
+        }
+
+        var last = body.Statements[^1];
+        if (last is BoundExpressionStatement expressionStatement)
+        {
+            return expressionStatement.Expression.Type;
+        }
+
+        return null;
+    }
+
+    private BoundBlockStatement ApplyImplicitReturn(BoundBlockStatement body)
+    {
+        if (body.Statements.Count == 0)
+        {
+            return body;
+        }
+
+        var statements = body.Statements.ToList();
+        if (statements[^1] is BoundExpressionStatement expressionStatement)
+        {
+            returnTypes?.Add(expressionStatement.Expression.Type);
+            statements[^1] = new BoundReturnStatement(expressionStatement.Expression);
+            return new BoundBlockStatement(statements);
+        }
+
+        return body;
+    }
+
+    private TypeSymbol BindType(TypeSyntax type)
+    {
+        if (type is NameTypeSyntax nameType)
+        {
+            var name = nameType.IdentifierToken.Text;
+            var resolved = name switch
+            {
+                "Int" => TypeSymbol.Int,
+                "Bool" => TypeSymbol.Bool,
+                "String" => TypeSymbol.String,
+                "Unit" => TypeSymbol.Unit,
+                _ => TypeSymbol.Error
+            };
+
+            if (resolved == TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    nameType.IdentifierToken.Span,
+                    $"Unknown type '{name}'."));
+            }
+
+            return resolved;
+        }
+
+        return TypeSymbol.Error;
     }
 }

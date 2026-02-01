@@ -2,13 +2,14 @@ namespace Lume.Compiler.Binding;
 
 public sealed class BoundCallExpression : BoundExpression
 {
-    public FunctionSymbol Function { get; }
+    public BoundExpression Callee { get; }
     public IReadOnlyList<BoundExpression> Arguments { get; }
-    public override TypeSymbol Type => Function.ReturnType;
+    public override TypeSymbol Type { get; }
 
-    public BoundCallExpression(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
+    public BoundCallExpression(BoundExpression callee, IReadOnlyList<BoundExpression> arguments, TypeSymbol returnType)
     {
-        Function = function;
+        Callee = callee;
         Arguments = arguments;
+        Type = returnType;
     }
 }

@@ -2,10 +2,12 @@ namespace Lume.Compiler.Binding;
 
 public sealed class BoundProgram
 {
+    public IReadOnlyList<BoundFunctionDeclaration> Functions { get; }
     public IReadOnlyList<BoundStatement> Statements { get; }
 
-    public BoundProgram(IReadOnlyList<BoundStatement> statements)
+    public BoundProgram(IReadOnlyList<BoundFunctionDeclaration> functions, IReadOnlyList<BoundStatement> statements)
     {
+        Functions = functions;
         Statements = statements;
     }
 }

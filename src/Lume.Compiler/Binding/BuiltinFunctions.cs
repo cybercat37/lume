@@ -1,41 +1,50 @@
 namespace Lume.Compiler.Binding;
 
+using System.Linq;
+
 public static class BuiltinFunctions
 {
     public static readonly FunctionSymbol Println = new(
         "println",
-        new[] { TypeSymbol.Int },
-        TypeSymbol.Unit);
+        new[] { new ParameterSymbol("value", TypeSymbol.Int) },
+        TypeSymbol.Unit,
+        isBuiltin: true);
 
     public static readonly FunctionSymbol Print = new(
         "print",
-        new[] { TypeSymbol.Int },
-        TypeSymbol.Unit);
+        new[] { new ParameterSymbol("value", TypeSymbol.Int) },
+        TypeSymbol.Unit,
+        isBuiltin: true);
 
     public static readonly FunctionSymbol Input = new(
         "input",
-        Array.Empty<TypeSymbol>(),
-        TypeSymbol.String);
+        Array.Empty<ParameterSymbol>(),
+        TypeSymbol.String,
+        isBuiltin: true);
 
     public static readonly FunctionSymbol Len = new(
         "len",
-        new[] { TypeSymbol.String },
-        TypeSymbol.Int);
+        new[] { new ParameterSymbol("text", TypeSymbol.String) },
+        TypeSymbol.Int,
+        isBuiltin: true);
 
     public static readonly FunctionSymbol Abs = new(
         "abs",
-        new[] { TypeSymbol.Int },
-        TypeSymbol.Int);
+        new[] { new ParameterSymbol("value", TypeSymbol.Int) },
+        TypeSymbol.Int,
+        isBuiltin: true);
 
     public static readonly FunctionSymbol Min = new(
         "min",
-        new[] { TypeSymbol.Int, TypeSymbol.Int },
-        TypeSymbol.Int);
+        new[] { new ParameterSymbol("left", TypeSymbol.Int), new ParameterSymbol("right", TypeSymbol.Int) },
+        TypeSymbol.Int,
+        isBuiltin: true);
 
     public static readonly FunctionSymbol Max = new(
         "max",
-        new[] { TypeSymbol.Int, TypeSymbol.Int },
-        TypeSymbol.Int);
+        new[] { new ParameterSymbol("left", TypeSymbol.Int), new ParameterSymbol("right", TypeSymbol.Int) },
+        TypeSymbol.Int,
+        isBuiltin: true);
 
     private static readonly Dictionary<string, FunctionSymbol> ByName = new(StringComparer.Ordinal)
     {
@@ -50,4 +59,6 @@ public static class BuiltinFunctions
 
     public static bool TryLookup(string name, out FunctionSymbol? function) =>
         ByName.TryGetValue(name, out function);
+
+    public static IReadOnlyList<FunctionSymbol> All => ByName.Values.ToList();
 }
