@@ -157,7 +157,7 @@ Follow the existing conventions visible in the C# files.
 - Keep changes scoped; avoid unrelated refactors unless required by the task.
 
 ## Roadmap references
-- Language and feature roadmap lives in `ROADMAP.md` and `STEP*_*.md` docs.
+- Language and feature roadmap lives in `docs/roadmap/ROADMAP.md` and `docs/roadmap/STEP*_*.md` docs.
 
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file

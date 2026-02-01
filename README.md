@@ -212,15 +212,15 @@ files with the new expected output.
 
 - **[Language Tutorial](docs/tutorial.md)** — Learn Axom with examples
 - **[Language Specification](docs/spec.md)** — Complete language reference
-- **[Roadmap](ROADMAP.md)** — Implementation progress and plans
+- **[Roadmap](docs/roadmap/ROADMAP.md)** — Implementation progress and plans
 
 ## Roadmap
 
 The current plan is the v0.5 roadmap (next minor release).
 
 - ✅ Steps 1–13 complete (pipeline through functions/lambdas)
-- ⏭ Next step: **Pattern match v1** (see `STEP15_PATTERN_MATCH.md`)
-- 📍 Full plan: [ROADMAP.md](ROADMAP.md)
+- ⏭ Next step: **Pattern match v1** (see `docs/roadmap/STEP15_PATTERN_MATCH.md`)
+- 📍 Full plan: [ROADMAP.md](docs/roadmap/ROADMAP.md)
 
 ## Language Features
 

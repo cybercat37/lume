@@ -44,4 +44,4 @@ This file provides guidance for AI assistants working on this repository.
 - Do not rewrite history without explicit user request.
 
 ## Roadmap
-- See `ROADMAP.md` and step files (`STEP1_PIPELINE.md` ... `STEP13_FUNCTIONS.md`).
+- See `docs/roadmap/ROADMAP.md` and step files in `docs/roadmap/`.

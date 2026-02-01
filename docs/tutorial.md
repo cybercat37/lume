@@ -847,7 +847,7 @@ numbers.each(fn(x) { sum = sum + x })
 ## 14. References
 
 - **Full specification**: [docs/spec.md](spec.md)
-- **Roadmap**: [ROADMAP.md](../../ROADMAP.md)
+- **Roadmap**: [ROADMAP.md](roadmap/ROADMAP.md)
 - **Agent guide**: [AGENTS.md](../../AGENTS.md)
 
 ---
