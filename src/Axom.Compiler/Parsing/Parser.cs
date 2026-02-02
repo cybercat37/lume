@@ -93,27 +93,42 @@ public sealed class Parser
             TokenKind.PrintKeyword => ParsePrintStatement(),
             TokenKind.PrintlnKeyword => ParsePrintStatement(),
             TokenKind.ReturnKeyword => ParseReturnStatement(),
-            TokenKind.TypeKeyword => ParseRecordTypeDeclaration(),
+            TokenKind.TypeKeyword => ParseTypeDeclaration(),
             TokenKind.FnKeyword when Peek(1).Kind == TokenKind.Identifier => ParseFunctionDeclaration(),
             _ => ParseExpressionStatement()
         };
     }
 
-    private StatementSyntax ParseRecordTypeDeclaration()
+    private StatementSyntax ParseTypeDeclaration()
     {
         var typeKeyword = MatchToken(TokenKind.TypeKeyword, "type");
         var identifier = MatchToken(TokenKind.Identifier, "type name");
         var openBrace = MatchToken(TokenKind.OpenBrace, "{");
         var fields = new List<RecordFieldSyntax>();
+        var variants = new List<SumVariantSyntax>();
 
         ConsumeSeparators();
         while (Current().Kind != TokenKind.CloseBrace && Current().Kind != TokenKind.EndOfFile)
         {
             var start = position;
-            var fieldIdentifier = MatchToken(TokenKind.Identifier, "field name");
-            var colonToken = MatchToken(TokenKind.Colon, ":");
-            var fieldType = ParseTypeSyntax();
-            fields.Add(new RecordFieldSyntax(fieldIdentifier, colonToken, fieldType));
+            var entryIdentifier = MatchToken(TokenKind.Identifier, "field or variant name");
+            if (Current().Kind == TokenKind.Colon)
+            {
+                var colonToken = MatchToken(TokenKind.Colon, ":");
+                var fieldType = ParseTypeSyntax();
+                fields.Add(new RecordFieldSyntax(entryIdentifier, colonToken, fieldType));
+            }
+            else if (Current().Kind == TokenKind.OpenParen)
+            {
+                var openParen = MatchToken(TokenKind.OpenParen, "(");
+                var payloadType = ParseTypeSyntax();
+                var closeParen = MatchToken(TokenKind.CloseParen, ")");
+                variants.Add(new SumVariantSyntax(entryIdentifier, openParen, payloadType, closeParen));
+            }
+            else
+            {
+                variants.Add(new SumVariantSyntax(entryIdentifier, null, null, null));
+            }
 
             if (Current().Kind == TokenKind.Comma)
             {
@@ -128,7 +143,20 @@ public sealed class Parser
         }
 
         var closeBrace = MatchToken(TokenKind.CloseBrace, "}");
-        return new RecordTypeDeclarationSyntax(typeKeyword, identifier, openBrace, fields, closeBrace);
+        if (fields.Count > 0 && variants.Count > 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                sourceText,
+                identifier.Span,
+                "Type declarations cannot mix record fields and sum variants."));
+        }
+
+        if (fields.Count > 0)
+        {
+            return new RecordTypeDeclarationSyntax(typeKeyword, identifier, openBrace, fields, closeBrace);
+        }
+
+        return new SumTypeDeclarationSyntax(typeKeyword, identifier, openBrace, variants, closeBrace);
     }
 
     private StatementSyntax ParseFunctionDeclaration()
@@ -476,6 +504,11 @@ public sealed class Parser
                     return new WildcardPatternSyntax(identifier);
                 }
 
+                if (Current().Kind == TokenKind.OpenParen)
+                {
+                    return ParseVariantPattern(identifier);
+                }
+
                 return new IdentifierPatternSyntax(identifier);
             default:
                 diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("pattern", Current())));
@@ -509,6 +542,23 @@ public sealed class Parser
 
         var close = MatchToken(TokenKind.CloseParen, ")");
         return new TuplePatternSyntax(openParen, elements, close);
+    }
+
+    private PatternSyntax ParseVariantPattern(SyntaxToken identifier)
+    {
+        var openParen = MatchToken(TokenKind.OpenParen, "(");
+        var payload = ParsePattern();
+        if (Current().Kind == TokenKind.Comma)
+        {
+            diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, "Sum type variants support a single payload pattern."));
+            while (Current().Kind == TokenKind.Comma)
+            {
+                NextToken();
+                ParsePattern();
+            }
+        }
+        var closeParen = MatchToken(TokenKind.CloseParen, ")");
+        return new VariantPatternSyntax(identifier, openParen, payload, closeParen);
     }
 
     private ExpressionSyntax ParseCallExpression(ExpressionSyntax callee)

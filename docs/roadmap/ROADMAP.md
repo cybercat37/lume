@@ -38,6 +38,7 @@ tight enough for end-to-end tests and docs updates.
    - Match exhaustiveness checks include sum type variants.
    - Interpreter and codegen support constructing and matching on variants.
    - Tests cover constructor calls, matches, and diagnostics.
+   Status: complete.
 
 4) Generics v1
    Enable minimal `<T>` generics for functions and types.

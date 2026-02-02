@@ -408,6 +408,24 @@ Notes:
 - Missing, duplicate, or unknown fields are compile-time errors.
 - Constructor-style calls `User(...)` are planned but not implemented.
 
+### 6.2 Sum Types
+
+Sum types declare a fixed set of variants, optionally carrying a payload.
+
+```axom
+type Result { Ok(Int) Error(String) }
+
+let value = Ok(42)
+print match value {
+  Ok(x) -> x
+  Error(_) -> 0
+}
+```
+
+Notes:
+- Variants may omit payloads (`Ready`).
+- Non-exhaustive matches are compile-time errors.
+
 ## 7. Interoperability
 
 - Direct .NET calls
@@ -426,4 +444,4 @@ Notes:
 
 ---
 
-Status: Draft v0.2 (implementation steps 1-13 complete; match v1 and records v1 implemented; planned features pending)
+Status: Draft v0.2 (implementation steps 1-13 complete; match v1, records v1, and sum types v1 implemented; planned features pending)

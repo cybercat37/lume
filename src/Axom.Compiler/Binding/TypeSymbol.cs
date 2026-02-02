@@ -8,17 +8,20 @@ public sealed class TypeSymbol
     public IReadOnlyList<TypeSymbol>? ParameterTypes { get; }
     public TypeSymbol? ReturnType { get; }
     public IReadOnlyList<TypeSymbol>? TupleElementTypes { get; }
+    public IReadOnlyList<SumVariantSymbol>? SumVariants { get; }
 
     private TypeSymbol(
         string name,
         IReadOnlyList<TypeSymbol>? parameterTypes = null,
         TypeSymbol? returnType = null,
-        IReadOnlyList<TypeSymbol>? tupleElementTypes = null)
+        IReadOnlyList<TypeSymbol>? tupleElementTypes = null,
+        IReadOnlyList<SumVariantSymbol>? sumVariants = null)
     {
         Name = name;
         ParameterTypes = parameterTypes;
         ReturnType = returnType;
         TupleElementTypes = tupleElementTypes;
+        SumVariants = sumVariants;
     }
 
     public static TypeSymbol Int { get; } = new("Int");
@@ -44,6 +47,11 @@ public sealed class TypeSymbol
     public static TypeSymbol Record(string name)
     {
         return new TypeSymbol(name);
+    }
+
+    public static TypeSymbol Sum(string name)
+    {
+        return new TypeSymbol(name, sumVariants: Array.Empty<SumVariantSymbol>());
     }
 
     public override string ToString() => Name;

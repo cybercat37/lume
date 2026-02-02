@@ -17,6 +17,11 @@ public sealed class Emitter
             WriteRecordType(builder, record);
             builder.AppendLine();
         }
+        foreach (var sum in program.SumTypes)
+        {
+            WriteSumType(builder, sum);
+            builder.AppendLine();
+        }
         builder.AppendLine("class Program");
         builder.AppendLine("{");
         foreach (var function in program.Functions)
@@ -98,6 +103,16 @@ public sealed class Emitter
         builder.AppendLine("}");
     }
 
+    private static void WriteSumType(StringBuilder builder, BoundSumTypeDeclaration sum)
+    {
+        builder.AppendLine($"sealed class {EscapeIdentifier(sum.Type.Name)}");
+        builder.AppendLine("{");
+        var writer = new IndentedWriter(builder, 1);
+        writer.WriteLine("public string Tag { get; init; } = string.Empty;");
+        writer.WriteLine("public object? Value { get; init; }");
+        builder.AppendLine("}");
+    }
+
     private static string WriteExpression(BoundExpression expression, int parentPrecedence = 0)
     {
         return expression switch
@@ -121,8 +136,21 @@ public sealed class Emitter
             BoundTupleExpression tuple => WriteTupleExpression(tuple),
             BoundRecordLiteralExpression record => WriteRecordLiteralExpression(record),
             BoundFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
+            BoundSumConstructorExpression sum => WriteSumConstructorExpression(sum),
             _ => throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}")
         };
+    }
+
+    private static string WriteSumConstructorExpression(BoundSumConstructorExpression sum)
+    {
+        var typeName = EscapeIdentifier(sum.Variant.DeclaringType.Name);
+        if (sum.Payload is null)
+        {
+            return $"new {typeName} {{ Tag = \"{sum.Variant.Name}\" }}";
+        }
+
+        var payload = WriteExpression(sum.Payload);
+        return $"new {typeName} {{ Tag = \"{sum.Variant.Name}\", Value = {payload} }}";
     }
 
     private static string WriteRecordLiteralExpression(BoundRecordLiteralExpression record)
@@ -167,8 +195,21 @@ public sealed class Emitter
             BoundLiteralPattern literal => FormatLiteral(literal.Value),
             BoundIdentifierPattern identifier => $"var {EscapeIdentifier(identifier.Symbol.Name)}",
             BoundTuplePattern tuple => $"({string.Join(", ", tuple.Elements.Select(WritePattern))})",
+            BoundVariantPattern variant => WriteVariantPattern(variant),
             _ => "_"
         };
+    }
+
+    private static string WriteVariantPattern(BoundVariantPattern variant)
+    {
+        var typeName = EscapeIdentifier(variant.Variant.DeclaringType.Name);
+        if (variant.Payload is null)
+        {
+            return $"{typeName} {{ Tag: \"{variant.Variant.Name}\" }}";
+        }
+
+        var payload = WritePattern(variant.Payload);
+        return $"{typeName} {{ Tag: \"{variant.Variant.Name}\", Value: {payload} }}";
     }
 
     private static string WriteTupleExpression(BoundTupleExpression tuple)

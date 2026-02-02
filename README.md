@@ -109,7 +109,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 
 ## Status
 
-**In Development** — Steps 1-13 of the roadmap are complete, with pattern matching v1 and records v1 implemented. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots, plus compilation caching and tooling support.
+**In Development** — Steps 1-13 of the roadmap are complete, with pattern matching v1, records v1, and sum types v1 implemented. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots, plus compilation caching and tooling support.
 
 ### Currently Implemented ✅
 
@@ -123,6 +123,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Functions and lambdas (`fn`, `return`)
 - Pattern matching v1 (`match` with literals, `_`, identifiers, tuples)
 - Records v1 (`type`, record literals, field access)
+- Sum types v1 (variants with optional payloads)
 - String escape sequences (`\n`, `\t`, `\r`, `\"`, `\\`)
 - Binding and scope resolution
 - Type checking
@@ -139,7 +140,6 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
 - Logical operators (`&&`, `||`, `!`)
 - Pattern matching (guards, lists, sum types)
-- Sum types
 - Generics
 - `Result`/`Option` and error propagation (`?`)
 - Collections (List, Map, Tuple)

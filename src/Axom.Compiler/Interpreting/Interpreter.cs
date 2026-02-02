@@ -135,6 +135,8 @@ public sealed class Interpreter
                     return EvaluateRecordLiteralExpression(record);
                 case BoundFieldAccessExpression fieldAccess:
                     return EvaluateFieldAccessExpression(fieldAccess);
+                case BoundSumConstructorExpression sum:
+                    return EvaluateSumConstructorExpression(sum);
                 default:
                     throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
             }
@@ -212,6 +214,12 @@ public sealed class Interpreter
             return null;
         }
 
+        private object? EvaluateSumConstructorExpression(BoundSumConstructorExpression sum)
+        {
+            var payload = sum.Payload is null ? null : EvaluateExpression(sum.Payload);
+            return new SumValue(sum.Variant, payload);
+        }
+
         private static bool TryMatchPattern(
             BoundPattern pattern,
             object? value,
@@ -246,6 +254,23 @@ public sealed class Interpreter
                     }
 
                     return true;
+                case BoundVariantPattern variant:
+                    if (value is not SumValue sum)
+                    {
+                        return false;
+                    }
+
+                    if (!string.Equals(sum.Variant.Name, variant.Variant.Name, StringComparison.Ordinal))
+                    {
+                        return false;
+                    }
+
+                    if (variant.Payload is null)
+                    {
+                        return true;
+                    }
+
+                    return TryMatchPattern(variant.Payload, sum.Payload, bindings);
                 default:
                     return false;
             }
@@ -424,6 +449,7 @@ public sealed class Interpreter
                 null => string.Empty,
                 bool boolValue => boolValue ? "true" : "false",
                 RecordValue record => record.ToString(),
+                SumValue sum => sum.ToString(),
                 _ => value.ToString() ?? string.Empty
             };
         }
@@ -472,6 +498,28 @@ public sealed class Interpreter
             {
                 var parts = fields.Select(field => $"{field.Key}: {FormatValue(field.Value)}");
                 return $"{Type.Name} {{ {string.Join(", ", parts)} }}";
+            }
+        }
+
+        private sealed class SumValue
+        {
+            public SumVariantSymbol Variant { get; }
+            public object? Payload { get; }
+
+            public SumValue(SumVariantSymbol variant, object? payload)
+            {
+                Variant = variant;
+                Payload = payload;
+            }
+
+            public override string ToString()
+            {
+                if (Variant.PayloadType is null)
+                {
+                    return Variant.Name;
+                }
+
+                return $"{Variant.Name}({FormatValue(Payload)})";
             }
         }
     }
