@@ -107,6 +107,18 @@ let user = User { name: "Ada", age: 36 }
 print user.name
 ```
 
+**Sum types**
+
+```axom
+type Result { Ok(Int) Error(String) }
+
+let value = Ok(42)
+print match value {
+  Ok(x) -> x
+  Error(_) -> 0
+}
+```
+
 **Status**: ✅ Implemented
 
 ---
