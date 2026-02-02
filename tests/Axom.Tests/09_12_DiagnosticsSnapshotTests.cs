@@ -123,6 +123,32 @@ public class DiagnosticsSnapshotTests
     }
 
     [Fact]
+    public void Record_missing_field_diagnostic_matches_snapshot()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("type User { name: String, age: Int }\nlet user = User { name: \"Ada\" }", "test.axom");
+
+        Assert.False(result.Success);
+
+        var snapshot = Snapshots.Read("RecordMissingField.snapshot.txt");
+        var actual = Snapshots.Format(result.Diagnostics);
+        Assert.Equal(snapshot, actual);
+    }
+
+    [Fact]
+    public void Record_unknown_field_diagnostic_matches_snapshot()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("type User { name: String }\nlet user = User { name: \"Ada\", age: 1 }", "test.axom");
+
+        Assert.False(result.Success);
+
+        var snapshot = Snapshots.Read("RecordUnknownField.snapshot.txt");
+        var actual = Snapshots.Format(result.Diagnostics);
+        Assert.Equal(snapshot, actual);
+    }
+
+    [Fact]
     public void Cli_check_diagnostics_match_snapshot()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_snapshot_{Guid.NewGuid():N}");

@@ -19,6 +19,7 @@ public sealed class Parser
         TokenKind.PrintlnKeyword,
         TokenKind.FnKeyword,
         TokenKind.ReturnKeyword,
+        TokenKind.TypeKeyword,
         TokenKind.MatchKeyword,
         TokenKind.Identifier,
         TokenKind.InputKeyword,
@@ -92,9 +93,42 @@ public sealed class Parser
             TokenKind.PrintKeyword => ParsePrintStatement(),
             TokenKind.PrintlnKeyword => ParsePrintStatement(),
             TokenKind.ReturnKeyword => ParseReturnStatement(),
+            TokenKind.TypeKeyword => ParseRecordTypeDeclaration(),
             TokenKind.FnKeyword when Peek(1).Kind == TokenKind.Identifier => ParseFunctionDeclaration(),
             _ => ParseExpressionStatement()
         };
+    }
+
+    private StatementSyntax ParseRecordTypeDeclaration()
+    {
+        var typeKeyword = MatchToken(TokenKind.TypeKeyword, "type");
+        var identifier = MatchToken(TokenKind.Identifier, "type name");
+        var openBrace = MatchToken(TokenKind.OpenBrace, "{");
+        var fields = new List<RecordFieldSyntax>();
+
+        ConsumeSeparators();
+        while (Current().Kind != TokenKind.CloseBrace && Current().Kind != TokenKind.EndOfFile)
+        {
+            var start = position;
+            var fieldIdentifier = MatchToken(TokenKind.Identifier, "field name");
+            var colonToken = MatchToken(TokenKind.Colon, ":");
+            var fieldType = ParseTypeSyntax();
+            fields.Add(new RecordFieldSyntax(fieldIdentifier, colonToken, fieldType));
+
+            if (Current().Kind == TokenKind.Comma)
+            {
+                NextToken();
+            }
+
+            ConsumeSeparators();
+            if (position == start)
+            {
+                NextToken();
+            }
+        }
+
+        var closeBrace = MatchToken(TokenKind.CloseBrace, "}");
+        return new RecordTypeDeclarationSyntax(typeKeyword, identifier, openBrace, fields, closeBrace);
     }
 
     private StatementSyntax ParseFunctionDeclaration()
@@ -294,9 +328,17 @@ public sealed class Parser
     private ExpressionSyntax ParsePostfixExpression()
     {
         var expression = ParsePrimaryExpression();
-        while (Current().Kind == TokenKind.OpenParen)
+        while (Current().Kind == TokenKind.OpenParen || Current().Kind == TokenKind.Dot)
         {
-            expression = ParseCallExpression(expression);
+            if (Current().Kind == TokenKind.OpenParen)
+            {
+                expression = ParseCallExpression(expression);
+                continue;
+            }
+
+            var dotToken = MatchToken(TokenKind.Dot, ".");
+            var identifierToken = MatchToken(TokenKind.Identifier, "field name");
+            expression = new FieldAccessExpressionSyntax(expression, dotToken, identifierToken);
         }
 
         return expression;
@@ -337,6 +379,11 @@ public sealed class Parser
 
                 return new InputExpressionSyntax(NextToken());
             case TokenKind.Identifier:
+                if (Peek(1).Kind == TokenKind.OpenBrace)
+                {
+                    return ParseRecordLiteralExpression();
+                }
+
                 return new NameExpressionSyntax(NextToken());
             case TokenKind.FnKeyword:
                 return ParseLambdaExpression();
@@ -378,6 +425,37 @@ public sealed class Parser
 
         var closeBrace = MatchToken(TokenKind.CloseBrace, "}");
         return new MatchExpressionSyntax(matchKeyword, expression, openBrace, arms, closeBrace);
+    }
+
+    private ExpressionSyntax ParseRecordLiteralExpression()
+    {
+        var identifier = MatchToken(TokenKind.Identifier, "type name");
+        var openBrace = MatchToken(TokenKind.OpenBrace, "{");
+        var fields = new List<RecordFieldAssignmentSyntax>();
+
+        ConsumeSeparators();
+        while (Current().Kind != TokenKind.CloseBrace && Current().Kind != TokenKind.EndOfFile)
+        {
+            var start = position;
+            var fieldIdentifier = MatchToken(TokenKind.Identifier, "field name");
+            var colonToken = MatchToken(TokenKind.Colon, ":");
+            var expression = ParseExpression();
+            fields.Add(new RecordFieldAssignmentSyntax(fieldIdentifier, colonToken, expression));
+
+            if (Current().Kind == TokenKind.Comma)
+            {
+                NextToken();
+            }
+
+            ConsumeSeparators();
+            if (position == start)
+            {
+                NextToken();
+            }
+        }
+
+        var closeBrace = MatchToken(TokenKind.CloseBrace, "}");
+        return new RecordLiteralExpressionSyntax(identifier, openBrace, fields, closeBrace);
     }
 
     private PatternSyntax ParsePattern()

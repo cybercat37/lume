@@ -27,6 +27,8 @@ tight enough for end-to-end tests and docs updates.
    - Interpreter and codegen support record construction and field reads.
    - Diagnostics for missing/duplicate fields and type mismatches.
    - Tests cover construction, access, and failure cases.
+   Status: complete.
+   Future: consider constructor-style `User(...)` literals.
 
 3) Sum types (enums with payload) v1
    Add `type Result<T, E> { Ok(T) Error(E) }`-style declarations.

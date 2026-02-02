@@ -45,7 +45,7 @@ This section captures agreed design choices to guide implementation.
 
 ### Types & Data
 - `Int` is 64-bit. `Double` planned later. No `Char`, `Byte`, or `UInt` for now.
-- Records use `type`, have auto-constructors, update syntax, and destructuring.
+- Records use `type` with literal construction `User { name: "Ada" }`; update syntax and destructuring are planned.
 - Sum types use `Variant` / `Variant(value)` payload style.
 - Generics use `<T>` with inference; no constraints for now.
 - Type aliases are equivalent to the base type (no newtype yet).
@@ -392,6 +392,22 @@ let result = par compute(data)?
 
 ---
 
+### 6.1 Records
+
+Records declare named fields and are constructed with record literals.
+
+```axom
+type User { name: String, age: Int }
+
+let user = User { name: "Ada", age: 36 }
+print user.name
+```
+
+Notes:
+- Field order in literals is not significant.
+- Missing, duplicate, or unknown fields are compile-time errors.
+- Constructor-style calls `User(...)` are planned but not implemented.
+
 ## 7. Interoperability
 
 - Direct .NET calls
@@ -410,4 +426,4 @@ let result = par compute(data)?
 
 ---
 
-Status: Draft v0.2 (implementation steps 1-12 complete; planned features pending)
+Status: Draft v0.2 (implementation steps 1-13 complete; match v1 and records v1 implemented; planned features pending)

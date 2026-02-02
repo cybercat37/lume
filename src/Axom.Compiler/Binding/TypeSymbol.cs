@@ -41,6 +41,11 @@ public sealed class TypeSymbol
         return new TypeSymbol(name, tupleElementTypes: elementTypes);
     }
 
+    public static TypeSymbol Record(string name)
+    {
+        return new TypeSymbol(name);
+    }
+
     public override string ToString() => Name;
 
     public override bool Equals(object? obj)

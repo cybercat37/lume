@@ -98,6 +98,15 @@ let mut total = 0
 print total
 ```
 
+**Records**
+
+```axom
+type User { name: String, age: Int }
+
+let user = User { name: "Ada", age: 36 }
+print user.name
+```
+
 **Status**: ✅ Implemented
 
 ---

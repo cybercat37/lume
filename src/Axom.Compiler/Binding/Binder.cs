@@ -16,6 +16,8 @@ public sealed class Binder
     private FunctionSymbol? currentFunction;
     private readonly Stack<LambdaBindingContext> lambdaStack = new();
     private List<TypeSymbol>? returnTypes;
+    private readonly Dictionary<string, TypeSymbol> recordTypes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, BoundRecordTypeDeclaration> recordDefinitions = new(StringComparer.Ordinal);
 
     private sealed class LambdaBindingContext
     {
@@ -32,10 +34,17 @@ public sealed class Binder
     {
         sourceText = syntaxTree.SourceText;
         scope = new BoundScope(null);
+        recordTypes.Clear();
+        recordDefinitions.Clear();
         DeclareBuiltins();
 
         var statements = new List<BoundStatement>();
         var functions = new List<BoundFunctionDeclaration>();
+        var recordDeclarations = syntaxTree.Root.Statements
+            .OfType<RecordTypeDeclarationSyntax>()
+            .ToList();
+        DeclareRecordTypeSymbols(recordDeclarations);
+        var records = BindRecordTypeDeclarations(recordDeclarations);
 
         var functionDeclarations = syntaxTree.Root.Statements
             .OfType<FunctionDeclarationSyntax>()
@@ -44,6 +53,11 @@ public sealed class Binder
 
         foreach (var statement in syntaxTree.Root.Statements)
         {
+            if (statement is RecordTypeDeclarationSyntax)
+            {
+                continue;
+            }
+
             if (statement is FunctionDeclarationSyntax functionDeclaration)
             {
                 functions.Add(BindFunctionDeclaration(functionDeclaration));
@@ -56,7 +70,7 @@ public sealed class Binder
         var allDiagnostics = syntaxTree.Diagnostics
             .Concat(diagnostics)
             .ToList();
-        return new BinderResult(new BoundProgram(functions, statements), allDiagnostics);
+        return new BinderResult(new BoundProgram(records, functions, statements), allDiagnostics);
     }
 
     public BinderResult BindCached(SyntaxTree syntaxTree, BindingCache cache)
@@ -77,6 +91,71 @@ public sealed class Binder
         {
             scope.TryDeclareFunction(function);
         }
+    }
+
+    private void DeclareRecordTypeSymbols(IReadOnlyList<RecordTypeDeclarationSyntax> declarations)
+    {
+        foreach (var declaration in declarations)
+        {
+            var name = declaration.IdentifierToken.Text;
+            if (string.IsNullOrEmpty(name))
+            {
+                continue;
+            }
+
+            if (recordTypes.ContainsKey(name))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    declaration.IdentifierToken.Span,
+                    $"Type '{name}' is already declared in this scope."));
+                continue;
+            }
+
+            recordTypes[name] = TypeSymbol.Record(name);
+        }
+    }
+
+    private List<BoundRecordTypeDeclaration> BindRecordTypeDeclarations(IReadOnlyList<RecordTypeDeclarationSyntax> declarations)
+    {
+        var records = new List<BoundRecordTypeDeclaration>();
+        foreach (var declaration in declarations)
+        {
+            var name = declaration.IdentifierToken.Text;
+            if (string.IsNullOrEmpty(name))
+            {
+                continue;
+            }
+
+            if (!recordTypes.TryGetValue(name, out var type))
+            {
+                continue;
+            }
+
+            var fields = new List<RecordFieldSymbol>();
+            var seenFields = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var field in declaration.Fields)
+            {
+                var fieldName = field.IdentifierToken.Text;
+                if (!seenFields.Add(fieldName))
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        field.IdentifierToken.Span,
+                        $"Field '{fieldName}' is already declared in record '{name}'."));
+                    continue;
+                }
+
+                var fieldType = BindType(field.Type);
+                fields.Add(new RecordFieldSymbol(fieldName, fieldType));
+            }
+
+            var record = new BoundRecordTypeDeclaration(type, fields);
+            records.Add(record);
+            recordDefinitions[name] = record;
+        }
+
+        return records;
     }
 
     private void DeclareFunctionSymbols(IReadOnlyList<FunctionDeclarationSyntax> declarations)
@@ -129,6 +208,12 @@ public sealed class Binder
                     SourceText,
                     statement.Span,
                     "Function declarations are only allowed at the top level."));
+                return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Unit));
+            case RecordTypeDeclarationSyntax:
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    statement.Span,
+                    "Type declarations are only allowed at the top level."));
                 return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Unit));
             case ExpressionStatementSyntax expressionStatement:
                 return new BoundExpressionStatement(BindExpression(expressionStatement.Expression));
@@ -250,6 +335,10 @@ public sealed class Binder
                 return BindMatchExpression(match);
             case TupleExpressionSyntax tuple:
                 return BindTupleExpression(tuple);
+            case RecordLiteralExpressionSyntax record:
+                return BindRecordLiteralExpression(record);
+            case FieldAccessExpressionSyntax fieldAccess:
+                return BindFieldAccessExpression(fieldAccess);
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
@@ -263,6 +352,93 @@ public sealed class Binder
             default:
                 throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
         }
+    }
+
+    private BoundExpression BindRecordLiteralExpression(RecordLiteralExpressionSyntax record)
+    {
+        var name = record.IdentifierToken.Text;
+        if (!recordDefinitions.TryGetValue(name, out var definition))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                record.IdentifierToken.Span,
+                $"Unknown type '{name}'."));
+            return new BoundRecordLiteralExpression(TypeSymbol.Error, Array.Empty<BoundRecordFieldAssignment>());
+        }
+
+        var assignments = new List<BoundRecordFieldAssignment>();
+        var seenFields = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var field in record.Fields)
+        {
+            var fieldName = field.IdentifierToken.Text;
+            var boundExpression = BindExpression(field.Expression);
+            if (!seenFields.Add(fieldName))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    field.IdentifierToken.Span,
+                    $"Field '{fieldName}' is already initialized in record '{name}'."));
+                continue;
+            }
+
+            var match = definition.Fields.FirstOrDefault(f => string.Equals(f.Name, fieldName, StringComparison.Ordinal));
+            if (match is null)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    field.IdentifierToken.Span,
+                    $"Record '{name}' has no field '{fieldName}'."));
+                continue;
+            }
+            if (boundExpression.Type != match.Type && boundExpression.Type != TypeSymbol.Error && match.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    field.Expression.Span,
+                    $"Cannot assign expression of type '{boundExpression.Type}' to field '{fieldName}' of type '{match.Type}'."));
+            }
+
+            assignments.Add(new BoundRecordFieldAssignment(match, boundExpression));
+        }
+
+        foreach (var field in definition.Fields)
+        {
+            if (!seenFields.Contains(field.Name))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    record.IdentifierToken.Span,
+                    $"Record '{name}' is missing required field '{field.Name}'."));
+            }
+        }
+
+        return new BoundRecordLiteralExpression(definition.Type, assignments);
+    }
+
+    private BoundExpression BindFieldAccessExpression(FieldAccessExpressionSyntax fieldAccess)
+    {
+        var target = BindExpression(fieldAccess.Target);
+        if (!recordDefinitions.TryGetValue(target.Type.Name, out var definition))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                fieldAccess.IdentifierToken.Span,
+                "Field access requires a record type."));
+            return new BoundFieldAccessExpression(target, new RecordFieldSymbol(fieldAccess.IdentifierToken.Text, TypeSymbol.Error));
+        }
+
+        var fieldName = fieldAccess.IdentifierToken.Text;
+        var match = definition.Fields.FirstOrDefault(field => string.Equals(field.Name, fieldName, StringComparison.Ordinal));
+        if (match is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                fieldAccess.IdentifierToken.Span,
+                $"Record '{definition.Type.Name}' has no field '{fieldName}'."));
+            return new BoundFieldAccessExpression(target, new RecordFieldSymbol(fieldName, TypeSymbol.Error));
+        }
+
+        return new BoundFieldAccessExpression(target, match);
     }
 
     private BoundExpression BindLiteralExpression(LiteralExpressionSyntax literal)
@@ -900,7 +1076,7 @@ public sealed class Binder
                 "Bool" => TypeSymbol.Bool,
                 "String" => TypeSymbol.String,
                 "Unit" => TypeSymbol.Unit,
-                _ => TypeSymbol.Error
+                _ => recordTypes.TryGetValue(name, out var recordType) ? recordType : TypeSymbol.Error
             };
 
             if (resolved == TypeSymbol.Error)

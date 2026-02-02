@@ -131,6 +131,10 @@ public sealed class Interpreter
                     return EvaluateMatchExpression(match);
                 case BoundTupleExpression tuple:
                     return EvaluateTupleExpression(tuple);
+                case BoundRecordLiteralExpression record:
+                    return EvaluateRecordLiteralExpression(record);
+                case BoundFieldAccessExpression fieldAccess:
+                    return EvaluateFieldAccessExpression(fieldAccess);
                 default:
                     throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
             }
@@ -182,6 +186,29 @@ public sealed class Interpreter
             }
 
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Non-exhaustive match expression."));
+            return null;
+        }
+
+        private object? EvaluateRecordLiteralExpression(BoundRecordLiteralExpression record)
+        {
+            var valuesByName = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var field in record.Fields)
+            {
+                valuesByName[field.Field.Name] = EvaluateExpression(field.Expression);
+            }
+
+            return new RecordValue(record.RecordType, valuesByName);
+        }
+
+        private object? EvaluateFieldAccessExpression(BoundFieldAccessExpression fieldAccess)
+        {
+            var target = EvaluateExpression(fieldAccess.Target);
+            if (target is RecordValue record && record.TryGet(fieldAccess.Field.Name, out var value))
+            {
+                return value;
+            }
+
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Field access failed."));
             return null;
         }
 
@@ -396,6 +423,7 @@ public sealed class Interpreter
             {
                 null => string.Empty,
                 bool boolValue => boolValue ? "true" : "false",
+                RecordValue record => record.ToString(),
                 _ => value.ToString() ?? string.Empty
             };
         }
@@ -424,6 +452,26 @@ public sealed class Interpreter
                 Parameters = parameters;
                 Body = body;
                 Captures = captures;
+            }
+        }
+
+        private sealed class RecordValue
+        {
+            private readonly Dictionary<string, object?> fields;
+            public TypeSymbol Type { get; }
+
+            public RecordValue(TypeSymbol type, Dictionary<string, object?> fields)
+            {
+                Type = type;
+                this.fields = fields;
+            }
+
+            public bool TryGet(string name, out object? value) => fields.TryGetValue(name, out value);
+
+            public override string ToString()
+            {
+                var parts = fields.Select(field => $"{field.Key}: {FormatValue(field.Value)}");
+                return $"{Type.Name} {{ {string.Join(", ", parts)} }}";
             }
         }
     }

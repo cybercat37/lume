@@ -113,6 +113,9 @@ public sealed class Lexer
             case ':':
                 Next();
                 return new SyntaxToken(TokenKind.Colon, new TextSpan(start, 1), ":", null);
+            case '.':
+                Next();
+                return new SyntaxToken(TokenKind.Dot, new TextSpan(start, 1), ".", null);
             case '(':
                 Next();
                 return new SyntaxToken(TokenKind.OpenParen, new TextSpan(start, 1), "(", null);
@@ -266,6 +269,7 @@ public sealed class Lexer
             "mut" => TokenKind.MutKeyword,
             "fn" => TokenKind.FnKeyword,
             "return" => TokenKind.ReturnKeyword,
+            "type" => TokenKind.TypeKeyword,
             "match" => TokenKind.MatchKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,

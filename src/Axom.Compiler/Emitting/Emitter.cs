@@ -12,6 +12,11 @@ public sealed class Emitter
         var builder = new StringBuilder();
         builder.AppendLine("using System;");
         builder.AppendLine();
+        foreach (var record in program.RecordTypes)
+        {
+            WriteRecordType(builder, record);
+            builder.AppendLine();
+        }
         builder.AppendLine("class Program");
         builder.AppendLine("{");
         foreach (var function in program.Functions)
@@ -81,6 +86,18 @@ public sealed class Emitter
         }
     }
 
+    private static void WriteRecordType(StringBuilder builder, BoundRecordTypeDeclaration record)
+    {
+        builder.AppendLine($"sealed class {EscapeIdentifier(record.Type.Name)}");
+        builder.AppendLine("{");
+        var writer = new IndentedWriter(builder, 1);
+        foreach (var field in record.Fields)
+        {
+            writer.WriteLine($"public {TypeToCSharp(field.Type)} {EscapeIdentifier(field.Name)} {{ get; init; }}");
+        }
+        builder.AppendLine("}");
+    }
+
     private static string WriteExpression(BoundExpression expression, int parentPrecedence = 0)
     {
         return expression switch
@@ -102,8 +119,29 @@ public sealed class Emitter
             BoundLambdaExpression lambda => WriteLambdaExpression(lambda),
             BoundMatchExpression match => WriteMatchExpression(match, parentPrecedence),
             BoundTupleExpression tuple => WriteTupleExpression(tuple),
+            BoundRecordLiteralExpression record => WriteRecordLiteralExpression(record),
+            BoundFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
             _ => throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}")
         };
+    }
+
+    private static string WriteRecordLiteralExpression(BoundRecordLiteralExpression record)
+    {
+        var assignments = string.Join(", ", record.Fields.Select(field =>
+            $"{EscapeIdentifier(field.Field.Name)} = {WriteExpression(field.Expression)}"));
+        return $"new {EscapeIdentifier(record.RecordType.Name)} {{ {assignments} }}";
+    }
+
+    private static string WriteFieldAccessExpression(BoundFieldAccessExpression fieldAccess)
+    {
+        var target = WriteExpression(fieldAccess.Target);
+        var needsParens = fieldAccess.Target is BoundAssignmentExpression or BoundBinaryExpression or BoundUnaryExpression or BoundMatchExpression;
+        if (needsParens)
+        {
+            target = $"({target})";
+        }
+
+        return $"{target}.{EscapeIdentifier(fieldAccess.Field.Name)}";
     }
 
     private static string WriteMatchExpression(BoundMatchExpression match, int parentPrecedence)
@@ -294,7 +332,7 @@ public sealed class Emitter
             var t when t == TypeSymbol.Bool => "bool",
             var t when t == TypeSymbol.String => "string",
             var t when t == TypeSymbol.Unit => "void",
-            _ => "object"
+            _ => EscapeIdentifier(type.Name)
         };
     }
 

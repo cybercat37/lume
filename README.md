@@ -17,6 +17,17 @@ Axom is a minimal, opinionated language for .NET focused on clarity over clevern
 - **Full .NET interoperability** — seamless integration with existing .NET ecosystems
 - **Small, understandable language surface** — easy to learn and maintain
 
+## Why Axom over C#
+
+If you like the .NET ecosystem but want a smaller, more deliberate language, Axom offers a few concrete advantages:
+
+- **Smaller surface area** — fewer constructs and one obvious way to do things means less incidental complexity than C#.
+- **Explicit errors** — errors are values (`Result`/`Option` planned), making failure paths visible instead of hidden in exceptions.
+- **Immutable by default** — safer state handling with mutation opt-in (`let mut`).
+- **Match-first control flow** — `match` is the primary branching tool, keeping logic explicit and centralized.
+- **.NET interop without losing Axom’s shape** — you can call into existing C# libraries while writing Axom code.
+- **Predictable output** — the compiler emits C#, so integration and debugging can stay familiar when needed.
+
 ## Quick Start
 
 ### Hello World
@@ -79,6 +90,15 @@ print match (1, 2) {
 }
 ```
 
+**Records**
+
+```axom
+type User { name: String, age: Int }
+
+let user = User { name: "Ada", age: 36 }
+print user.name
+```
+
 ### Editor Support (VS Code)
 
 There is a minimal local VS Code extension for Axom syntax highlighting:
@@ -89,7 +109,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 
 ## Status
 
-**In Development** — Steps 1-12 of the roadmap are complete. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots, plus compilation caching and tooling support.
+**In Development** — Steps 1-13 of the roadmap are complete, with pattern matching v1 and records v1 implemented. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots, plus compilation caching and tooling support.
 
 ### Currently Implemented ✅
 
@@ -102,6 +122,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Blocks and scoped variables
 - Functions and lambdas (`fn`, `return`)
 - Pattern matching v1 (`match` with literals, `_`, identifiers, tuples)
+- Records v1 (`type`, record literals, field access)
 - String escape sequences (`\n`, `\t`, `\r`, `\"`, `\\`)
 - Binding and scope resolution
 - Type checking
@@ -118,7 +139,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
 - Logical operators (`&&`, `||`, `!`)
 - Pattern matching (guards, lists, sum types)
-- Records and Sum types
+- Sum types
 - Generics
 - `Result`/`Option` and error propagation (`?`)
 - Collections (List, Map, Tuple)
@@ -220,9 +241,9 @@ files with the new expected output.
 
 The current plan is the v0.5 roadmap (next minor release).
 
-- ✅ Steps 1–13 complete (pipeline through functions/lambdas)
-- ⏭ Next step: **Pattern match v1** (see `docs/roadmap/STEP15_PATTERN_MATCH.md`)
-- 📍 Full plan: [ROADMAP.md](docs/roadmap/ROADMAP.md)
+ - ✅ Steps 1–13 complete (pipeline through functions/lambdas)
+ - ✅ Pattern match v1 complete
+ - 📍 Full plan and current focus: [ROADMAP.md](docs/roadmap/ROADMAP.md)
 
 ## Language Features
 
