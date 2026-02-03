@@ -22,9 +22,6 @@ println greeting + " there"
 println "len(greeting)"
 print len(greeting)
 
-println "*** input (commented) ***"
-println "// input() is available but skipped in demo"
-
 println "*** functions and lambdas ***"
 fn add(x: Int, y: Int) => x + y
 let inc = fn(x: Int) => x + 1
@@ -62,6 +59,9 @@ println match (1, 2) {
   (a, b) -> a + b
   _ -> 0
 }
+
+println "*** input (commented) ***"
+println "// input() is available but skipped in demo"
 
 println "*** operators ***"
 println "comparisons"

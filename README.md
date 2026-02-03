@@ -144,7 +144,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Type checking
 - Interpreter runtime
 - Code generation (emits C#)
-- Builtin functions: `print`, `println`, `input`, `len`, `abs`, `min`, `max`
+- Builtin functions: `print`, `println`, `input`, `len`, `abs`, `min`, `max`, `float`, `int`
 - CLI commands: `check`, `build`, `run` with options
 - Test infrastructure: golden files and diagnostic snapshots
 - Compilation cache (`--cache`) and large input guardrail
