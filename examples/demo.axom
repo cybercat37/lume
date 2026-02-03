@@ -1,30 +1,65 @@
-let mut x = 1
-println x
+let mut counter = 1
+println "counter start"
+println counter
 
-let greeting = "hi"
-print len(greeting)
+counter = counter + 2
+println "counter updated"
+println counter
 
-let m = max(2, abs(-3))
-println m
-
-println min(1, 2)
-
-let size = match 3 {
-  0 -> "none"
-  1 -> "one"
-  _ -> "many"
+{
+  let x = 10
+  let y = 20
+  println "block sum"
+  println x + y
 }
 
-println size
+let greeting = "hi"
+println "string concat"
+println greeting + " there"
+println "len(greeting)"
+print len(greeting)
 
-println 1 + 2 == 3
-println 4 <= 2
-println true || false && true
-println 1.5 + 2.25
-println float(2)
-println int(3.9)
+fn add(x: Int, y: Int) => x + y
+let inc = fn(x: Int) => x + 1
+println "functions"
+println add(1, 2)
+println inc(3)
 
-print match (1, 2) {
+let m = max(2, abs(-3))
+println "builtins int"
+println m
+println min(1, 2)
+println "builtins float"
+println abs(-1.5)
+println min(1.5, 2.5)
+println max(1.5, 2.5)
+
+type User { name: String, age: Int }
+let user = User { name: "Ada", age: 36 }
+println "record field"
+println user.name
+
+type Result { Ok(Int) Error(String) }
+let value = Ok(42)
+println "sum type match"
+print match value {
+  Ok(x) -> x
+  Error(_) -> 0
+}
+
+println "tuple match"
+println match (1, 2) {
   (a, b) -> a + b
   _ -> 0
 }
+
+println "comparisons"
+println 1 + 2 == 3
+println 4 <= 2
+println "logical"
+println true || false && true
+println "float arithmetic"
+println 1.5 + 2.25
+println "conversions"
+println float(2)
+println int(3.9)
