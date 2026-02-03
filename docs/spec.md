@@ -44,7 +44,8 @@ This section captures agreed design choices to guide implementation.
 - Pipe operator `|>` planned for later, passes value as first argument.
 
 ### Types & Data
-- `Int` is 64-bit. `Double` planned later. No `Char`, `Byte`, or `UInt` for now.
+- `Int` is 64-bit. `Float` is 64-bit (double precision). No `Char`, `Byte`, or `UInt` for now.
+- Numeric conversions are explicit: `float(Int) -> Float` and `int(Float) -> Int`.
 - Records use `type` with literal construction `User { name: "Ada" }`; update syntax and destructuring are planned.
 - Sum types use `Variant` / `Variant(value)` payload style.
 - Generics use `<T>` with inference; no constraints for now.

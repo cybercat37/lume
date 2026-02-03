@@ -90,6 +90,7 @@ tight enough for end-to-end tests and docs updates.
    - Parser treats floats as numeric literals with precedence like ints.
    - Type checker supports `Float` in arithmetic and comparisons.
    - Interpreter/codegen evaluate float expressions correctly.
+   - Explicit numeric conversions (`float(Int)`, `int(Float)`) are available.
    - Tests cover literals, arithmetic, comparisons, and diagnostics.
 
 ## Out of scope for v0.5

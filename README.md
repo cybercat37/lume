@@ -150,6 +150,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Tooling: dotnet tool packaging, CI workflow, shell completions
 
 ### Coming Soon 🔜
+- Explicit numeric conversions (`float(Int)`, `int(Float)`)
 - Pattern matching (guards, lists, sum types)
 - Generics
 - `Result`/`Option` and error propagation (`?`)

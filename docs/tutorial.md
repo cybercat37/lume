@@ -157,6 +157,13 @@ counter = counter + 1
 
 **Status**: ✅ Implemented
 
+Numeric conversions are explicit and provided by builtin functions:
+
+```axom
+let f = float(2)
+let i = int(3.5)
+```
+
 ---
 
 ### 2.3 Operators
@@ -904,6 +911,7 @@ numbers.each(fn(x) { sum = sum + x })
 
 ### 🔜 Planned
 
+- Explicit numeric conversions (`float(Int)`, `int(Float)`)
 - Pattern matching (guards, lists, sum types)
 - Generics
 - `Result`/`Option` and error propagation (`?`)
