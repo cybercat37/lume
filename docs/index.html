@@ -110,9 +110,33 @@ print match value {
       <section class="examples" id="examples">
         <div class="section-inner">
           <h2>Examples</h2>
+          <p class="section-lede">
+            From recursive elegance to pragmatic data modeling, Axom favors clear
+            constructs that scale from tiny scripts to real programs.
+          </p>
           <div class="example-grid">
             <div class="example">
-              <p class="label">Match with sum types</p>
+              <p class="label">Fibonacci (recursive)</p>
+              <pre><code>fn fib(n: Int) => match n {
+  0 -> 0
+  1 -> 1
+  _ -> fib(n - 1) + fib(n - 2)
+}
+
+println fib(8)</code></pre>
+            </div>
+            <div class="example">
+              <p class="label">Sum types + match</p>
+              <pre><code>fn classify(n: Int) => match n {
+  0 -> "zero"
+  1 -> "one"
+  _ -> "many"
+}
+
+println classify(3)</code></pre>
+            </div>
+            <div class="example">
+              <p class="label">Result pattern</p>
               <pre><code>type Result { Ok(Int) Error(String) }
 fn safe_div(a: Int, b: Int) => match b {
   0 -> Error("divide by zero")
@@ -125,6 +149,19 @@ print match safe_div(10, 2) {
 }</code></pre>
             </div>
             <div class="example">
+              <p class="label">Option pattern</p>
+              <pre><code>type Option { Some(Int) None }
+fn parse_port(text: String) => match text {
+  "" -> None
+  _ -> Some(int(text))
+}
+
+print match parse_port("8080") {
+  Some(p) -> p
+  None -> 80
+}</code></pre>
+            </div>
+            <div class="example">
               <p class="label">Records and functions</p>
               <pre><code>type User { name: String, age: Int }
 fn is_adult(u: User) => u.age >= 18
@@ -132,6 +169,19 @@ fn is_adult(u: User) => u.age >= 18
 let user = User { name: "Ada", age: 36 }
 println is_adult(user)
 println user.name</code></pre>
+            </div>
+            <div class="example">
+              <p class="label">Tuples and match</p>
+              <pre><code>print match (1, 2) {
+  (a, b) -> a + b
+  _ -> 0
+}</code></pre>
+            </div>
+            <div class="example">
+              <p class="label">Float + conversion</p>
+              <pre><code>println 1.5 + 2.25
+println float(2)
+println int(3.9)</code></pre>
             </div>
           </div>
         </div>
