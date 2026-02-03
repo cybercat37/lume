@@ -129,6 +129,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Variables (`let`, `let mut`) and assignments
 - Primitive types (`Int`, `Bool`, `String`)
 - Arithmetic operators (`+`, `-`, `*`, `/`, `%`)
+- Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
 - Unary operators (`-`, `+`)
 - String concatenation (`+`)
 - Blocks and scoped variables
@@ -149,7 +150,6 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 
 ### Coming Soon 🔜
 
-- Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
 - Logical operators (`&&`, `||`, `!`)
 - Pattern matching (guards, lists, sum types)
 - Generics

@@ -87,6 +87,12 @@ public sealed class Lexer
                     return new SyntaxToken(TokenKind.Arrow, new TextSpan(start, 2), "=>", null);
                 }
 
+                if (Peek(1) == '=')
+                {
+                    position += 2;
+                    return new SyntaxToken(TokenKind.EqualEqual, new TextSpan(start, 2), "==", null);
+                }
+
                 Next();
                 return new SyntaxToken(TokenKind.EqualsToken, new TextSpan(start, 1), "=", null);
             case '+':
@@ -107,6 +113,32 @@ public sealed class Lexer
             case '/':
                 Next();
                 return new SyntaxToken(TokenKind.Slash, new TextSpan(start, 1), "/", null);
+            case '!':
+                if (Peek(1) == '=')
+                {
+                    position += 2;
+                    return new SyntaxToken(TokenKind.BangEqual, new TextSpan(start, 2), "!=", null);
+                }
+
+                break;
+            case '<':
+                if (Peek(1) == '=')
+                {
+                    position += 2;
+                    return new SyntaxToken(TokenKind.LessOrEqual, new TextSpan(start, 2), "<=", null);
+                }
+
+                Next();
+                return new SyntaxToken(TokenKind.Less, new TextSpan(start, 1), "<", null);
+            case '>':
+                if (Peek(1) == '=')
+                {
+                    position += 2;
+                    return new SyntaxToken(TokenKind.GreaterOrEqual, new TextSpan(start, 2), ">=", null);
+                }
+
+                Next();
+                return new SyntaxToken(TokenKind.Greater, new TextSpan(start, 1), ">", null);
             case ',':
                 Next();
                 return new SyntaxToken(TokenKind.Comma, new TextSpan(start, 1), ",", null);

@@ -34,4 +34,19 @@ public class PrecedenceTests
         var left = Assert.IsType<UnaryExpressionSyntax>(multiply.Left);
         Assert.Equal(TokenKind.Minus, left.OperatorToken.Kind);
     }
+
+    [Fact]
+    public void Comparison_binds_looser_than_addition()
+    {
+        var sourceText = new SourceText("print 1 + 2 == 3", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var statement = Assert.IsType<PrintStatementSyntax>(syntaxTree.Root.Statements.Single());
+        var comparison = Assert.IsType<BinaryExpressionSyntax>(statement.Expression);
+
+        Assert.Equal(TokenKind.EqualEqual, comparison.OperatorToken.Kind);
+
+        var left = Assert.IsType<BinaryExpressionSyntax>(comparison.Left);
+        Assert.Equal(TokenKind.Plus, left.OperatorToken.Kind);
+    }
 }

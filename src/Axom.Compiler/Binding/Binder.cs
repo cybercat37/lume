@@ -565,10 +565,25 @@ public sealed class Binder
     {
         var left = BindExpression(binary.Left);
         var right = BindExpression(binary.Right);
+        var op = binary.OperatorToken.Kind;
 
         if (left.Type == TypeSymbol.Int && right.Type == TypeSymbol.Int)
         {
-            return new BoundBinaryExpression(left, binary.OperatorToken.Kind, right, TypeSymbol.Int);
+            if (op is TokenKind.EqualEqual or TokenKind.BangEqual or TokenKind.Less or TokenKind.LessOrEqual
+                or TokenKind.Greater or TokenKind.GreaterOrEqual)
+            {
+                return new BoundBinaryExpression(left, op, right, TypeSymbol.Bool);
+            }
+
+            return new BoundBinaryExpression(left, op, right, TypeSymbol.Int);
+        }
+
+        if (op is TokenKind.EqualEqual or TokenKind.BangEqual)
+        {
+            if (left.Type == right.Type && (left.Type == TypeSymbol.Bool || left.Type == TypeSymbol.String))
+            {
+                return new BoundBinaryExpression(left, op, right, TypeSymbol.Bool);
+            }
         }
 
         if (left.Type != TypeSymbol.Error && right.Type != TypeSymbol.Error)
@@ -579,7 +594,7 @@ public sealed class Binder
                 $"Operator '{binary.OperatorToken.Text}' is not defined for types '{left.Type}' and '{right.Type}'."));
         }
 
-        return new BoundBinaryExpression(left, binary.OperatorToken.Kind, right, TypeSymbol.Error);
+        return new BoundBinaryExpression(left, op, right, TypeSymbol.Error);
     }
 
     private BoundExpression BindMatchExpression(MatchExpressionSyntax match)

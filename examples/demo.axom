@@ -17,6 +17,9 @@ let size = match 3 {
 
 println size
 
+println 1 + 2 == 3
+println 4 <= 2
+
 print match (1, 2) {
   (a, b) -> a + b
   _ -> 0

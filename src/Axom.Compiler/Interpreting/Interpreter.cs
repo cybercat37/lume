@@ -438,6 +438,32 @@ public sealed class Interpreter
                     Lexing.TokenKind.Minus => leftInt - rightInt,
                     Lexing.TokenKind.Star => leftInt * rightInt,
                     Lexing.TokenKind.Slash => leftInt / rightInt,
+                    Lexing.TokenKind.EqualEqual => leftInt == rightInt,
+                    Lexing.TokenKind.BangEqual => leftInt != rightInt,
+                    Lexing.TokenKind.Less => leftInt < rightInt,
+                    Lexing.TokenKind.LessOrEqual => leftInt <= rightInt,
+                    Lexing.TokenKind.Greater => leftInt > rightInt,
+                    Lexing.TokenKind.GreaterOrEqual => leftInt >= rightInt,
+                    _ => null
+                };
+            }
+
+            if (left is bool leftBool && right is bool rightBool)
+            {
+                return binary.OperatorKind switch
+                {
+                    Lexing.TokenKind.EqualEqual => leftBool == rightBool,
+                    Lexing.TokenKind.BangEqual => leftBool != rightBool,
+                    _ => null
+                };
+            }
+
+            if (left is string leftString && right is string rightString)
+            {
+                return binary.OperatorKind switch
+                {
+                    Lexing.TokenKind.EqualEqual => string.Equals(leftString, rightString, StringComparison.Ordinal),
+                    Lexing.TokenKind.BangEqual => !string.Equals(leftString, rightString, StringComparison.Ordinal),
                     _ => null
                 };
             }

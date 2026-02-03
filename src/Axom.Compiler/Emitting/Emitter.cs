@@ -310,6 +310,12 @@ public sealed class Emitter
             TokenKind.Slash => 3,
             TokenKind.Plus => 2,
             TokenKind.Minus => 2,
+            TokenKind.EqualEqual => 1,
+            TokenKind.BangEqual => 1,
+            TokenKind.Less => 1,
+            TokenKind.LessOrEqual => 1,
+            TokenKind.Greater => 1,
+            TokenKind.GreaterOrEqual => 1,
             _ => 0
         };
     }
@@ -322,6 +328,12 @@ public sealed class Emitter
             TokenKind.Minus => "-",
             TokenKind.Star => "*",
             TokenKind.Slash => "/",
+            TokenKind.EqualEqual => "==",
+            TokenKind.BangEqual => "!=",
+            TokenKind.Less => "<",
+            TokenKind.LessOrEqual => "<=",
+            TokenKind.Greater => ">",
+            TokenKind.GreaterOrEqual => ">=",
             _ => throw new InvalidOperationException($"Unexpected operator: {kind}")
         };
     }

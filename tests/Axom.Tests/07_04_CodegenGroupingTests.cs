@@ -51,4 +51,14 @@ public class CodegenGroupingTests
         Assert.True(result.Success);
         Assert.Contains("10 / 2 - 3 * 4", result.GeneratedCode);
     }
+
+    [Fact]
+    public void Compile_comparison_preserves_precedence()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print 1 + 2 == 3", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("1 + 2 == 3", result.GeneratedCode);
+    }
 }

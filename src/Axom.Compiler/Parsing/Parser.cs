@@ -724,10 +724,16 @@ public sealed class Parser
     {
         return kind switch
         {
-            TokenKind.Star => 2,
-            TokenKind.Slash => 2,
-            TokenKind.Plus => 1,
-            TokenKind.Minus => 1,
+            TokenKind.Star => 3,
+            TokenKind.Slash => 3,
+            TokenKind.Plus => 2,
+            TokenKind.Minus => 2,
+            TokenKind.EqualEqual => 1,
+            TokenKind.BangEqual => 1,
+            TokenKind.Less => 1,
+            TokenKind.LessOrEqual => 1,
+            TokenKind.Greater => 1,
+            TokenKind.GreaterOrEqual => 1,
             _ => 0
         };
     }
