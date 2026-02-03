@@ -130,6 +130,14 @@ Follow the existing conventions visible in the C# files.
 - No `.github/copilot-instructions.md` file present.
 - Do not commit generated build artifacts (`bin/`, `obj/`, `out/`).
 - Keep changes scoped; avoid unrelated refactors unless required by the task.
+## Compiler modularity (guidance)
+- Keep compiler phases explicit and isolated: Parse → Bind → Lower → Interpret/Emit.
+- Introduce a dedicated lowering pass (`Lowerer`) that transforms `BoundProgram`
+  into a lowered form consumed by the interpreter and emitter.
+- AST stays syntax-only; bound nodes stay semantic; lowered nodes represent
+  executable forms. Avoid cross-layer dependencies.
+- Preserve public entry points used by tests (e.g., `SyntaxTree.Parse`,
+  `Interpreter.Run`) to keep tests unchanged while internal structure evolves.
 ## Roadmap references
 - Language and feature roadmap lives in `docs/roadmap/ROADMAP.md` and `docs/roadmap/STEP*_*.md`.
 ## If you add new tooling
