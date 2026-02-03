@@ -1156,6 +1156,15 @@ public sealed class Binder
         {
             boundArguments.Add(BindExpression(argument));
         }
+
+        if (callee is BoundFunctionExpression builtin && builtin.Function.IsBuiltin)
+        {
+            var builtinResult = BindBuiltinCall(builtin.Function, call, boundArguments);
+            if (builtinResult is not null)
+            {
+                return builtinResult;
+            }
+        }
         var parameterTypes = callee.Type.ParameterTypes;
         if (parameterTypes is null)
         {
@@ -1191,6 +1200,98 @@ public sealed class Binder
 
         var returnType = callee.Type.ReturnType ?? TypeSymbol.Error;
         return new BoundCallExpression(callee, boundArguments, returnType);
+    }
+
+    private BoundExpression? BindBuiltinCall(
+        FunctionSymbol function,
+        CallExpressionSyntax call,
+        IReadOnlyList<BoundExpression> arguments)
+    {
+        switch (function.Name)
+        {
+            case "abs":
+                return BindBuiltinUnary(function, call, arguments, allowFloat: true);
+            case "min":
+            case "max":
+                return BindBuiltinBinary(function, call, arguments, allowFloat: true);
+            default:
+                return null;
+        }
+    }
+
+    private BoundExpression BindBuiltinUnary(
+        FunctionSymbol function,
+        CallExpressionSyntax call,
+        IReadOnlyList<BoundExpression> arguments,
+        bool allowFloat)
+    {
+        if (arguments.Count != 1)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                "Function expects 1 arguments."));
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+        }
+
+        var argumentType = arguments[0].Type;
+        if (argumentType == TypeSymbol.Int)
+        {
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Int);
+        }
+
+        if (allowFloat && argumentType == TypeSymbol.Float)
+        {
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Float);
+        }
+
+        if (argumentType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                $"Function expects '{TypeSymbol.Int}' but got '{argumentType}'."));
+        }
+
+        return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+    }
+
+    private BoundExpression BindBuiltinBinary(
+        FunctionSymbol function,
+        CallExpressionSyntax call,
+        IReadOnlyList<BoundExpression> arguments,
+        bool allowFloat)
+    {
+        if (arguments.Count != 2)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                "Function expects 2 arguments."));
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+        }
+
+        var leftType = arguments[0].Type;
+        var rightType = arguments[1].Type;
+        if (leftType == TypeSymbol.Int && rightType == TypeSymbol.Int)
+        {
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Int);
+        }
+
+        if (allowFloat && leftType == TypeSymbol.Float && rightType == TypeSymbol.Float)
+        {
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Float);
+        }
+
+        if (leftType != TypeSymbol.Error && rightType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                $"Function expects '{leftType}' but got '{rightType}'."));
+        }
+
+        return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
     }
 
     private BoundStatement BindReturnStatement(ReturnStatementSyntax returnStatement)

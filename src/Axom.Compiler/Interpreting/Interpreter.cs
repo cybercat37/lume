@@ -321,11 +321,36 @@ public sealed class Interpreter
                 case "len":
                     return arguments[0] is string text ? text.Length : 0;
                 case "abs":
-                    return arguments[0] is int value ? Math.Abs(value) : 0;
+                    return arguments[0] switch
+                    {
+                        int value => Math.Abs(value),
+                        double doubleAbsValue => Math.Abs(doubleAbsValue),
+                        _ => 0
+                    };
                 case "min":
-                    return arguments[0] is int left && arguments[1] is int right ? Math.Min(left, right) : 0;
+                    if (arguments[0] is int left && arguments[1] is int right)
+                    {
+                        return Math.Min(left, right);
+                    }
+
+                    if (arguments[0] is double leftDouble && arguments[1] is double rightDouble)
+                    {
+                        return Math.Min(leftDouble, rightDouble);
+                    }
+
+                    return 0;
                 case "max":
-                    return arguments[0] is int leftMax && arguments[1] is int rightMax ? Math.Max(leftMax, rightMax) : 0;
+                    if (arguments[0] is int leftMax && arguments[1] is int rightMax)
+                    {
+                        return Math.Max(leftMax, rightMax);
+                    }
+
+                    if (arguments[0] is double leftMaxDouble && arguments[1] is double rightMaxDouble)
+                    {
+                        return Math.Max(leftMaxDouble, rightMaxDouble);
+                    }
+
+                    return 0;
                 case "float":
                     return arguments[0] is int intValue ? (double)intValue : 0.0;
                 case "int":
