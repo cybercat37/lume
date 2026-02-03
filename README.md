@@ -136,6 +136,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Numeric conversions (`float(Int)`, `int(Float)`)
 - Blocks and scoped variables
 - Functions and lambdas (`fn`, `return`)
+- Recursion via `match` (no `if/while/for`)
 - Pattern matching v1 (`match` with literals, `_`, identifiers, tuples)
 - Records v1 (`type`, record literals, field access)
 - Sum types v1 (variants with optional payloads)

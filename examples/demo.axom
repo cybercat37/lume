@@ -75,3 +75,19 @@ println 1.5 + 2.25
 println "*** numeric conversions ***"
 println float(2)
 println int(3.9)
+
+println "*** recursion ***"
+fn fib(n: Int) => match n {
+  0 -> 0
+  1 -> 1
+  _ -> fib(n - 1) + fib(n - 2)
+}
+
+fn fact(n: Int) => match n {
+  0 -> 1
+  1 -> 1
+  _ -> n * fact(n - 1)
+}
+
+println fib(8)
+println fact(5)
