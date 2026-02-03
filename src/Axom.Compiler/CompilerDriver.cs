@@ -1,6 +1,7 @@
 using Axom.Compiler.Binding;
 using Axom.Compiler.Diagnostics;
 using Axom.Compiler.Emitting;
+using Axom.Compiler.Lowering;
 using Axom.Compiler.Parsing;
 using Axom.Compiler.Text;
 
@@ -32,8 +33,10 @@ public sealed class CompilerDriver
             return CompilationResult.Fail(diagnostics, syntaxTree);
         }
 
+        var lowerer = new Lowerer();
+        var loweredProgram = lowerer.Lower(bindResult.Program);
         var emitter = new Emitter();
-        var generatedCode = emitter.Emit(bindResult.Program);
+        var generatedCode = emitter.Emit(loweredProgram);
         return CompilationResult.CreateSuccess(generatedCode, syntaxTree);
     }
 
@@ -59,8 +62,10 @@ public sealed class CompilerDriver
             return CompilationResult.Fail(diagnostics, syntaxTree);
         }
 
+        var lowerer = new Lowerer();
+        var loweredProgram = lowerer.Lower(bindResult.Program);
         var emitter = new Emitter();
-        var generatedCode = emitter.EmitCached(bindResult.Program, cache.Emitted);
+        var generatedCode = emitter.EmitCached(loweredProgram, cache.Emitted);
         return CompilationResult.CreateSuccess(generatedCode, syntaxTree);
     }
 }

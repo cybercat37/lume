@@ -2,6 +2,7 @@ using System.Text;
 using System.Linq;
 using Axom.Compiler.Binding;
 using Axom.Compiler.Diagnostics;
+using Axom.Compiler.Lowering;
 using Axom.Compiler.Parsing;
 
 namespace Axom.Compiler.Interpreting;
@@ -28,20 +29,22 @@ public sealed class Interpreter
             return new InterpreterResult(string.Empty, bindResult.Diagnostics);
         }
 
-        var evaluator = new Evaluator(bindResult.Program, inputBuffer);
+        var lowerer = new Lowerer();
+        var loweredProgram = lowerer.Lower(bindResult.Program);
+        var evaluator = new Evaluator(loweredProgram, inputBuffer);
         return evaluator.Evaluate();
     }
 
     private sealed class Evaluator
     {
-        private readonly BoundProgram program;
+        private readonly LoweredProgram program;
         private readonly Dictionary<VariableSymbol, object?> values;
         private readonly Dictionary<FunctionSymbol, BoundFunctionDeclaration> functions;
         private readonly StringBuilder output;
         private readonly List<Diagnostic> diagnostics;
         private readonly Queue<string> inputBuffer;
 
-        public Evaluator(BoundProgram program, Queue<string> inputBuffer)
+        public Evaluator(LoweredProgram program, Queue<string> inputBuffer)
         {
             this.program = program;
             values = new Dictionary<VariableSymbol, object?>();

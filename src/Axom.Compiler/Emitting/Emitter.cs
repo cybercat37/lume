@@ -1,13 +1,14 @@
 using System.Text;
 using System.Linq;
 using Axom.Compiler.Binding;
+using Axom.Compiler.Lowering;
 using Axom.Compiler.Lexing;
 
 namespace Axom.Compiler.Emitting;
 
 public sealed class Emitter
 {
-    public string Emit(BoundProgram program)
+    public string Emit(LoweredProgram program)
     {
         var builder = new StringBuilder();
         builder.AppendLine("using System;");
@@ -42,7 +43,7 @@ public sealed class Emitter
         return builder.ToString();
     }
 
-    public string EmitCached(BoundProgram program, EmitCache cache)
+    public string EmitCached(LoweredProgram program, EmitCache cache)
     {
         if (cache.TryGet(program, out var cached) && cached is not null)
         {
