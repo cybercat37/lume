@@ -1,4 +1,5 @@
 using System.Text;
+using System.Globalization;
 using Axom.Compiler.Diagnostics;
 using Axom.Compiler.Text;
 
@@ -267,14 +268,30 @@ public sealed class Lexer
             Next();
         }
 
+        var hasDecimal = false;
+        if (Current() == '.' && char.IsDigit(Peek(1)))
+        {
+            hasDecimal = true;
+            Next();
+            while (char.IsDigit(Current()))
+            {
+                Next();
+            }
+        }
+
         var text = sourceText.Text.Substring(start, position - start);
-        if (int.TryParse(text, out var value))
+        if (!hasDecimal && int.TryParse(text, out var value))
         {
             return new SyntaxToken(TokenKind.NumberLiteral, new TextSpan(start, text.Length), text, value);
         }
 
+        if (hasDecimal && double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var doubleValue))
+        {
+            return new SyntaxToken(TokenKind.NumberLiteral, new TextSpan(start, text.Length), text, doubleValue);
+        }
+
         var span = new TextSpan(start, text.Length);
-        diagnostics.Add(Diagnostic.Error(sourceText, span, "Number literal is too large."));
+        diagnostics.Add(Diagnostic.Error(sourceText, span, "Number literal is invalid."));
         return new SyntaxToken(TokenKind.NumberLiteral, span, text, 0);
     }
 

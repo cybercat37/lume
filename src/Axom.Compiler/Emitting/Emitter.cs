@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Linq;
 using Axom.Compiler.Binding;
@@ -350,6 +351,7 @@ public sealed class Emitter
             null => "null",
             bool boolValue => boolValue ? "true" : "false",
             string stringValue => $"\"{EscapeString(stringValue)}\"",
+            double doubleValue => doubleValue.ToString(CultureInfo.InvariantCulture),
             _ => value.ToString() ?? "null"
         };
     }
@@ -388,6 +390,7 @@ public sealed class Emitter
         return type switch
         {
             var t when t == TypeSymbol.Int => "int",
+            var t when t == TypeSymbol.Float => "double",
             var t when t == TypeSymbol.Bool => "bool",
             var t when t == TypeSymbol.String => "string",
             var t when t == TypeSymbol.Unit => "void",

@@ -71,4 +71,14 @@ public class CodegenGroupingTests
         Assert.True(result.Success);
         Assert.Contains("true || false && true", result.GeneratedCode);
     }
+
+    [Fact]
+    public void Compile_float_literals_preserve_format()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print 1.5 + 2.25", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("1.5 + 2.25", result.GeneratedCode);
+    }
 }

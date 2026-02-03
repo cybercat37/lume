@@ -25,6 +25,7 @@ public sealed class TypeSymbol
     }
 
     public static TypeSymbol Int { get; } = new("Int");
+    public static TypeSymbol Float { get; } = new("Float");
     public static TypeSymbol Bool { get; } = new("Bool");
     public static TypeSymbol String { get; } = new("String");
     public static TypeSymbol Error { get; } = new("Error");

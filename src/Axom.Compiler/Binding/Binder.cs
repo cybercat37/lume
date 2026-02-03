@@ -548,6 +548,11 @@ public sealed class Binder
             return new BoundLiteralExpression(value, TypeSymbol.Int);
         }
 
+        if (value is double)
+        {
+            return new BoundLiteralExpression(value, TypeSymbol.Float);
+        }
+
         if (value is bool)
         {
             return new BoundLiteralExpression(value, TypeSymbol.Bool);
@@ -593,6 +598,17 @@ public sealed class Binder
             }
 
             return new BoundBinaryExpression(left, op, right, TypeSymbol.Int);
+        }
+
+        if (left.Type == TypeSymbol.Float && right.Type == TypeSymbol.Float)
+        {
+            if (op is TokenKind.EqualEqual or TokenKind.BangEqual or TokenKind.Less or TokenKind.LessOrEqual
+                or TokenKind.Greater or TokenKind.GreaterOrEqual)
+            {
+                return new BoundBinaryExpression(left, op, right, TypeSymbol.Bool);
+            }
+
+            return new BoundBinaryExpression(left, op, right, TypeSymbol.Float);
         }
 
         if (op is TokenKind.EqualEqual or TokenKind.BangEqual)
@@ -966,6 +982,11 @@ public sealed class Binder
             return (value, TypeSymbol.Int);
         }
 
+        if (value is double)
+        {
+            return (value, TypeSymbol.Float);
+        }
+
         if (value is bool)
         {
             return (value, TypeSymbol.Bool);
@@ -990,6 +1011,11 @@ public sealed class Binder
         if (operand.Type == TypeSymbol.Bool && unary.OperatorToken.Kind == TokenKind.Bang)
         {
             return new BoundUnaryExpression(operand, unary.OperatorToken.Kind, TypeSymbol.Bool);
+        }
+
+        if (operand.Type == TypeSymbol.Float)
+        {
+            return new BoundUnaryExpression(operand, unary.OperatorToken.Kind, TypeSymbol.Float);
         }
 
         if (operand.Type == TypeSymbol.Int)
@@ -1401,6 +1427,7 @@ public sealed class Binder
             var resolved = name switch
             {
                 "Int" => TypeSymbol.Int,
+                "Float" => TypeSymbol.Float,
                 "Bool" => TypeSymbol.Bool,
                 "String" => TypeSymbol.String,
                 "Unit" => TypeSymbol.Unit,

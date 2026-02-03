@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Linq;
 using Axom.Compiler.Binding;
@@ -416,6 +417,13 @@ public sealed class Interpreter
                     : intValue;
             }
 
+            if (operand is double doubleValue)
+            {
+                return unary.OperatorKind == Lexing.TokenKind.Minus
+                    ? -doubleValue
+                    : doubleValue;
+            }
+
             if (operand is bool boolValue && unary.OperatorKind == Lexing.TokenKind.Bang)
             {
                 return !boolValue;
@@ -481,6 +489,30 @@ public sealed class Interpreter
                 };
             }
 
+            if (left is double leftDouble && right is double rightDouble)
+            {
+                if (binary.OperatorKind == Lexing.TokenKind.Slash && rightDouble == 0)
+                {
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Division by zero."));
+                    return 0.0;
+                }
+
+                return binary.OperatorKind switch
+                {
+                    Lexing.TokenKind.Plus => leftDouble + rightDouble,
+                    Lexing.TokenKind.Minus => leftDouble - rightDouble,
+                    Lexing.TokenKind.Star => leftDouble * rightDouble,
+                    Lexing.TokenKind.Slash => leftDouble / rightDouble,
+                    Lexing.TokenKind.EqualEqual => leftDouble == rightDouble,
+                    Lexing.TokenKind.BangEqual => leftDouble != rightDouble,
+                    Lexing.TokenKind.Less => leftDouble < rightDouble,
+                    Lexing.TokenKind.LessOrEqual => leftDouble <= rightDouble,
+                    Lexing.TokenKind.Greater => leftDouble > rightDouble,
+                    Lexing.TokenKind.GreaterOrEqual => leftDouble >= rightDouble,
+                    _ => null
+                };
+            }
+
             if (left is bool leftBoolean && right is bool rightBoolean)
             {
                 return binary.OperatorKind switch
@@ -512,6 +544,7 @@ public sealed class Interpreter
             {
                 null => string.Empty,
                 bool boolValue => boolValue ? "true" : "false",
+                double doubleValue => doubleValue.ToString(CultureInfo.InvariantCulture),
                 RecordValue record => record.ToString(),
                 SumValue sum => sum.ToString(),
                 _ => value.ToString() ?? string.Empty
