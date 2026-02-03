@@ -30,4 +30,20 @@ let user = User { name: ""Ada"", age: 36 }
 
         Assert.Empty(syntaxTree.Diagnostics);
     }
+
+    [Fact]
+    public void Record_literal_allows_trailing_comma()
+    {
+        var sourceText = new SourceText(@"
+type User { name: String, age: Int }
+let user = User {
+  name: ""Ada"",
+  age: 36,
+}
+", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
 }
