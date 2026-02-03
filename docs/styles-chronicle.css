@@ -1,20 +1,20 @@
 :root {
   color-scheme: light;
-  --bg: #1b1410;
-  --bg-deep: #0f0b09;
-  --iron: #2c2420;
-  --ash: #d6c9bb;
-  --sand: #f1e8dd;
-  --copper: #b66c3d;
-  --ember: #e27b3a;
-  --steel: #7e8a95;
-  --ink: #0f0b09;
-  --glow: rgba(226, 123, 58, 0.25);
-  --line: rgba(214, 201, 187, 0.2);
-  --radius: 18px;
-  --shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  --bg: #f6f0e6;
+  --bg-deep: #efe5d5;
+  --iron: #2d2a26;
+  --ash: #4a3f34;
+  --sand: #1a1511;
+  --copper: #b37243;
+  --ember: #d27b48;
+  --steel: #6b5b4b;
+  --ink: #15100c;
+  --glow: rgba(210, 123, 72, 0.18);
+  --line: rgba(26, 21, 17, 0.15);
+  --radius: 12px;
+  --shadow: 0 30px 80px rgba(30, 20, 10, 0.15);
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --display: "Cinzel", "Times New Roman", serif;
+  --display: "Fraunces", "Times New Roman", serif;
   --body: "Source Serif 4", "Georgia", serif;
 }
 
@@ -26,18 +26,19 @@ body {
   margin: 0;
   font-family: var(--body);
   color: var(--sand);
-  background: radial-gradient(1200px 900px at 10% -10%, #3a2319 0%, var(--bg) 45%),
-    radial-gradient(900px 700px at 85% 15%, #2c1a12 0%, var(--bg-deep) 55%);
+  background: linear-gradient(180deg, #f8f1e6 0%, #efe4d4 50%, #f2eade 100%);
   min-height: 100vh;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 6px);
-  mix-blend-mode: soft-light;
+  background-image: radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.03), transparent 45%),
+    radial-gradient(circle at 80% 10%, rgba(0, 0, 0, 0.02), transparent 50%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.03) 1px, transparent 1px, transparent 4px);
+  mix-blend-mode: multiply;
   pointer-events: none;
   opacity: 0.25;
   z-index: 0;
@@ -51,7 +52,7 @@ a {
 pre,
 code {
   font-family: var(--mono);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
 }
 
 .section-inner {
@@ -62,7 +63,7 @@ code {
 }
 
 .hero {
-  padding: 40px 0 100px;
+  padding: 36px 0 90px;
   position: relative;
 }
 
@@ -72,7 +73,7 @@ code {
   justify-content: space-between;
   width: min(1200px, 92vw);
   margin: 0 auto;
-  padding: 16px 0 28px;
+  padding: 12px 0 24px;
 }
 
 .brand {
@@ -80,7 +81,7 @@ code {
   align-items: center;
   gap: 12px;
   font-family: var(--display);
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   letter-spacing: 0.08em;
 }
 
@@ -92,36 +93,11 @@ code {
 
 .nav-links {
   display: flex;
-  gap: 22px;
-  font-size: 0.95rem;
+  gap: 20px;
+  font-size: 0.9rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.2em;
   color: var(--ash);
-}
-
-.theme-switch {
-  display: flex;
-  gap: 10px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(15, 11, 9, 0.35);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--ash);
-}
-
-.theme-switch a {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-}
-
-.theme-switch a.is-active {
-  background: rgba(226, 123, 58, 0.2);
-  border-color: rgba(226, 123, 58, 0.4);
-  color: var(--sand);
 }
 
 .nav-links a {
@@ -132,15 +108,40 @@ code {
   content: "";
   position: absolute;
   left: 0;
-  bottom: -6px;
+  bottom: -8px;
   width: 0;
-  height: 1px;
+  height: 2px;
   background: var(--ember);
   transition: width 0.3s ease;
 }
 
 .nav-links a:hover::after {
   width: 100%;
+}
+
+.theme-switch {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--ash);
+}
+
+.theme-switch a {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.theme-switch a.is-active {
+  background: rgba(210, 123, 72, 0.18);
+  border-color: rgba(210, 123, 72, 0.35);
+  color: var(--sand);
 }
 
 .hero-content {
@@ -154,16 +155,16 @@ code {
 
 .hero-text h1 {
   font-family: var(--display);
-  font-size: clamp(2.4rem, 4vw, 4rem);
+  font-size: clamp(2.6rem, 4vw, 4.1rem);
   margin: 12px 0 16px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .kicker {
   text-transform: uppercase;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.35em;
   color: var(--steel);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
 
 .lede {
@@ -191,7 +192,7 @@ code {
   background: linear-gradient(120deg, var(--copper), var(--ember));
   color: var(--ink);
   border: none;
-  box-shadow: 0 12px 30px rgba(226, 123, 58, 0.3);
+  box-shadow: 0 12px 30px rgba(210, 123, 72, 0.25);
 }
 
 .btn.ghost {
@@ -204,8 +205,8 @@ code {
 }
 
 .metal-card {
-  background: linear-gradient(160deg, #2b2220, #1a1412);
-  border: 1px solid rgba(214, 201, 187, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 24px;
   box-shadow: var(--shadow);
@@ -217,7 +218,7 @@ code {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(400px 300px at 80% 0%, rgba(226, 123, 58, 0.18), transparent 65%);
+  background: radial-gradient(400px 300px at 80% 0%, rgba(210, 123, 72, 0.14), transparent 65%);
   pointer-events: none;
 }
 
@@ -234,13 +235,13 @@ section {
 }
 
 .manifesto {
-  background: linear-gradient(180deg, rgba(27, 20, 16, 0.8), rgba(27, 20, 16, 0.2));
+  background: rgba(255, 255, 255, 0.65);
   text-align: center;
 }
 
 .manifesto h2 {
   font-family: var(--display);
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-size: clamp(2rem, 3vw, 2.8rem);
   margin-bottom: 12px;
 }
 
@@ -250,7 +251,7 @@ section {
   gap: 22px;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--steel);
 }
 
@@ -263,7 +264,7 @@ section {
 
 .step {
   padding: 18px;
-  background: rgba(15, 11, 9, 0.6);
+  background: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--line);
   border-radius: 14px;
 }
@@ -276,7 +277,7 @@ section {
 }
 
 .example {
-  background: rgba(15, 11, 9, 0.5);
+  background: rgba(255, 255, 255, 0.8);
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 22px;
@@ -300,7 +301,7 @@ section {
   padding: 22px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: rgba(15, 11, 9, 0.65);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .roadmap-card h3 {

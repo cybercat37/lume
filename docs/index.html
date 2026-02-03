@@ -7,8 +7,8 @@
     <meta name="description" content="Axom is a modern language forged for clarity, expressiveness, and a pragmatic runtime." />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:wght@300;500;700&family=Montserrat:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link id="theme-styles" rel="stylesheet" href="styles.css">
   </head>
   <body>
     <header class="hero">
@@ -22,6 +22,11 @@
           <a href="#examples">Examples</a>
           <a href="#roadmap">Roadmap</a>
           <a href="#community">Community</a>
+        </div>
+        <div class="theme-switch" aria-label="Theme switcher">
+          <a href="#" data-theme="styles.css" class="is-active">Forge</a>
+          <a href="#" data-theme="styles-chronicle.css">Chronicle</a>
+          <a href="#" data-theme="styles-nightshift.css">Nightshift</a>
         </div>
       </nav>
 
@@ -189,5 +194,33 @@ println user.name</code></pre>
         </div>
       </div>
     </footer>
+    <script>
+      const themeLink = document.getElementById("theme-styles");
+      const themeButtons = document.querySelectorAll(".theme-switch a");
+      const storedTheme = localStorage.getItem("axom-theme");
+
+      if (storedTheme) {
+        themeLink.setAttribute("href", storedTheme);
+      }
+
+      themeButtons.forEach((button) => {
+        if (button.dataset.theme === themeLink.getAttribute("href")) {
+          button.classList.add("is-active");
+        } else {
+          button.classList.remove("is-active");
+        }
+      });
+
+      themeButtons.forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          const theme = button.dataset.theme;
+          themeLink.setAttribute("href", theme);
+          localStorage.setItem("axom-theme", theme);
+          themeButtons.forEach((btn) => btn.classList.remove("is-active"));
+          button.classList.add("is-active");
+        });
+      });
+    </script>
   </body>
 </html>
