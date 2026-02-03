@@ -151,6 +151,7 @@ counter = counter + 1
 | Type | Description | Example |
 |------|-------------|---------|
 | `Int` | 64-bit integer | `42`, `-10` |
+| `Float` | 64-bit float | `1.5`, `0.25` |
 | `Bool` | Boolean | `true`, `false` |
 | `String` | UTF-8 string | `"hello"` |
 
@@ -168,6 +169,7 @@ let diff = 10 - 5
 let prod = 10 * 5
 let quot = 10 / 3
 let rem = 10 % 3
+let fsum = 1.5 + 2.25
 ```
 
 #### Comparison
@@ -195,9 +197,7 @@ let not = !false
 let msg = "Hello" + " " + "World"
 ```
 
-**Status**: ✅ Implemented (arithmetic, string concatenation)
-
-**Status**: 🔜 Planned (logical, comparison)
+**Status**: ✅ Implemented (arithmetic, comparison, logical, string concatenation)
 
 ---
 
@@ -880,8 +880,10 @@ numbers.each(fn(x) { sum = sum + x })
 
 - Lexer and Parser with error recovery
 - Variables (`let`, `let mut`) and assignments
-- Primitive types (`Int`, `Bool`, `String`)
+- Primitive types (`Int`, `Float`, `Bool`, `String`)
 - Arithmetic operators (`+`, `-`, `*`, `/`, `%`)
+- Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
+- Logical operators (`&&`, `||`, `!`)
 - Unary operators (`-`, `+`)
 - String concatenation (`+`)
 - Blocks and scoped variables
@@ -902,8 +904,6 @@ numbers.each(fn(x) { sum = sum + x })
 
 ### 🔜 Planned
 
-- Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
-- Logical operators (`&&`, `||`, `!`)
 - Pattern matching (guards, lists, sum types)
 - Generics
 - `Result`/`Option` and error propagation (`?`)

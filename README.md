@@ -127,7 +127,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 
 - Lexer and Parser with error recovery
 - Variables (`let`, `let mut`) and assignments
-- Primitive types (`Int`, `Bool`, `String`)
+- Primitive types (`Int`, `Float`, `Bool`, `String`)
 - Arithmetic operators (`+`, `-`, `*`, `/`, `%`)
 - Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
 - Logical operators (`&&`, `||`, `!`)
