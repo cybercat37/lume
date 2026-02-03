@@ -83,6 +83,15 @@ tight enough for end-to-end tests and docs updates.
    - `docs/spec.md` and `docs/tutorial.md` updated with v0.5 features.
    - README roadmap section reflects v0.5 scope and status.
 
+9) Float numeric type v1
+   Add a floating-point primitive with literals and arithmetic/comparison support.
+   Definition of Done:
+   - Lexer supports float literals (e.g., `1.0`, `0.25`).
+   - Parser treats floats as numeric literals with precedence like ints.
+   - Type checker supports `Float` in arithmetic and comparisons.
+   - Interpreter/codegen evaluate float expressions correctly.
+   - Tests cover literals, arithmetic, comparisons, and diagnostics.
+
 ## Out of scope for v0.5
 - Intent annotations/effect validation (Step 14).
 - Structured concurrency (`scope`, `spawn`, `task.join`) and cancellation.
@@ -94,3 +103,4 @@ tight enough for end-to-end tests and docs updates.
 ## Status tracking
 - Update progress per step as features land.
 - See `docs/roadmap/STEP15_PATTERN_MATCH.md` for the next detailed step breakdown.
+- Next implementation focus: Float numeric type v1 (step 9 above).
