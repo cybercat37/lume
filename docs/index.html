@@ -41,21 +41,17 @@
           </div>
         </div>
         <div class="hero-panel">
-          <div class="metal-card">
-            <p class="card-title">Hello from the forge</p>
-            <pre><code>println "Forge the small things"
-let mut heat = 1
-heat = heat + 2
-println heat
+            <div class="metal-card">
+              <p class="card-title">Hello from the forge</p>
+              <pre><code>fn fib(n: Int) => match n {
+  0 -> 0
+  1 -> 1
+  _ -> fib(n - 1) + fib(n - 2)
+}
 
-type Result { Ok(Int) Error(String) }
-let value = Ok(42)
-print match value {
-  Ok(x) -> x
-  Error(_) -> 0
-}</code></pre>
+println fib(8)</code></pre>
+            </div>
           </div>
-        </div>
       </div>
     </header>
 
@@ -111,16 +107,6 @@ print match value {
             constructs that scale from tiny scripts to real programs.
           </p>
           <div class="example-grid">
-            <div class="example">
-              <p class="label">Fibonacci (recursive)</p>
-              <pre><code>fn fib(n: Int) => match n {
-  0 -> 0
-  1 -> 1
-  _ -> fib(n - 1) + fib(n - 2)
-}
-
-println fib(8)</code></pre>
-            </div>
             <div class="example">
               <p class="label">Sum types + match</p>
               <pre><code>type Signal { Ready(Int) Busy(String) }
