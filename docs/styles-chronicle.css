@@ -76,6 +76,13 @@ code {
   padding: 12px 0 24px;
 }
 
+.theme-bar {
+  width: min(1200px, 92vw);
+  margin: 0 auto 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -339,6 +346,10 @@ section {
     display: none;
   }
 
+  .theme-bar {
+    justify-content: flex-start;
+  }
+
   .forge .pipeline,
   .examples .example-grid,
   .roadmap-grid {
@@ -350,6 +361,10 @@ section {
   .cta {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .theme-switch {
+    flex-wrap: wrap;
   }
 
   .motto {
