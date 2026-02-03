@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Axom | The Forge Language</title>
+    <meta name="description" content="Axom is a modern language forged for clarity, expressiveness, and a pragmatic runtime." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="nav">
+        <div class="brand">
+          <img src="assets/forge-mark.svg" alt="Axom forge mark" class="mark">
+          <span class="brand-name">Axom</span>
+        </div>
+        <div class="nav-links">
+          <a href="#forge">The Forge</a>
+          <a href="#examples">Examples</a>
+          <a href="#roadmap">Roadmap</a>
+          <a href="#community">Community</a>
+        </div>
+      </nav>
+
+      <div class="hero-content">
+        <div class="hero-text">
+          <p class="kicker">A language made with heat and intent</p>
+          <h1>Axom is forged, not assembled.</h1>
+          <p class="lede">
+            A compact language and toolchain shaped for clarity, expressive
+            programs, and a runtime you can trust. Built in the open, refined
+            by tests, and crafted for real work.
+          </p>
+          <div class="cta">
+            <a class="btn primary" href="https://github.com/axom-lang/axom">Get the CLI</a>
+            <a class="btn ghost" href="https://github.com/axom-lang/axom/blob/main/docs/spec.md">Read the Spec</a>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div class="metal-card">
+            <p class="card-title">Hello from the forge</p>
+            <pre><code>println "Forge the small things"
+let mut heat = 1
+heat = heat + 2
+println heat
+
+type Result { Ok(Int) Error(String) }
+let value = Ok(42)
+print match value {
+  Ok(x) -> x
+  Error(_) -> 0
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="manifesto" id="manifesto">
+        <div class="section-inner">
+          <h2>The axiom of Axom</h2>
+          <p>
+            Clear by default. Expressive when you need it. Opinionated enough
+            to stay readable. Small enough to understand end-to-end.
+          </p>
+          <div class="motto">
+            <span>Clarity</span>
+            <span>Precision</span>
+            <span>Pragmatism</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="forge" id="forge">
+        <div class="section-inner">
+          <h2>The Forge</h2>
+          <p class="section-lede">
+            Every program is shaped through a clear, explicit pipeline. Each
+            step does one job, and does it well.
+          </p>
+          <div class="pipeline">
+            <div class="step">
+              <h3>Parse</h3>
+              <p>Turn source into syntax. Preserve structure and intent.</p>
+            </div>
+            <div class="step">
+              <h3>Bind</h3>
+              <p>Resolve symbols, types, and diagnostics early.</p>
+            </div>
+            <div class="step">
+              <h3>Lower</h3>
+              <p>Rewrite into a simpler executable core.</p>
+            </div>
+            <div class="step">
+              <h3>Emit / Run</h3>
+              <p>Interpret or compile to clean, readable C#.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="examples" id="examples">
+        <div class="section-inner">
+          <h2>Examples</h2>
+          <div class="example-grid">
+            <div class="example">
+              <p class="label">Match with sum types</p>
+              <pre><code>type Result { Ok(Int) Error(String) }
+fn safe_div(a: Int, b: Int) => match b {
+  0 -> Error("divide by zero")
+  _ -> Ok(a / b)
+}
+
+print match safe_div(10, 2) {
+  Ok(x) -> x
+  Error(msg) -> 0
+}</code></pre>
+            </div>
+            <div class="example">
+              <p class="label">Records and functions</p>
+              <pre><code>type User { name: String, age: Int }
+fn is_adult(u: User) => u.age >= 18
+
+let user = User { name: "Ada", age: 36 }
+println is_adult(user)
+println user.name</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="roadmap" id="roadmap">
+        <div class="section-inner">
+          <h2>Roadmap</h2>
+          <div class="roadmap-grid">
+            <div class="roadmap-card done">
+              <h3>Done</h3>
+              <ul>
+                <li>Functions + lambdas</li>
+                <li>Records and sum types</li>
+                <li>Interpreter and codegen</li>
+              </ul>
+            </div>
+            <div class="roadmap-card now">
+              <h3>Now</h3>
+              <ul>
+                <li>Pattern matching polish</li>
+                <li>Generics v1</li>
+                <li>Collections v1</li>
+              </ul>
+            </div>
+            <div class="roadmap-card next">
+              <h3>Next</h3>
+              <ul>
+                <li>Error handling core</li>
+                <li>CLI args</li>
+                <li>Standard library expansion</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="community" id="community">
+        <div class="section-inner">
+          <h2>Community</h2>
+          <p>
+            Axom is built in the open. Contributions, critiques, and real-world
+            experiments are the fuel of the forge.
+          </p>
+          <div class="cta">
+            <a class="btn primary" href="https://github.com/axom-lang/axom">Repository</a>
+            <a class="btn ghost" href="https://github.com/axom-lang/axom/issues">Open an issue</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="section-inner">
+        <p>Axom: forged for clarity and pragmatic power.</p>
+        <div class="footer-links">
+          <a href="https://github.com/axom-lang/axom/blob/main/docs/spec.md">Spec</a>
+          <a href="https://github.com/axom-lang/axom/blob/main/docs/tutorial.md">Tutorial</a>
+          <a href="https://github.com/axom-lang/axom">GitHub</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
