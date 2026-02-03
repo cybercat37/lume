@@ -911,7 +911,6 @@ numbers.each(fn(x) { sum = sum + x })
 
 ### 🔜 Planned
 
-- Explicit numeric conversions (`float(Int)`, `int(Float)`)
 - Pattern matching (guards, lists, sum types)
 - Generics
 - `Result`/`Option` and error propagation (`?`)
