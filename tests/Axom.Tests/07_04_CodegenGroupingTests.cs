@@ -61,4 +61,14 @@ public class CodegenGroupingTests
         Assert.True(result.Success);
         Assert.Contains("1 + 2 == 3", result.GeneratedCode);
     }
+
+    [Fact]
+    public void Compile_logical_preserves_precedence()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print true || false && true", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("true || false && true", result.GeneratedCode);
+    }
 }

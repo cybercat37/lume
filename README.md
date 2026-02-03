@@ -130,6 +130,7 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Primitive types (`Int`, `Bool`, `String`)
 - Arithmetic operators (`+`, `-`, `*`, `/`, `%`)
 - Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
+- Logical operators (`&&`, `||`, `!`)
 - Unary operators (`-`, `+`)
 - String concatenation (`+`)
 - Blocks and scoped variables
@@ -149,8 +150,6 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 - Tooling: dotnet tool packaging, CI workflow, shell completions
 
 ### Coming Soon 🔜
-
-- Logical operators (`&&`, `||`, `!`)
 - Pattern matching (guards, lists, sum types)
 - Generics
 - `Result`/`Option` and error propagation (`?`)

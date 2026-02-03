@@ -416,11 +416,44 @@ public sealed class Interpreter
                     : intValue;
             }
 
+            if (operand is bool boolValue && unary.OperatorKind == Lexing.TokenKind.Bang)
+            {
+                return !boolValue;
+            }
+
             return null;
         }
 
         private object? EvaluateBinaryExpression(BoundBinaryExpression binary)
         {
+            if (binary.OperatorKind is Lexing.TokenKind.AmpersandAmpersand or Lexing.TokenKind.PipePipe)
+            {
+                var leftValue = EvaluateExpression(binary.Left);
+                if (leftValue is not bool leftBool)
+                {
+                    return null;
+                }
+
+                if (binary.OperatorKind == Lexing.TokenKind.AmpersandAmpersand)
+                {
+                    if (!leftBool)
+                    {
+                        return false;
+                    }
+
+                    var rightValue = EvaluateExpression(binary.Right);
+                    return rightValue is bool rightBool && leftBool && rightBool;
+                }
+
+                if (leftBool)
+                {
+                    return true;
+                }
+
+                var rightOrValue = EvaluateExpression(binary.Right);
+                return rightOrValue is bool rightOrBool && rightOrBool;
+            }
+
             var left = EvaluateExpression(binary.Left);
             var right = EvaluateExpression(binary.Right);
 
@@ -448,12 +481,14 @@ public sealed class Interpreter
                 };
             }
 
-            if (left is bool leftBool && right is bool rightBool)
+            if (left is bool leftBoolean && right is bool rightBoolean)
             {
                 return binary.OperatorKind switch
                 {
-                    Lexing.TokenKind.EqualEqual => leftBool == rightBool,
-                    Lexing.TokenKind.BangEqual => leftBool != rightBool,
+                    Lexing.TokenKind.EqualEqual => leftBoolean == rightBoolean,
+                    Lexing.TokenKind.BangEqual => leftBoolean != rightBoolean,
+                    Lexing.TokenKind.AmpersandAmpersand => leftBoolean && rightBoolean,
+                    Lexing.TokenKind.PipePipe => leftBoolean || rightBoolean,
                     _ => null
                 };
             }

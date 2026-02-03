@@ -19,6 +19,7 @@ println size
 
 println 1 + 2 == 3
 println 4 <= 2
+println true || false && true
 
 print match (1, 2) {
   (a, b) -> a + b

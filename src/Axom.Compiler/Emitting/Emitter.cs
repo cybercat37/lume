@@ -300,22 +300,24 @@ public sealed class Emitter
 
     private static int GetAssignmentPrecedence() => 1;
 
-    private static int GetUnaryPrecedence() => 4;
+    private static int GetUnaryPrecedence() => 6;
 
     private static int GetBinaryPrecedence(TokenKind kind)
     {
         return kind switch
         {
-            TokenKind.Star => 3,
-            TokenKind.Slash => 3,
-            TokenKind.Plus => 2,
-            TokenKind.Minus => 2,
-            TokenKind.EqualEqual => 1,
-            TokenKind.BangEqual => 1,
-            TokenKind.Less => 1,
-            TokenKind.LessOrEqual => 1,
-            TokenKind.Greater => 1,
-            TokenKind.GreaterOrEqual => 1,
+            TokenKind.Star => 5,
+            TokenKind.Slash => 5,
+            TokenKind.Plus => 4,
+            TokenKind.Minus => 4,
+            TokenKind.EqualEqual => 3,
+            TokenKind.BangEqual => 3,
+            TokenKind.Less => 3,
+            TokenKind.LessOrEqual => 3,
+            TokenKind.Greater => 3,
+            TokenKind.GreaterOrEqual => 3,
+            TokenKind.AmpersandAmpersand => 2,
+            TokenKind.PipePipe => 1,
             _ => 0
         };
     }
@@ -334,6 +336,9 @@ public sealed class Emitter
             TokenKind.LessOrEqual => "<=",
             TokenKind.Greater => ">",
             TokenKind.GreaterOrEqual => ">=",
+            TokenKind.AmpersandAmpersand => "&&",
+            TokenKind.PipePipe => "||",
+            TokenKind.Bang => "!",
             _ => throw new InvalidOperationException($"Unexpected operator: {kind}")
         };
     }
