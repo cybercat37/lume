@@ -1247,10 +1247,13 @@ public sealed class Binder
 
         if (argumentType != TypeSymbol.Error)
         {
+            var expected = allowFloat
+                ? "Int or Float"
+                : TypeSymbol.Int.ToString();
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
                 call.Span,
-                $"Function expects '{TypeSymbol.Int}' but got '{argumentType}'."));
+                $"Function expects '{expected}' but got '{argumentType}'."));
         }
 
         return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
@@ -1285,10 +1288,13 @@ public sealed class Binder
 
         if (leftType != TypeSymbol.Error && rightType != TypeSymbol.Error)
         {
+            var expected = allowFloat
+                ? "Int or Float"
+                : TypeSymbol.Int.ToString();
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
                 call.Span,
-                $"Function expects '{leftType}' but got '{rightType}'."));
+                $"Function expects '{expected}' but got '{leftType}' and '{rightType}'."));
         }
 
         return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
