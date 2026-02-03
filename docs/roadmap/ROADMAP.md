@@ -89,6 +89,7 @@ tight enough for end-to-end tests and docs updates.
 - CPU parallelism (`par`) semantics and runtime.
 - .NET interop surface (direct calls/NuGet) beyond current codegen.
 - Advanced effect system beyond pragmatic diagnostics.
+- Pipeline combinator expressions (proposal: `docs/proposals/pipeline-combinators.md`).
 
 ## Status tracking
 - Update progress per step as features land.

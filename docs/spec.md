@@ -56,6 +56,8 @@ This section captures agreed design choices to guide implementation.
 - Tuples are included; access via destructuring only.
 - String interpolation: `f"...{expr}..."` with `{}` expressions.
 - String helpers (length/split) live in stdlib.
+- Pipeline combinator expressions are proposed for iteration ergonomics
+  (see `docs/proposals/pipeline-combinators.md`).
 
 ### Modules & Visibility
 - One file = one module; no nested modules for now.

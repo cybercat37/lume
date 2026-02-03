@@ -154,7 +154,7 @@ counter = counter + 1
 | `Bool` | Boolean | `true`, `false` |
 | `String` | UTF-8 string | `"hello"` |
 
-**Status**: 🔜 Planned
+**Status**: ✅ Implemented
 
 ---
 
@@ -195,7 +195,9 @@ let not = !false
 let msg = "Hello" + " " + "World"
 ```
 
-**Status**: ✅ Implemented (arithmetic, logical, comparison, string concatenation)
+**Status**: ✅ Implemented (arithmetic, string concatenation)
+
+**Status**: 🔜 Planned (logical, comparison)
 
 ---
 
@@ -404,7 +406,7 @@ let user = User { name: "Alice", age: 30 }
 let name = user.name
 ```
 
-**Status**: 🔜 Planned
+**Status**: ✅ Implemented
 
 ---
 
@@ -420,7 +422,7 @@ let success = Ok(42)
 let failure = Error("Something went wrong")
 ```
 
-**Status**: 🔜 Planned
+**Status**: ✅ Implemented
 
 ---
 
@@ -874,40 +876,43 @@ numbers.each(fn(x) { sum = sum + x })
 
 ## 15. Implementation Status (Summary)
 
-### ✅ Implemented (Steps 1-12)
+### ✅ Implemented
 
-- Base Lexer and Parser
-- Variables (`let`, `let mut`)
+- Lexer and Parser with error recovery
+- Variables (`let`, `let mut`) and assignments
 - Primitive types (`Int`, `Bool`, `String`)
-- Arithmetic operators (`+`, `-`, `*`, `/`)
+- Arithmetic operators (`+`, `-`, `*`, `/`, `%`)
 - Unary operators (`-`, `+`)
-- Blocks and scope
-- Comments (planned, not yet implemented)
-- String escape sequences
+- String concatenation (`+`)
+- Blocks and scoped variables
+- Functions and lambdas (`fn`, `return`)
+- Pattern matching v1 (`match` with literals, `_`, identifiers, tuples)
+- Records v1 (`type`, record literals, field access)
+- Sum types v1 (variants with optional payloads)
+- String escape sequences (`\n`, `\t`, `\r`, `\"`, `\\`)
 - Binding and scope resolution
-- Base type checking
+- Type checking
 - Interpreter runtime
-- Code generation (C# emission)
-- Builtin functions (`print`, `println`, `input`, `len`, `abs`, `min`, `max`)
-- CLI commands (`check`, `build`, `run`) with options (`--out`, `--quiet`, `--verbose`, `--cache`)
-- Test infrastructure (golden files, diagnostic snapshots)
-- Compilation cache and large input guardrail
+- Code generation (emits C#)
+- Builtin functions: `print`, `println`, `input`, `len`, `abs`, `min`, `max`
+- CLI commands: `check`, `build`, `run` with options
+- Test infrastructure: golden files and diagnostic snapshots
+- Compilation cache (`--cache`) and large input guardrail
 - Tooling: dotnet tool packaging, CI workflow, shell completions
 
 ### 🔜 Planned
 
-- Pattern matching (`match`)
-- Functions and lambdas
-- Records and Sum types
+- Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
+- Logical operators (`&&`, `||`, `!`)
+- Pattern matching (guards, lists, sum types)
 - Generics
-- `Result`/`Option` and `?` operator
+- `Result`/`Option` and error propagation (`?`)
 - Collections (List, Map, Tuple)
 - Iterator combinators
-- Modules and `import`
+- Modules and imports
 - Structured concurrency
 - String interpolation
-- Complete .NET interop
 
 ---
 
-**Last updated**: January 2026
+**Last updated**: February 2026

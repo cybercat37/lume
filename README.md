@@ -256,6 +256,7 @@ The current plan is the v0.5 roadmap (next minor release).
  - ✅ Steps 1–13 complete (pipeline through functions/lambdas)
  - ✅ Pattern match v1 complete
  - 📍 Full plan and current focus: [ROADMAP.md](docs/roadmap/ROADMAP.md)
+ - 📄 Proposal: pipeline combinator expressions ([docs/proposals/pipeline-combinators.md](docs/proposals/pipeline-combinators.md))
 
 ## Language Features
 
