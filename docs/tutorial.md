@@ -82,8 +82,11 @@ print len(name)
 
 ```axom
 print abs(-10)
+print abs(-1.5)
 print min(3, 7)
+print min(1.5, 2.5)
 print max(3, 7)
+print max(1.5, 2.5)
 ```
 
 **Mutable variable with block scope**
