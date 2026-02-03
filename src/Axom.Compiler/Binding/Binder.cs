@@ -611,6 +611,11 @@ public sealed class Binder
             return new BoundBinaryExpression(left, op, right, TypeSymbol.Float);
         }
 
+        if (op == TokenKind.Plus && left.Type == TypeSymbol.String && right.Type == TypeSymbol.String)
+        {
+            return new BoundBinaryExpression(left, op, right, TypeSymbol.String);
+        }
+
         if (op is TokenKind.EqualEqual or TokenKind.BangEqual)
         {
             if (left.Type == right.Type && (left.Type == TypeSymbol.Bool || left.Type == TypeSymbol.String))

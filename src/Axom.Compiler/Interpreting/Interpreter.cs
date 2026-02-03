@@ -44,6 +44,7 @@ public sealed class Interpreter
         private readonly StringBuilder output;
         private readonly List<Diagnostic> diagnostics;
         private readonly Queue<string> inputBuffer;
+        private FunctionSymbol? currentFunction;
 
         public Evaluator(LoweredProgram program, Queue<string> inputBuffer)
         {
@@ -93,9 +94,12 @@ public sealed class Interpreter
                     EvaluateExpression(expressionStatement.Expression);
                     return;
                 case BoundReturnStatement returnStatement:
-                    var returnValue = returnStatement.Expression is null
-                        ? null
-                        : EvaluateExpression(returnStatement.Expression);
+                    if (returnStatement.Expression is null)
+                    {
+                        throw new ReturnSignal(null);
+                    }
+
+                    var returnValue = EvaluateTailExpression(returnStatement.Expression);
                     throw new ReturnSignal(returnValue);
                 default:
                     throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
@@ -173,6 +177,70 @@ public sealed class Interpreter
                     try
                     {
                         return EvaluateExpression(arm.Expression);
+                    }
+                    finally
+                    {
+                        foreach (var binding in bindings)
+                        {
+                            if (previousValues.TryGetValue(binding.Key, out var previous))
+                            {
+                                values[binding.Key] = previous;
+                            }
+                            else
+                            {
+                                values.Remove(binding.Key);
+                            }
+                        }
+                    }
+                }
+            }
+
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Non-exhaustive match expression."));
+            return null;
+        }
+
+        private object? EvaluateTailExpression(BoundExpression expression)
+        {
+            if (currentFunction is not null && expression is BoundCallExpression call)
+            {
+                if (call.Callee is BoundFunctionExpression functionExpression &&
+                    functionExpression.Function == currentFunction)
+                {
+                    var arguments = call.Arguments.Select(EvaluateExpression).ToArray();
+                    throw new TailCallSignal(arguments);
+                }
+            }
+
+            if (expression is BoundMatchExpression match)
+            {
+                return EvaluateMatchExpressionTail(match);
+            }
+
+            return EvaluateExpression(expression);
+        }
+
+        private object? EvaluateMatchExpressionTail(BoundMatchExpression match)
+        {
+            var value = EvaluateExpression(match.Expression);
+            foreach (var arm in match.Arms)
+            {
+                var bindings = new Dictionary<VariableSymbol, object?>();
+                if (TryMatchPattern(arm.Pattern, value, bindings))
+                {
+                    var previousValues = new Dictionary<VariableSymbol, object?>();
+                    foreach (var binding in bindings)
+                    {
+                        if (values.TryGetValue(binding.Key, out var existing))
+                        {
+                            previousValues[binding.Key] = existing;
+                        }
+
+                        values[binding.Key] = binding.Value;
+                    }
+
+                    try
+                    {
+                        return EvaluateTailExpression(arm.Expression);
                     }
                     finally
                     {
@@ -293,7 +361,12 @@ public sealed class Interpreter
 
                 if (functions.TryGetValue(functionSymbol, out var declaration))
                 {
-                    return EvaluateUserFunction(declaration.Parameters, declaration.Body, arguments, new Dictionary<VariableSymbol, object?>());
+                    return EvaluateUserFunction(
+                        functionSymbol,
+                        declaration.Parameters,
+                        declaration.Body,
+                        arguments,
+                        new Dictionary<VariableSymbol, object?>());
                 }
 
                 return null;
@@ -301,7 +374,7 @@ public sealed class Interpreter
 
             if (callee is FunctionValue functionValue)
             {
-                return EvaluateUserFunction(functionValue.Parameters, functionValue.Body, arguments, functionValue.Captures);
+                return EvaluateUserFunction(null, functionValue.Parameters, functionValue.Body, arguments, functionValue.Captures);
             }
 
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Expression is not callable."));
@@ -375,6 +448,7 @@ public sealed class Interpreter
         }
 
         private object? EvaluateUserFunction(
+            FunctionSymbol? functionSymbol,
             IReadOnlyList<VariableSymbol> parameters,
             BoundBlockStatement body,
             object?[] arguments,
@@ -382,6 +456,7 @@ public sealed class Interpreter
         {
             var previousValues = new Dictionary<VariableSymbol, object?>();
             var modifiedSymbols = new HashSet<VariableSymbol>();
+            var previousFunction = currentFunction;
 
             foreach (var capture in captures)
             {
@@ -409,9 +484,30 @@ public sealed class Interpreter
             object? result = null;
             try
             {
-                foreach (var statement in body.Statements)
+                currentFunction = functionSymbol;
+                var currentArguments = arguments;
+                while (true)
                 {
-                    EvaluateStatement(statement);
+                    for (var i = 0; i < parameters.Count && i < currentArguments.Length; i++)
+                    {
+                        var parameter = parameters[i];
+                        values[parameter] = currentArguments[i];
+                    }
+
+                    try
+                    {
+                        foreach (var statement in body.Statements)
+                        {
+                            EvaluateStatement(statement);
+                        }
+
+                        return null;
+                    }
+                    catch (TailCallSignal signal)
+                    {
+                        currentArguments = signal.Arguments;
+                        continue;
+                    }
                 }
             }
             catch (ReturnSignal signal)
@@ -420,6 +516,7 @@ public sealed class Interpreter
             }
             finally
             {
+                currentFunction = previousFunction;
                 foreach (var symbol in modifiedSymbols)
                 {
                     if (previousValues.TryGetValue(symbol, out var previous))
@@ -558,6 +655,7 @@ public sealed class Interpreter
             {
                 return binary.OperatorKind switch
                 {
+                    Lexing.TokenKind.Plus => leftString + rightString,
                     Lexing.TokenKind.EqualEqual => string.Equals(leftString, rightString, StringComparison.Ordinal),
                     Lexing.TokenKind.BangEqual => !string.Equals(leftString, rightString, StringComparison.Ordinal),
                     _ => null
@@ -587,6 +685,16 @@ public sealed class Interpreter
             public ReturnSignal(object? value)
             {
                 Value = value;
+            }
+        }
+
+        private sealed class TailCallSignal : Exception
+        {
+            public object?[] Arguments { get; }
+
+            public TailCallSignal(object?[] arguments)
+            {
+                Arguments = arguments;
             }
         }
 

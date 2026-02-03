@@ -23,9 +23,9 @@ println "len(greeting)"
 print len(greeting)
 
 println "*** functions and lambdas ***"
-fn add(x: Int, y: Int) => x + y
+fn add(x: Int, y: Int) -> Int => x + y
 let inc = fn(x: Int) => x + 1
-fn double(x: Int) {
+fn double(x: Int) -> Int {
   return x * 2
 }
 println add(1, 2)
@@ -77,13 +77,13 @@ println float(2)
 println int(3.9)
 
 println "*** recursion ***"
-fn fib(n: Int) => match n {
+fn fib(n: Int) -> Int => match n {
   0 -> 0
   1 -> 1
   _ -> fib(n - 1) + fib(n - 2)
 }
 
-fn fact(n: Int) => match n {
+fn fact(n: Int) -> Int => match n {
   0 -> 1
   1 -> 1
   _ -> n * fact(n - 1)

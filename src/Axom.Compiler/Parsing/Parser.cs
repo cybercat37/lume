@@ -307,35 +307,35 @@ public sealed class Parser
         return new BlockStatementSyntax(openBrace, statements, closeBrace);
     }
 
-    private ExpressionSyntax ParseExpression() =>
-        ParseAssignmentExpression();
+    private ExpressionSyntax ParseExpression(bool allowRecordLiteral = true) =>
+        ParseAssignmentExpression(allowRecordLiteral);
 
-    private ExpressionSyntax ParseAssignmentExpression()
+    private ExpressionSyntax ParseAssignmentExpression(bool allowRecordLiteral)
     {
         if (Current().Kind == TokenKind.Identifier && Peek(1).Kind == TokenKind.EqualsToken)
         {
             var identifier = NextToken();
             var equalsToken = NextToken();
-            var right = ParseAssignmentExpression();
+            var right = ParseAssignmentExpression(allowRecordLiteral);
             return new AssignmentExpressionSyntax(identifier, equalsToken, right);
         }
 
-        return ParseBinaryExpression();
+        return ParseBinaryExpression(allowRecordLiteral);
     }
 
-    private ExpressionSyntax ParseBinaryExpression(int parentPrecedence = 0)
+    private ExpressionSyntax ParseBinaryExpression(bool allowRecordLiteral, int parentPrecedence = 0)
     {
         ExpressionSyntax left;
         var unaryPrecedence = GetUnaryOperatorPrecedence(Current().Kind);
         if (unaryPrecedence != 0 && unaryPrecedence >= parentPrecedence)
         {
             var operatorToken = NextToken();
-            var operand = ParseBinaryExpression(unaryPrecedence);
+            var operand = ParseBinaryExpression(allowRecordLiteral, unaryPrecedence);
             left = new UnaryExpressionSyntax(operatorToken, operand);
         }
         else
         {
-            left = ParsePostfixExpression();
+            left = ParsePostfixExpression(allowRecordLiteral);
         }
 
         while (true)
@@ -347,16 +347,16 @@ public sealed class Parser
             }
 
             var operatorToken = NextToken();
-            var right = ParseBinaryExpression(precedence);
+            var right = ParseBinaryExpression(allowRecordLiteral, precedence);
             left = new BinaryExpressionSyntax(left, operatorToken, right);
         }
 
         return left;
     }
 
-    private ExpressionSyntax ParsePostfixExpression()
+    private ExpressionSyntax ParsePostfixExpression(bool allowRecordLiteral)
     {
-        var expression = ParsePrimaryExpression();
+        var expression = ParsePrimaryExpression(allowRecordLiteral);
         while (Current().Kind == TokenKind.OpenParen || Current().Kind == TokenKind.Dot)
         {
             if (Current().Kind == TokenKind.OpenParen)
@@ -373,7 +373,7 @@ public sealed class Parser
         return expression;
     }
 
-    private ExpressionSyntax ParsePrimaryExpression()
+    private ExpressionSyntax ParsePrimaryExpression(bool allowRecordLiteral)
     {
         switch (Current().Kind)
         {
@@ -408,7 +408,7 @@ public sealed class Parser
 
                 return new InputExpressionSyntax(NextToken());
             case TokenKind.Identifier:
-                if (Peek(1).Kind == TokenKind.OpenBrace)
+                if (allowRecordLiteral && Peek(1).Kind == TokenKind.OpenBrace)
                 {
                     return ParseRecordLiteralExpression();
                 }
@@ -432,7 +432,7 @@ public sealed class Parser
     private ExpressionSyntax ParseMatchExpression()
     {
         var matchKeyword = MatchToken(TokenKind.MatchKeyword, "match");
-        var expression = ParseExpression();
+        var expression = ParseExpression(allowRecordLiteral: false);
         var openBrace = MatchToken(TokenKind.OpenBrace, "{");
         var arms = new List<MatchArmSyntax>();
 
