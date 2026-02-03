@@ -81,4 +81,14 @@ public class CodegenGroupingTests
         Assert.True(result.Success);
         Assert.Contains("1.5 + 2.25", result.GeneratedCode);
     }
+
+    [Fact]
+    public void Compile_numeric_conversions_emit_casts()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print float(2)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("(double)2", result.GeneratedCode);
+    }
 }

@@ -46,6 +46,18 @@ public static class BuiltinFunctions
         TypeSymbol.Int,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Float = new(
+        "float",
+        new[] { new ParameterSymbol("value", TypeSymbol.Int) },
+        TypeSymbol.Float,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol Int = new(
+        "int",
+        new[] { new ParameterSymbol("value", TypeSymbol.Float) },
+        TypeSymbol.Int,
+        isBuiltin: true);
+
     private static readonly Dictionary<string, FunctionSymbol> ByName = new(StringComparer.Ordinal)
     {
         [Print.Name] = Print,
@@ -54,7 +66,9 @@ public static class BuiltinFunctions
         [Len.Name] = Len,
         [Abs.Name] = Abs,
         [Min.Name] = Min,
-        [Max.Name] = Max
+        [Max.Name] = Max,
+        [Float.Name] = Float,
+        [Int.Name] = Int
     };
 
     public static bool TryLookup(string name, out FunctionSymbol? function) =>

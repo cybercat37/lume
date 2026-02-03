@@ -234,6 +234,8 @@ public sealed class Emitter
                 "abs" => $"Math.Abs({args})",
                 "min" => $"Math.Min({args})",
                 "max" => $"Math.Max({args})",
+                "float" => $"(double){args}",
+                "int" => $"(int){args}",
                 _ => $"{EscapeIdentifier(function.Function.Name)}({args})"
             };
         }

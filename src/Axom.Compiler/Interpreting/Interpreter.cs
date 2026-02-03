@@ -326,6 +326,10 @@ public sealed class Interpreter
                     return arguments[0] is int left && arguments[1] is int right ? Math.Min(left, right) : 0;
                 case "max":
                     return arguments[0] is int leftMax && arguments[1] is int rightMax ? Math.Max(leftMax, rightMax) : 0;
+                case "float":
+                    return arguments[0] is int intValue ? (double)intValue : 0.0;
+                case "int":
+                    return arguments[0] is double doubleValue ? (int)doubleValue : 0;
                 default:
                     return null;
             }
