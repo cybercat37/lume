@@ -879,50 +879,11 @@ numbers.each(fn(x) { sum = sum + x })
 ## 14. References
 
 - **Full specification**: [docs/spec.md](spec.md)
-- **Roadmap**: [ROADMAP.md](docs/roadmap/ROADMAP.md)
-- **Agent guide**: [AGENTS.md](../../AGENTS.md)
+- **Roadmap**: [roadmap.md](../roadmap.md)
+- **Agent guide**: [AGENTS.md](../AGENTS.md)
 
 ---
 
 ## 15. Implementation Status (Summary)
 
-### ✅ Implemented
-
-- Lexer and Parser with error recovery
-- Variables (`let`, `let mut`) and assignments
-- Primitive types (`Int`, `Float`, `Bool`, `String`)
-- Arithmetic operators (`+`, `-`, `*`, `/`, `%`)
-- Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
-- Logical operators (`&&`, `||`, `!`)
-- Unary operators (`-`, `+`)
-- String concatenation (`+`)
-- Blocks and scoped variables
-- Functions and lambdas (`fn`, `return`)
-- Pattern matching v1 (`match` with literals, `_`, identifiers, tuples)
-- Records v1 (`type`, record literals, field access)
-- Sum types v1 (variants with optional payloads)
-- String escape sequences (`\n`, `\t`, `\r`, `\"`, `\\`)
-- Binding and scope resolution
-- Type checking
-- Interpreter runtime
-- Code generation (emits C#)
-- Builtin functions: `print`, `println`, `input`, `len`, `abs`, `min`, `max`
-- CLI commands: `check`, `build`, `run` with options
-- Test infrastructure: golden files and diagnostic snapshots
-- Compilation cache (`--cache`) and large input guardrail
-- Tooling: dotnet tool packaging, CI workflow, shell completions
-
-### 🔜 Planned
-
-- Pattern matching (guards, lists, sum types)
-- Generics
-- `Result`/`Option` and error propagation (`?`)
-- Collections (List, Map, Tuple)
-- Iterator combinators
-- Modules and imports
-- Structured concurrency
-- String interpolation
-
----
-
-**Last updated**: February 2026
+Status is tracked in `roadmap.md` to keep a single source of truth.

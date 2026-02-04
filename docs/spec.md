@@ -447,4 +447,4 @@ Notes:
 
 ---
 
-Status: Draft v0.2 (implementation steps 1-13 complete; match v1, records v1, and sum types v1 implemented; planned features pending)
+Status: Draft v0.2 (see `roadmap.md` for implementation status)

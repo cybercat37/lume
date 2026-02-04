@@ -139,7 +139,7 @@ Follow the existing conventions visible in the C# files.
 - Preserve public entry points used by tests (e.g., `SyntaxTree.Parse`,
   `Interpreter.Run`) to keep tests unchanged while internal structure evolves.
 ## Roadmap references
-- Language and feature roadmap lives in `docs/roadmap/ROADMAP.md` and `docs/roadmap/STEP*_*.md`.
+- The consolidated roadmap lives in `roadmap.md`.
 ## If you add new tooling
 When adding tooling (formatters, analyzers, CI tasks), update this file
 with the exact commands and any per-project variants.

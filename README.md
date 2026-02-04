@@ -119,47 +119,10 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 2. Run `Developer: Install Extension from Location...`.
 3. Select `tools/vscode-axom`.
 
-## Status
+## Status and Roadmap
 
-**In Development** — Steps 1-13 of the roadmap are complete, with pattern matching v1, records v1, and sum types v1 implemented. The compiler can parse, type-check, interpret, and generate C# code for basic programs. A full CLI with `check`, `build`, and `run` commands is available. Test infrastructure includes golden files and diagnostic snapshots, plus compilation caching and tooling support.
-
-### Currently Implemented ✅
-
-- Lexer and Parser with error recovery
-- Variables (`let`, `let mut`) and assignments
-- Primitive types (`Int`, `Float`, `Bool`, `String`)
-- Arithmetic operators (`+`, `-`, `*`, `/`, `%`)
-- Comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`)
-- Logical operators (`&&`, `||`, `!`)
-- Unary operators (`-`, `+`)
-- String concatenation (`+`)
-- Numeric conversions (`float(Int)`, `int(Float)`)
-- Blocks and scoped variables
-- Functions and lambdas (`fn`, `return`)
-- Recursion via `match` (no `if/while/for`)
-- Pattern matching v1 (`match` with literals, `_`, identifiers, tuples)
-- Records v1 (`type`, record literals, field access)
-- Sum types v1 (variants with optional payloads)
-- String escape sequences (`\n`, `\t`, `\r`, `\"`, `\\`)
-- Binding and scope resolution
-- Type checking
-- Interpreter runtime
-- Code generation (emits C#)
-- Builtin functions: `print`, `println`, `input`, `len`, `abs`, `min`, `max`, `float`, `int`
-- CLI commands: `check`, `build`, `run` with options
-- Test infrastructure: golden files and diagnostic snapshots
-- Compilation cache (`--cache`) and large input guardrail
-- Tooling: dotnet tool packaging, CI workflow, shell completions
-
-### Coming Soon 🔜
-- Pattern matching (guards, lists, sum types)
-- Generics
-- `Result`/`Option` and error propagation (`?`)
-- Collections (List, Map, Tuple)
-- Iterator combinators
-- Modules and imports
-- Structured concurrency
-- String interpolation
+Project status, implemented features, and future plans live in the single source of truth:
+- `roadmap.md`
 
 ## Building and Running
 
@@ -248,16 +211,11 @@ files with the new expected output.
 
 - **[Language Tutorial](docs/tutorial.md)** — Learn Axom with examples
 - **[Language Specification](docs/spec.md)** — Complete language reference
-- **[Roadmap](docs/roadmap/ROADMAP.md)** — Implementation progress and plans
+- **[Roadmap](roadmap.md)** — Implementation progress and plans
 
 ## Roadmap
 
-The current plan is the v0.5 roadmap (next minor release).
-
- - ✅ Steps 1–13 complete (pipeline through functions/lambdas)
- - ✅ Pattern match v1 complete
- - 📍 Full plan and current focus: [ROADMAP.md](docs/roadmap/ROADMAP.md)
- - 📄 Proposal: pipeline combinator expressions ([docs/proposals/pipeline-combinators.md](docs/proposals/pipeline-combinators.md))
+See `roadmap.md` for the complete, consolidated roadmap.
 
 ## Language Features
 

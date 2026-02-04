@@ -69,7 +69,7 @@ dotnet test tests/Axom.Tests/Axom.Tests.csproj --filter "FullyQualifiedName~Clas
 ### Docs
 
 - Language spec: `docs/spec.md`
-- Roadmap: `docs/roadmap/ROADMAP.md`
+- Roadmap: `roadmap.md`
 
 ## Questions?
 
