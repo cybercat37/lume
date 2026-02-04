@@ -40,7 +40,7 @@ public sealed class Interpreter
     {
         private readonly LoweredProgram program;
         private readonly Dictionary<VariableSymbol, object?> values;
-        private readonly Dictionary<FunctionSymbol, BoundFunctionDeclaration> functions;
+        private readonly Dictionary<FunctionSymbol, LoweredFunctionDeclaration> functions;
         private readonly StringBuilder output;
         private readonly List<Diagnostic> diagnostics;
         private readonly Queue<string> inputBuffer;
@@ -70,30 +70,30 @@ public sealed class Interpreter
             return new InterpreterResult(output.ToString().TrimEnd('\n', '\r'), diagnostics);
         }
 
-        private void EvaluateStatement(BoundStatement statement)
+        private void EvaluateStatement(LoweredStatement statement)
         {
             switch (statement)
             {
-                case BoundBlockStatement block:
+                case LoweredBlockStatement block:
                     foreach (var inner in block.Statements)
                     {
                         EvaluateStatement(inner);
                     }
                     return;
-                case BoundVariableDeclaration declaration:
+                case LoweredVariableDeclaration declaration:
                     values[declaration.Symbol] = EvaluateExpression(declaration.Initializer);
                     return;
-                case BoundPrintStatement print:
+                case LoweredPrintStatement print:
                     var value = EvaluateExpression(print.Expression);
                     if (diagnostics.Count == 0)
                     {
                         output.AppendLine(FormatValue(value));
                     }
                     return;
-                case BoundExpressionStatement expressionStatement:
+                case LoweredExpressionStatement expressionStatement:
                     EvaluateExpression(expressionStatement.Expression);
                     return;
-                case BoundReturnStatement returnStatement:
+                case LoweredReturnStatement returnStatement:
                     if (returnStatement.Expression is null)
                     {
                         throw new ReturnSignal(null);
@@ -101,109 +101,155 @@ public sealed class Interpreter
 
                     var returnValue = EvaluateTailExpression(returnStatement.Expression);
                     throw new ReturnSignal(returnValue);
+                case LoweredIfStatement ifStatement:
+                    var conditionValue = EvaluateExpression(ifStatement.Condition);
+                    if (conditionValue is bool boolValue && boolValue)
+                    {
+                        EvaluateStatement(ifStatement.Then);
+                    }
+                    else if (ifStatement.Else is not null)
+                    {
+                        EvaluateStatement(ifStatement.Else);
+                    }
+
+                    return;
                 default:
                     throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
             }
         }
 
-        private object? EvaluateExpression(BoundExpression expression)
+        private object? EvaluateExpression(LoweredExpression expression)
         {
             switch (expression)
             {
-                case BoundLiteralExpression literal:
+                case LoweredLiteralExpression literal:
                     return literal.Value;
-                case BoundNameExpression name:
+                case LoweredNameExpression name:
                     if (values.TryGetValue(name.Symbol, out var value))
                     {
                         return value;
                     }
 
                     return null;
-                case BoundAssignmentExpression assignment:
+                case LoweredAssignmentExpression assignment:
                     var assignedValue = EvaluateExpression(assignment.Expression);
                     values[assignment.Symbol] = assignedValue;
                     return assignedValue;
-                case BoundUnaryExpression unary:
+                case LoweredUnaryExpression unary:
                     return EvaluateUnaryExpression(unary);
-                case BoundBinaryExpression binary:
+                case LoweredBinaryExpression binary:
                     return EvaluateBinaryExpression(binary);
-                case BoundInputExpression:
+                case LoweredInputExpression:
                     return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
-                case BoundCallExpression call:
+                case LoweredCallExpression call:
                     return EvaluateCall(call);
-                case BoundFunctionExpression functionExpression:
+                case LoweredFunctionExpression functionExpression:
                     return functionExpression.Function;
-                case BoundLambdaExpression lambda:
+                case LoweredLambdaExpression lambda:
                     return EvaluateLambda(lambda);
-                case BoundMatchExpression match:
-                    return EvaluateMatchExpression(match);
-                case BoundTupleExpression tuple:
+                case LoweredTupleExpression tuple:
                     return EvaluateTupleExpression(tuple);
-                case BoundRecordLiteralExpression record:
+                case LoweredTupleAccessExpression tupleAccess:
+                    return EvaluateTupleAccessExpression(tupleAccess);
+                case LoweredRecordLiteralExpression record:
                     return EvaluateRecordLiteralExpression(record);
-                case BoundFieldAccessExpression fieldAccess:
+                case LoweredFieldAccessExpression fieldAccess:
                     return EvaluateFieldAccessExpression(fieldAccess);
-                case BoundSumConstructorExpression sum:
+                case LoweredSumConstructorExpression sum:
                     return EvaluateSumConstructorExpression(sum);
+                case LoweredIsTupleExpression isTuple:
+                    return EvaluateIsTupleExpression(isTuple);
+                case LoweredIsSumExpression isSum:
+                    return EvaluateIsSumExpression(isSum);
+                case LoweredSumTagExpression sumTag:
+                    return EvaluateSumTagExpression(sumTag);
+                case LoweredSumValueExpression sumValue:
+                    return EvaluateSumValueExpression(sumValue);
+                case LoweredBlockExpression block:
+                    return EvaluateBlockExpression(block);
+                case LoweredDefaultExpression defaultExpression:
+                    return EvaluateDefaultExpression(defaultExpression);
+                case LoweredMatchFailureExpression matchFailure:
+                    return EvaluateMatchFailureExpression(matchFailure);
                 default:
                     throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
             }
         }
 
-        private object? EvaluateTupleExpression(BoundTupleExpression tuple)
+        private object? EvaluateTupleExpression(LoweredTupleExpression tuple)
         {
             return tuple.Elements.Select(EvaluateExpression).ToArray();
         }
 
-        private object? EvaluateMatchExpression(BoundMatchExpression match)
+        private object? EvaluateTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
         {
-            var value = EvaluateExpression(match.Expression);
-            foreach (var arm in match.Arms)
+            var target = EvaluateExpression(tupleAccess.Target);
+            if (target is object?[] elements && tupleAccess.Index >= 0 && tupleAccess.Index < elements.Length)
             {
-                var bindings = new Dictionary<VariableSymbol, object?>();
-                if (TryMatchPattern(arm.Pattern, value, bindings))
-                {
-                    var previousValues = new Dictionary<VariableSymbol, object?>();
-                    foreach (var binding in bindings)
-                    {
-                        if (values.TryGetValue(binding.Key, out var existing))
-                        {
-                            previousValues[binding.Key] = existing;
-                        }
-
-                        values[binding.Key] = binding.Value;
-                    }
-
-                    try
-                    {
-                        return EvaluateExpression(arm.Expression);
-                    }
-                    finally
-                    {
-                        foreach (var binding in bindings)
-                        {
-                            if (previousValues.TryGetValue(binding.Key, out var previous))
-                            {
-                                values[binding.Key] = previous;
-                            }
-                            else
-                            {
-                                values.Remove(binding.Key);
-                            }
-                        }
-                    }
-                }
+                return elements[tupleAccess.Index];
             }
 
-            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Non-exhaustive match expression."));
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Tuple access failed."));
             return null;
         }
 
-        private object? EvaluateTailExpression(BoundExpression expression)
+        private object? EvaluateIsTupleExpression(LoweredIsTupleExpression isTuple)
         {
-            if (currentFunction is not null && expression is BoundCallExpression call)
+            var target = EvaluateExpression(isTuple.Target);
+            return target is object?[];
+        }
+
+        private object? EvaluateIsSumExpression(LoweredIsSumExpression isSum)
+        {
+            var target = EvaluateExpression(isSum.Target);
+            return target is SumValue;
+        }
+
+        private object? EvaluateSumTagExpression(LoweredSumTagExpression sumTag)
+        {
+            var target = EvaluateExpression(sumTag.Target);
+            return target is SumValue sum ? sum.Variant.Name : null;
+        }
+
+        private object? EvaluateSumValueExpression(LoweredSumValueExpression sumValue)
+        {
+            var target = EvaluateExpression(sumValue.Target);
+            return target is SumValue sum ? sum.Payload : null;
+        }
+
+        private object? EvaluateBlockExpression(LoweredBlockExpression block)
+        {
+            foreach (var statement in block.Statements)
             {
-                if (call.Callee is BoundFunctionExpression functionExpression &&
+                EvaluateStatement(statement);
+            }
+
+            return EvaluateExpression(block.Result);
+        }
+
+        private object? EvaluateDefaultExpression(LoweredDefaultExpression defaultExpression)
+        {
+            return defaultExpression.Type switch
+            {
+                var t when t == TypeSymbol.Int => 0,
+                var t when t == TypeSymbol.Float => 0.0,
+                var t when t == TypeSymbol.Bool => false,
+                var t when t == TypeSymbol.String => string.Empty,
+                _ => null
+            };
+        }
+
+        private object? EvaluateMatchFailureExpression(LoweredMatchFailureExpression matchFailure)
+        {
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Non-exhaustive match expression."));
+            return EvaluateDefaultExpression(new LoweredDefaultExpression(matchFailure.Type));
+        }
+
+        private object? EvaluateTailExpression(LoweredExpression expression)
+        {
+            if (currentFunction is not null && expression is LoweredCallExpression call)
+            {
+                if (call.Callee is LoweredFunctionExpression functionExpression &&
                     functionExpression.Function == currentFunction)
                 {
                     var arguments = call.Arguments.Select(EvaluateExpression).ToArray();
@@ -211,59 +257,20 @@ public sealed class Interpreter
                 }
             }
 
-            if (expression is BoundMatchExpression match)
+            if (expression is LoweredBlockExpression block)
             {
-                return EvaluateMatchExpressionTail(match);
+                foreach (var statement in block.Statements)
+                {
+                    EvaluateStatement(statement);
+                }
+
+                return EvaluateTailExpression(block.Result);
             }
 
             return EvaluateExpression(expression);
         }
 
-        private object? EvaluateMatchExpressionTail(BoundMatchExpression match)
-        {
-            var value = EvaluateExpression(match.Expression);
-            foreach (var arm in match.Arms)
-            {
-                var bindings = new Dictionary<VariableSymbol, object?>();
-                if (TryMatchPattern(arm.Pattern, value, bindings))
-                {
-                    var previousValues = new Dictionary<VariableSymbol, object?>();
-                    foreach (var binding in bindings)
-                    {
-                        if (values.TryGetValue(binding.Key, out var existing))
-                        {
-                            previousValues[binding.Key] = existing;
-                        }
-
-                        values[binding.Key] = binding.Value;
-                    }
-
-                    try
-                    {
-                        return EvaluateTailExpression(arm.Expression);
-                    }
-                    finally
-                    {
-                        foreach (var binding in bindings)
-                        {
-                            if (previousValues.TryGetValue(binding.Key, out var previous))
-                            {
-                                values[binding.Key] = previous;
-                            }
-                            else
-                            {
-                                values.Remove(binding.Key);
-                            }
-                        }
-                    }
-                }
-            }
-
-            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Non-exhaustive match expression."));
-            return null;
-        }
-
-        private object? EvaluateRecordLiteralExpression(BoundRecordLiteralExpression record)
+        private object? EvaluateRecordLiteralExpression(LoweredRecordLiteralExpression record)
         {
             var valuesByName = new Dictionary<string, object?>(StringComparer.Ordinal);
             foreach (var field in record.Fields)
@@ -274,7 +281,7 @@ public sealed class Interpreter
             return new RecordValue(record.RecordType, valuesByName);
         }
 
-        private object? EvaluateFieldAccessExpression(BoundFieldAccessExpression fieldAccess)
+        private object? EvaluateFieldAccessExpression(LoweredFieldAccessExpression fieldAccess)
         {
             var target = EvaluateExpression(fieldAccess.Target);
             if (target is RecordValue record && record.TryGet(fieldAccess.Field.Name, out var value))
@@ -286,69 +293,14 @@ public sealed class Interpreter
             return null;
         }
 
-        private object? EvaluateSumConstructorExpression(BoundSumConstructorExpression sum)
+        private object? EvaluateSumConstructorExpression(LoweredSumConstructorExpression sum)
         {
             var payload = sum.Payload is null ? null : EvaluateExpression(sum.Payload);
             return new SumValue(sum.Variant, payload);
         }
 
-        private static bool TryMatchPattern(
-            BoundPattern pattern,
-            object? value,
-            IDictionary<VariableSymbol, object?> bindings)
-        {
-            switch (pattern)
-            {
-                case BoundWildcardPattern:
-                    return true;
-                case BoundLiteralPattern literal:
-                    return Equals(literal.Value, value);
-                case BoundIdentifierPattern identifier:
-                    bindings[identifier.Symbol] = value;
-                    return true;
-                case BoundTuplePattern tuple:
-                    if (value is not object?[] elements)
-                    {
-                        return false;
-                    }
 
-                    if (elements.Length != tuple.Elements.Count)
-                    {
-                        return false;
-                    }
-
-                    for (var i = 0; i < elements.Length; i++)
-                    {
-                        if (!TryMatchPattern(tuple.Elements[i], elements[i], bindings))
-                        {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                case BoundVariantPattern variant:
-                    if (value is not SumValue sum)
-                    {
-                        return false;
-                    }
-
-                    if (!string.Equals(sum.Variant.Name, variant.Variant.Name, StringComparison.Ordinal))
-                    {
-                        return false;
-                    }
-
-                    if (variant.Payload is null)
-                    {
-                        return true;
-                    }
-
-                    return TryMatchPattern(variant.Payload, sum.Payload, bindings);
-                default:
-                    return false;
-            }
-        }
-
-        private object? EvaluateCall(BoundCallExpression call)
+        private object? EvaluateCall(LoweredCallExpression call)
         {
             var callee = EvaluateExpression(call.Callee);
             var arguments = call.Arguments.Select(EvaluateExpression).ToArray();
@@ -433,7 +385,7 @@ public sealed class Interpreter
             }
         }
 
-        private FunctionValue EvaluateLambda(BoundLambdaExpression lambda)
+        private FunctionValue EvaluateLambda(LoweredLambdaExpression lambda)
         {
             var captures = new Dictionary<VariableSymbol, object?>();
             foreach (var capture in lambda.Captures)
@@ -450,7 +402,7 @@ public sealed class Interpreter
         private object? EvaluateUserFunction(
             FunctionSymbol? functionSymbol,
             IReadOnlyList<VariableSymbol> parameters,
-            BoundBlockStatement body,
+            LoweredBlockStatement body,
             object?[] arguments,
             IDictionary<VariableSymbol, object?> captures)
         {
@@ -533,7 +485,7 @@ public sealed class Interpreter
             return result;
         }
 
-        private object? EvaluateUnaryExpression(BoundUnaryExpression unary)
+        private object? EvaluateUnaryExpression(LoweredUnaryExpression unary)
         {
             var operand = EvaluateExpression(unary.Operand);
             if (operand is int intValue)
@@ -558,7 +510,7 @@ public sealed class Interpreter
             return null;
         }
 
-        private object? EvaluateBinaryExpression(BoundBinaryExpression binary)
+        private object? EvaluateBinaryExpression(LoweredBinaryExpression binary)
         {
             if (binary.OperatorKind is Lexing.TokenKind.AmpersandAmpersand or Lexing.TokenKind.PipePipe)
             {
@@ -701,12 +653,12 @@ public sealed class Interpreter
         private sealed class FunctionValue
         {
             public IReadOnlyList<VariableSymbol> Parameters { get; }
-            public BoundBlockStatement Body { get; }
+            public LoweredBlockStatement Body { get; }
             public IDictionary<VariableSymbol, object?> Captures { get; }
 
             public FunctionValue(
                 IReadOnlyList<VariableSymbol> parameters,
-                BoundBlockStatement body,
+                LoweredBlockStatement body,
                 IDictionary<VariableSymbol, object?> captures)
             {
                 Parameters = parameters;

@@ -7,15 +7,15 @@ public sealed class LoweredProgram
     public BoundProgram Source { get; }
     public IReadOnlyList<BoundRecordTypeDeclaration> RecordTypes { get; }
     public IReadOnlyList<BoundSumTypeDeclaration> SumTypes { get; }
-    public IReadOnlyList<BoundFunctionDeclaration> Functions { get; }
-    public IReadOnlyList<BoundStatement> Statements { get; }
+    public IReadOnlyList<LoweredFunctionDeclaration> Functions { get; }
+    public IReadOnlyList<LoweredStatement> Statements { get; }
 
     public LoweredProgram(
         BoundProgram source,
         IReadOnlyList<BoundRecordTypeDeclaration> recordTypes,
         IReadOnlyList<BoundSumTypeDeclaration> sumTypes,
-        IReadOnlyList<BoundFunctionDeclaration> functions,
-        IReadOnlyList<BoundStatement> statements)
+        IReadOnlyList<LoweredFunctionDeclaration> functions,
+        IReadOnlyList<LoweredStatement> statements)
     {
         Source = source;
         RecordTypes = recordTypes;

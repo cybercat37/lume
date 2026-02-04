@@ -56,11 +56,11 @@ public sealed class Emitter
         return code;
     }
 
-    private static void WriteStatement(IndentedWriter writer, BoundStatement statement)
+    private static void WriteStatement(IndentedWriter writer, LoweredStatement statement)
     {
         switch (statement)
         {
-            case BoundBlockStatement block:
+            case LoweredBlockStatement block:
                 writer.WriteLine("{");
                 writer.Indent();
                 foreach (var inner in block.Statements)
@@ -70,16 +70,16 @@ public sealed class Emitter
                 writer.Unindent();
                 writer.WriteLine("}");
                 return;
-            case BoundVariableDeclaration declaration:
+            case LoweredVariableDeclaration declaration:
                 writer.WriteLine($"var {EscapeIdentifier(declaration.Symbol.Name)} = {WriteExpression(declaration.Initializer)};");
                 return;
-            case BoundPrintStatement print:
+            case LoweredPrintStatement print:
                 writer.WriteLine($"Console.WriteLine({WriteExpression(print.Expression)});");
                 return;
-            case BoundExpressionStatement expressionStatement:
+            case LoweredExpressionStatement expressionStatement:
                 writer.WriteLine($"{WriteExpression(expressionStatement.Expression)};");
                 return;
-            case BoundReturnStatement returnStatement:
+            case LoweredReturnStatement returnStatement:
                 if (returnStatement.Expression is null)
                 {
                     writer.WriteLine("return;");
@@ -87,6 +87,15 @@ public sealed class Emitter
                 }
 
                 writer.WriteLine($"return {WriteExpression(returnStatement.Expression)};");
+                return;
+            case LoweredIfStatement ifStatement:
+                writer.WriteLine($"if ({WriteExpression(ifStatement.Condition)})");
+                WriteStatement(writer, ifStatement.Then);
+                if (ifStatement.Else is not null)
+                {
+                    writer.WriteLine("else");
+                    WriteStatement(writer, ifStatement.Else);
+                }
                 return;
             default:
                 throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
@@ -115,35 +124,42 @@ public sealed class Emitter
         builder.AppendLine("}");
     }
 
-    private static string WriteExpression(BoundExpression expression, int parentPrecedence = 0)
+    private static string WriteExpression(LoweredExpression expression, int parentPrecedence = 0)
     {
         return expression switch
         {
-            BoundLiteralExpression literal => FormatLiteral(literal.Value),
-            BoundNameExpression name => EscapeIdentifier(name.Symbol.Name),
-            BoundAssignmentExpression assignment => WrapIfNeeded(
+            LoweredLiteralExpression literal => FormatLiteral(literal.Value),
+            LoweredNameExpression name => EscapeIdentifier(name.Symbol.Name),
+            LoweredAssignmentExpression assignment => WrapIfNeeded(
                 $"{EscapeIdentifier(assignment.Symbol.Name)} = {WriteExpression(assignment.Expression, GetAssignmentPrecedence())}",
                 GetAssignmentPrecedence(),
                 parentPrecedence),
-            BoundUnaryExpression unary => WrapIfNeeded(
+            LoweredUnaryExpression unary => WrapIfNeeded(
                 $"{OperatorText(unary.OperatorKind)}{WriteExpression(unary.Operand, GetUnaryPrecedence())}",
                 GetUnaryPrecedence(),
                 parentPrecedence),
-            BoundBinaryExpression binary => WriteBinaryExpression(binary, parentPrecedence),
-            BoundInputExpression => "Console.ReadLine()",
-            BoundCallExpression call => WriteCallExpression(call),
-            BoundFunctionExpression function => EscapeIdentifier(function.Function.Name),
-            BoundLambdaExpression lambda => WriteLambdaExpression(lambda),
-            BoundMatchExpression match => WriteMatchExpression(match, parentPrecedence),
-            BoundTupleExpression tuple => WriteTupleExpression(tuple),
-            BoundRecordLiteralExpression record => WriteRecordLiteralExpression(record),
-            BoundFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
-            BoundSumConstructorExpression sum => WriteSumConstructorExpression(sum),
+            LoweredBinaryExpression binary => WriteBinaryExpression(binary, parentPrecedence),
+            LoweredInputExpression => "Console.ReadLine()",
+            LoweredCallExpression call => WriteCallExpression(call),
+            LoweredFunctionExpression function => EscapeIdentifier(function.Function.Name),
+            LoweredLambdaExpression lambda => WriteLambdaExpression(lambda),
+            LoweredTupleExpression tuple => WriteTupleExpression(tuple),
+            LoweredTupleAccessExpression tupleAccess => WriteTupleAccessExpression(tupleAccess),
+            LoweredRecordLiteralExpression record => WriteRecordLiteralExpression(record),
+            LoweredFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
+            LoweredSumConstructorExpression sum => WriteSumConstructorExpression(sum),
+            LoweredIsTupleExpression isTuple => WriteIsTupleExpression(isTuple),
+            LoweredIsSumExpression isSum => WriteIsSumExpression(isSum),
+            LoweredSumTagExpression sumTag => WriteSumTagExpression(sumTag),
+            LoweredSumValueExpression sumValue => WriteSumValueExpression(sumValue),
+            LoweredBlockExpression block => WriteBlockExpression(block),
+            LoweredDefaultExpression defaultExpression => WriteDefaultExpression(defaultExpression),
+            LoweredMatchFailureExpression matchFailure => WriteMatchFailureExpression(matchFailure),
             _ => throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}")
         };
     }
 
-    private static string WriteSumConstructorExpression(BoundSumConstructorExpression sum)
+    private static string WriteSumConstructorExpression(LoweredSumConstructorExpression sum)
     {
         var typeName = EscapeIdentifier(sum.Variant.DeclaringType.Name);
         if (sum.Payload is null)
@@ -155,17 +171,17 @@ public sealed class Emitter
         return $"new {typeName} {{ Tag = \"{sum.Variant.Name}\", Value = {payload} }}";
     }
 
-    private static string WriteRecordLiteralExpression(BoundRecordLiteralExpression record)
+    private static string WriteRecordLiteralExpression(LoweredRecordLiteralExpression record)
     {
         var assignments = string.Join(", ", record.Fields.Select(field =>
             $"{EscapeIdentifier(field.Field.Name)} = {WriteExpression(field.Expression)}"));
         return $"new {EscapeIdentifier(record.RecordType.Name)} {{ {assignments} }}";
     }
 
-    private static string WriteFieldAccessExpression(BoundFieldAccessExpression fieldAccess)
+    private static string WriteFieldAccessExpression(LoweredFieldAccessExpression fieldAccess)
     {
         var target = WriteExpression(fieldAccess.Target);
-        var needsParens = fieldAccess.Target is BoundAssignmentExpression or BoundBinaryExpression or BoundUnaryExpression or BoundMatchExpression;
+        var needsParens = fieldAccess.Target is LoweredAssignmentExpression or LoweredBinaryExpression or LoweredUnaryExpression or LoweredBlockExpression;
         if (needsParens)
         {
             target = $"({target})";
@@ -174,56 +190,92 @@ public sealed class Emitter
         return $"{target}.{EscapeIdentifier(fieldAccess.Field.Name)}";
     }
 
-    private static string WriteMatchExpression(BoundMatchExpression match, int parentPrecedence)
-    {
-        var target = WriteExpression(match.Expression);
-        var arms = string.Join(", ", match.Arms.Select(WriteMatchArm));
-        var text = $"{target} switch {{ {arms} }}";
-        return WrapIfNeeded(text, 0, parentPrecedence);
-    }
-
-    private static string WriteMatchArm(BoundMatchArm arm)
-    {
-        var pattern = WritePattern(arm.Pattern);
-        var expression = WriteExpression(arm.Expression);
-        return $"{pattern} => {expression}";
-    }
-
-    private static string WritePattern(BoundPattern pattern)
-    {
-        return pattern switch
-        {
-            BoundWildcardPattern => "_",
-            BoundLiteralPattern literal => FormatLiteral(literal.Value),
-            BoundIdentifierPattern identifier => $"var {EscapeIdentifier(identifier.Symbol.Name)}",
-            BoundTuplePattern tuple => $"({string.Join(", ", tuple.Elements.Select(WritePattern))})",
-            BoundVariantPattern variant => WriteVariantPattern(variant),
-            _ => "_"
-        };
-    }
-
-    private static string WriteVariantPattern(BoundVariantPattern variant)
-    {
-        var typeName = EscapeIdentifier(variant.Variant.DeclaringType.Name);
-        if (variant.Payload is null)
-        {
-            return $"{typeName} {{ Tag: \"{variant.Variant.Name}\" }}";
-        }
-
-        var payload = WritePattern(variant.Payload);
-        return $"{typeName} {{ Tag: \"{variant.Variant.Name}\", Value: {payload} }}";
-    }
-
-    private static string WriteTupleExpression(BoundTupleExpression tuple)
+    private static string WriteTupleExpression(LoweredTupleExpression tuple)
     {
         var elements = string.Join(", ", tuple.Elements.Select(WriteExpression));
         return $"({elements})";
     }
 
-    private static string WriteCallExpression(BoundCallExpression call)
+    private static string WriteTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
+    {
+        var target = WriteExpression(tupleAccess.Target);
+        return $"{target}.Item{tupleAccess.Index + 1}";
+    }
+
+    private static string WriteIsTupleExpression(LoweredIsTupleExpression isTuple)
+    {
+        var target = WriteExpression(isTuple.Target);
+        var tupleType = TypeToCSharp(isTuple.TupleType);
+        return $"{target} is {tupleType}";
+    }
+
+    private static string WriteIsSumExpression(LoweredIsSumExpression isSum)
+    {
+        var target = WriteExpression(isSum.Target);
+        var sumType = TypeToCSharp(isSum.SumType);
+        return $"{target} is {sumType}";
+    }
+
+    private static string WriteSumTagExpression(LoweredSumTagExpression sumTag)
+    {
+        var target = WriteExpression(sumTag.Target);
+        return $"{target}.Tag";
+    }
+
+    private static string WriteSumValueExpression(LoweredSumValueExpression sumValue)
+    {
+        var target = WriteExpression(sumValue.Target);
+        var payloadType = TypeToCSharp(sumValue.Type);
+        return $"({payloadType}){target}.Value";
+    }
+
+    private static string WriteBlockExpression(LoweredBlockExpression block)
+    {
+        var builder = new StringBuilder();
+        var isUnit = block.Type == TypeSymbol.Unit;
+        var delegateType = isUnit
+            ? "Action"
+            : $"Func<{TypeToCSharp(block.Type)}>";
+        builder.Append($"(({delegateType})(() => ");
+        builder.AppendLine("{");
+        var writer = new IndentedWriter(builder, 1);
+        foreach (var statement in block.Statements)
+        {
+            WriteStatement(writer, statement);
+        }
+
+        if (!isUnit)
+        {
+            writer.WriteLine($"return {WriteExpression(block.Result)};");
+        }
+        else
+        {
+            writer.WriteLine("return;");
+        }
+
+        builder.Append("}))()" );
+
+        return builder.ToString();
+    }
+
+    private static string WriteDefaultExpression(LoweredDefaultExpression defaultExpression)
+    {
+        return defaultExpression.Type == TypeSymbol.Unit
+            ? "null"
+            : $"default({TypeToCSharp(defaultExpression.Type)})";
+    }
+
+    private static string WriteMatchFailureExpression(LoweredMatchFailureExpression matchFailure)
+    {
+        return matchFailure.Type == TypeSymbol.Unit
+            ? "null"
+            : $"default({TypeToCSharp(matchFailure.Type)})";
+    }
+
+    private static string WriteCallExpression(LoweredCallExpression call)
     {
         var args = string.Join(", ", call.Arguments.Select(arg => WriteExpression(arg)));
-        if (call.Callee is BoundFunctionExpression function && function.Function.IsBuiltin)
+        if (call.Callee is LoweredFunctionExpression function && function.Function.IsBuiltin)
         {
             return function.Function.Name switch
             {
@@ -241,18 +293,18 @@ public sealed class Emitter
         }
 
         var calleeText = WriteExpression(call.Callee);
-        var wrapped = call.Callee is BoundNameExpression or BoundFunctionExpression
+        var wrapped = call.Callee is LoweredNameExpression or LoweredFunctionExpression
             ? calleeText
             : $"({calleeText})";
         return $"{wrapped}({args})";
     }
 
-    private static string WriteLambdaExpression(BoundLambdaExpression lambda)
+    private static string WriteLambdaExpression(LoweredLambdaExpression lambda)
     {
         var parameters = string.Join(", ", lambda.Parameters.Select(parameter =>
             $"{TypeToCSharp(parameter.Type)} {EscapeIdentifier(parameter.Name)}"));
 
-        if (lambda.Body.Statements.Count == 1 && lambda.Body.Statements[0] is BoundReturnStatement returnStatement)
+        if (lambda.Body.Statements.Count == 1 && lambda.Body.Statements[0] is LoweredReturnStatement returnStatement)
         {
             var expression = returnStatement.Expression is null
                 ? string.Empty
@@ -272,7 +324,7 @@ public sealed class Emitter
         return builder.ToString();
     }
 
-    private static void WriteFunction(StringBuilder builder, BoundFunctionDeclaration function)
+    private static void WriteFunction(StringBuilder builder, LoweredFunctionDeclaration function)
     {
         var returnType = TypeToCSharp(function.Symbol.ReturnType);
         var parameters = string.Join(", ", function.Parameters.Select(parameter =>
@@ -287,7 +339,7 @@ public sealed class Emitter
         builder.AppendLine("    }");
     }
 
-    private static string WriteBinaryExpression(BoundBinaryExpression binary, int parentPrecedence)
+    private static string WriteBinaryExpression(LoweredBinaryExpression binary, int parentPrecedence)
     {
         var precedence = GetBinaryPrecedence(binary.OperatorKind);
         var left = WriteExpression(binary.Left, precedence);

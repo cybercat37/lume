@@ -28,7 +28,9 @@ print add(user.age, 1)
         Assert.Same(bindResult.Program, lowered.Source);
         Assert.Same(bindResult.Program.RecordTypes, lowered.RecordTypes);
         Assert.Same(bindResult.Program.SumTypes, lowered.SumTypes);
-        Assert.Same(bindResult.Program.Functions, lowered.Functions);
-        Assert.Same(bindResult.Program.Statements, lowered.Statements);
+        Assert.NotSame(bindResult.Program.Functions, lowered.Functions);
+        Assert.NotSame(bindResult.Program.Statements, lowered.Statements);
+        Assert.Equal(bindResult.Program.Functions.Count, lowered.Functions.Count);
+        Assert.Equal(bindResult.Program.Statements.Count, lowered.Statements.Count);
     }
 }
