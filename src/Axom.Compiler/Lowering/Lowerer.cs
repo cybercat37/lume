@@ -35,6 +35,7 @@ public sealed class Lowerer
             BoundVariableDeclaration declaration => new LoweredVariableDeclaration(
                 declaration.Symbol,
                 LowerExpression(declaration.Initializer)),
+            BoundDeconstructionStatement deconstruction => LowerDeconstructionStatement(deconstruction),
             BoundPrintStatement print => new LoweredPrintStatement(LowerExpression(print.Expression)),
             BoundExpressionStatement expressionStatement => new LoweredExpressionStatement(
                 LowerExpression(expressionStatement.Expression)),
@@ -47,6 +48,27 @@ public sealed class Lowerer
     {
         var lowered = block.Statements.Select(LowerStatement).ToList();
         return new LoweredBlockStatement(lowered);
+    }
+
+    private LoweredStatement LowerDeconstructionStatement(BoundDeconstructionStatement deconstruction)
+    {
+        var valueTemp = NewTemp(deconstruction.Initializer.Type);
+        var valueName = new LoweredNameExpression(valueTemp);
+        var patternResult = LowerPattern(deconstruction.Pattern, valueName);
+
+        var statements = new List<LoweredStatement>
+        {
+            new LoweredVariableDeclaration(valueTemp, LowerExpression(deconstruction.Initializer))
+        };
+
+        var thenBlock = new LoweredBlockStatement(patternResult.Bindings);
+        var elseBlock = new LoweredBlockStatement(new List<LoweredStatement>
+        {
+            new LoweredExpressionStatement(new LoweredMatchFailureExpression(TypeSymbol.Unit))
+        });
+
+        statements.Add(new LoweredIfStatement(patternResult.Condition, thenBlock, elseBlock));
+        return new LoweredBlockStatement(statements);
     }
 
     private LoweredStatement LowerReturnStatement(BoundReturnStatement returnStatement)

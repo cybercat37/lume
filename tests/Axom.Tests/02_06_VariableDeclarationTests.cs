@@ -12,7 +12,8 @@ public class VariableDeclarationTests
 
         var statement = Assert.IsType<VariableDeclarationSyntax>(syntaxTree.Root.Statements.Single());
 
-        Assert.Equal("x", statement.IdentifierToken.Text);
+        var identifier = Assert.IsType<IdentifierPatternSyntax>(statement.Pattern);
+        Assert.Equal("x", identifier.IdentifierToken.Text);
         Assert.Empty(syntaxTree.Diagnostics);
     }
 
@@ -24,7 +25,21 @@ public class VariableDeclarationTests
 
         var statement = Assert.IsType<VariableDeclarationSyntax>(syntaxTree.Root.Statements.Single());
 
-        Assert.Equal("x", statement.IdentifierToken.Text);
+        var identifier = Assert.IsType<IdentifierPatternSyntax>(statement.Pattern);
+        Assert.Equal("x", identifier.IdentifierToken.Text);
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
+    [Fact]
+    public void Let_tuple_declaration_parses()
+    {
+        var sourceText = new SourceText("let (x, y) = (1, 2)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var statement = Assert.IsType<VariableDeclarationSyntax>(syntaxTree.Root.Statements.Single());
+
+        var tuplePattern = Assert.IsType<TuplePatternSyntax>(statement.Pattern);
+        Assert.Equal(2, tuplePattern.Elements.Count);
         Assert.Empty(syntaxTree.Diagnostics);
     }
 }

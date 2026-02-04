@@ -395,27 +395,41 @@ public sealed class Binder
 
     private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax declaration)
     {
-        var name = declaration.IdentifierToken.Text;
-        var isMutable = declaration.MutKeyword is not null;
         var initializer = BindExpression(declaration.Initializer);
-        var type = initializer.Type;
+        var isMutable = declaration.MutKeyword is not null;
 
-        VariableSymbol? declaredSymbol = null;
-        if (!string.IsNullOrEmpty(name))
+        if (declaration.Pattern is IdentifierPatternSyntax identifierPattern)
         {
-            var symbol = new VariableSymbol(name, isMutable, type);
-            declaredSymbol = scope.TryDeclare(symbol);
-            if (declaredSymbol is null)
+            var name = identifierPattern.IdentifierToken.Text;
+            var type = initializer.Type;
+            VariableSymbol? declaredSymbol = null;
+            if (!string.IsNullOrEmpty(name))
             {
-                diagnostics.Add(Diagnostic.Error(
-                    SourceText,
-                    declaration.IdentifierToken.Span,
-                    $"Variable '{name}' is already declared in this scope."));
+                var symbol = new VariableSymbol(name, isMutable, type);
+                declaredSymbol = scope.TryDeclare(symbol);
+                if (declaredSymbol is null)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        identifierPattern.IdentifierToken.Span,
+                        $"Variable '{name}' is already declared in this scope."));
+                }
             }
+
+            declaredSymbol ??= new VariableSymbol(name, isMutable, type);
+            return new BoundVariableDeclaration(declaredSymbol, initializer);
         }
 
-        declaredSymbol ??= new VariableSymbol(name, isMutable, type);
-        return new BoundVariableDeclaration(declaredSymbol, initializer);
+        if (declaration.Pattern is not TuplePatternSyntax)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                declaration.Pattern.Span,
+                "Only tuple patterns are supported in let declarations."));
+        }
+
+        var boundPattern = BindPattern(declaration.Pattern, initializer.Type);
+        return new BoundDeconstructionStatement(boundPattern, initializer);
     }
 
     private BoundExpression BindExpression(ExpressionSyntax expression)

@@ -7,7 +7,7 @@ public sealed class VariableDeclarationSyntax : StatementSyntax
 {
     public SyntaxToken LetKeyword { get; }
     public SyntaxToken? MutKeyword { get; }
-    public SyntaxToken IdentifierToken { get; }
+    public PatternSyntax Pattern { get; }
     public SyntaxToken EqualsToken { get; }
     public ExpressionSyntax Initializer { get; }
     public SyntaxToken? SemicolonToken { get; }
@@ -15,14 +15,14 @@ public sealed class VariableDeclarationSyntax : StatementSyntax
     public VariableDeclarationSyntax(
         SyntaxToken letKeyword,
         SyntaxToken? mutKeyword,
-        SyntaxToken identifierToken,
+        PatternSyntax pattern,
         SyntaxToken equalsToken,
         ExpressionSyntax initializer,
         SyntaxToken? semicolonToken)
     {
         LetKeyword = letKeyword;
         MutKeyword = mutKeyword;
-        IdentifierToken = identifierToken;
+        Pattern = pattern;
         EqualsToken = equalsToken;
         Initializer = initializer;
         SemicolonToken = semicolonToken;

@@ -248,7 +248,24 @@ public sealed class Parser
             mutKeyword = NextToken();
         }
 
-        var identifier = MatchToken(TokenKind.Identifier, "identifier");
+        PatternSyntax pattern;
+        if (Current().Kind == TokenKind.OpenParen)
+        {
+            pattern = ParseTuplePattern();
+        }
+        else
+        {
+            var identifier = MatchToken(TokenKind.Identifier, "identifier");
+            if (identifier.Text == "_")
+            {
+                pattern = new WildcardPatternSyntax(identifier);
+            }
+            else
+            {
+                pattern = new IdentifierPatternSyntax(identifier);
+            }
+        }
+
         var equalsToken = MatchToken(TokenKind.EqualsToken, "=");
         var initializer = ParseExpression();
         SyntaxToken? semicolonToken = null;
@@ -260,7 +277,7 @@ public sealed class Parser
         return new VariableDeclarationSyntax(
             letKeyword,
             mutKeyword,
-            identifier,
+            pattern,
             equalsToken,
             initializer,
             semicolonToken);

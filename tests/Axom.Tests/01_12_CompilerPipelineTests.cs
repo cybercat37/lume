@@ -71,6 +71,19 @@ public class CompilerPipelineTests
     }
 
     [Fact]
+    public void Compile_tuple_deconstruction_generates_code()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("let (x, y) = (1, 2)\nprint x\nprint y", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("var x", result.GeneratedCode);
+        Assert.Contains("var y", result.GeneratedCode);
+        Assert.Contains("Item1", result.GeneratedCode);
+        Assert.Contains("Item2", result.GeneratedCode);
+    }
+
+    [Fact]
     public void Compile_arithmetic_generates_expression()
     {
         var compiler = new CompilerDriver();
