@@ -25,6 +25,7 @@ Language core:
 
 Runtime + tooling:
 - Interpreter and codegen (C# emitter)
+- Dedicated lowering pass with lowered nodes
 - CLI: check, build, run (+ out/verbosity flags)
 - Golden + snapshot tests and fuzz harness
 - Compilation cache and large input guardrail
@@ -63,7 +64,7 @@ Key tasks:
 - Reconcile tutorial “planned” sections with tests and README.
 - Ensure docs/tools do not reference traditional comments.
 
-### M1: Compiler Modularity + Lowering Pass
+### M1: Compiler Modularity + Lowering Pass (Done)
 Objective: introduce an explicit lowering stage to decouple binding from execution.
 
 DoD:
