@@ -231,6 +231,8 @@ public sealed class Lowerer
                 return LowerTuplePattern(tuple, value);
             case BoundVariantPattern variant:
                 return LowerVariantPattern(variant, value);
+            case BoundRecordPattern record:
+                return LowerRecordPattern(record, value);
             default:
                 return PatternLoweringResult.MatchAlways();
         }
@@ -276,6 +278,22 @@ public sealed class Lowerer
         var payloadResult = LowerPattern(variant.Payload, payloadValue);
         condition = new LoweredBinaryExpression(condition, Lexing.TokenKind.AmpersandAmpersand, payloadResult.Condition, TypeSymbol.Bool);
         bindings.AddRange(payloadResult.Bindings);
+        return new PatternLoweringResult(condition, bindings);
+    }
+
+    private PatternLoweringResult LowerRecordPattern(BoundRecordPattern record, LoweredExpression value)
+    {
+        LoweredExpression condition = new LoweredIsRecordExpression(value, record.RecordType.Type);
+        var bindings = new List<LoweredStatement>();
+
+        foreach (var field in record.Fields)
+        {
+            var fieldValue = new LoweredFieldAccessExpression(value, field.Field);
+            var fieldResult = LowerPattern(field.Pattern, fieldValue);
+            condition = new LoweredBinaryExpression(condition, Lexing.TokenKind.AmpersandAmpersand, fieldResult.Condition, TypeSymbol.Bool);
+            bindings.AddRange(fieldResult.Bindings);
+        }
+
         return new PatternLoweringResult(condition, bindings);
     }
 

@@ -161,6 +161,8 @@ public sealed class Interpreter
                     return EvaluateIsTupleExpression(isTuple);
                 case LoweredIsSumExpression isSum:
                     return EvaluateIsSumExpression(isSum);
+                case LoweredIsRecordExpression isRecord:
+                    return EvaluateIsRecordExpression(isRecord);
                 case LoweredSumTagExpression sumTag:
                     return EvaluateSumTagExpression(sumTag);
                 case LoweredSumValueExpression sumValue:
@@ -203,6 +205,12 @@ public sealed class Interpreter
         {
             var target = EvaluateExpression(isSum.Target);
             return target is SumValue;
+        }
+
+        private object? EvaluateIsRecordExpression(LoweredIsRecordExpression isRecord)
+        {
+            var target = EvaluateExpression(isRecord.Target);
+            return target is RecordValue record && record.Type == isRecord.RecordType;
         }
 
         private object? EvaluateSumTagExpression(LoweredSumTagExpression sumTag)

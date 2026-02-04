@@ -706,9 +706,54 @@ public sealed class Binder
                 return BindTuplePattern(tuple, targetType);
             case VariantPatternSyntax variant:
                 return BindVariantPattern(variant, targetType);
+            case RecordPatternSyntax record:
+                return BindRecordPattern(record, targetType);
             default:
                 return new BoundWildcardPattern(TypeSymbol.Error);
         }
+    }
+
+    private BoundPattern BindRecordPattern(RecordPatternSyntax recordPattern, TypeSymbol targetType)
+    {
+        var recordName = recordPattern.IdentifierToken.Text;
+        if (!recordDefinitions.TryGetValue(recordName, out var definition))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                recordPattern.IdentifierToken.Span,
+                $"Record type '{recordName}' is not defined."));
+            return new BoundRecordPattern(new BoundRecordTypeDeclaration(TypeSymbol.Error, Array.Empty<RecordFieldSymbol>()),
+                Array.Empty<BoundRecordFieldPattern>(),
+                TypeSymbol.Error);
+        }
+
+        if (definition.Type != targetType && targetType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                recordPattern.IdentifierToken.Span,
+                $"Record pattern '{recordName}' does not match '{targetType}'."));
+        }
+
+        var fields = new List<BoundRecordFieldPattern>();
+        foreach (var fieldPattern in recordPattern.Fields)
+        {
+            var fieldName = fieldPattern.IdentifierToken.Text;
+            var field = definition.Fields.FirstOrDefault(item => string.Equals(item.Name, fieldName, StringComparison.Ordinal));
+            if (field is null)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    fieldPattern.IdentifierToken.Span,
+                    $"Record '{recordName}' has no field '{fieldName}'."));
+                continue;
+            }
+
+            var boundFieldPattern = BindPattern(fieldPattern.Pattern, field.Type);
+            fields.Add(new BoundRecordFieldPattern(field, boundFieldPattern));
+        }
+
+        return new BoundRecordPattern(definition, fields, definition.Type);
     }
 
     private BoundPattern BindIdentifierPattern(IdentifierPatternSyntax identifier, TypeSymbol targetType)
@@ -965,6 +1010,7 @@ public sealed class Binder
             WildcardPatternSyntax => true,
             IdentifierPatternSyntax => true,
             TuplePatternSyntax tuple => tuple.Elements.All(IsCatchAllPattern),
+            RecordPatternSyntax record => record.Fields.All(field => IsCatchAllPattern(field.Pattern)),
             _ => false
         };
     }

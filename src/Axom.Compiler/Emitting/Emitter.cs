@@ -150,6 +150,7 @@ public sealed class Emitter
             LoweredSumConstructorExpression sum => WriteSumConstructorExpression(sum),
             LoweredIsTupleExpression isTuple => WriteIsTupleExpression(isTuple),
             LoweredIsSumExpression isSum => WriteIsSumExpression(isSum),
+            LoweredIsRecordExpression isRecord => WriteIsRecordExpression(isRecord),
             LoweredSumTagExpression sumTag => WriteSumTagExpression(sumTag),
             LoweredSumValueExpression sumValue => WriteSumValueExpression(sumValue),
             LoweredBlockExpression block => WriteBlockExpression(block),
@@ -214,6 +215,13 @@ public sealed class Emitter
         var target = WriteExpression(isSum.Target);
         var sumType = TypeToCSharp(isSum.SumType);
         return $"{target} is {sumType}";
+    }
+
+    private static string WriteIsRecordExpression(LoweredIsRecordExpression isRecord)
+    {
+        var target = WriteExpression(isRecord.Target);
+        var recordType = TypeToCSharp(isRecord.RecordType);
+        return $"{target} is {recordType}";
     }
 
     private static string WriteSumTagExpression(LoweredSumTagExpression sumTag)

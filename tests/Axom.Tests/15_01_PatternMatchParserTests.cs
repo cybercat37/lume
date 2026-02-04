@@ -32,4 +32,20 @@ let result = match 1 {
 
         Assert.NotEmpty(syntaxTree.Diagnostics);
     }
+
+    [Fact]
+    public void Match_record_pattern_parses()
+    {
+        var sourceText = new SourceText(@"
+type User { name: String, age: Int }
+let user = User { name: ""Ada"", age: 36 }
+let result = match user {
+  User { name: n, age: a } -> n
+}
+", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
 }

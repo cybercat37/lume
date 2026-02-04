@@ -38,4 +38,22 @@ let result = match true {
 
         Assert.NotEmpty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Match_record_pattern_binds()
+    {
+        var sourceText = new SourceText(@"
+type User { name: String, age: Int }
+let user = User { name: ""Ada"", age: 36 }
+let result = match user {
+  User { name: n, age: a } -> n
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
 }

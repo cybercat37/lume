@@ -527,6 +527,11 @@ public sealed class Parser
                     return ParseVariantPattern(identifier);
                 }
 
+                if (Current().Kind == TokenKind.OpenBrace)
+                {
+                    return ParseRecordPattern(identifier);
+                }
+
                 return new IdentifierPatternSyntax(identifier);
             default:
                 diagnostics.Add(Diagnostic.Error(sourceText, Current().Span, UnexpectedTokenMessage("pattern", Current())));
@@ -577,6 +582,36 @@ public sealed class Parser
         }
         var closeParen = MatchToken(TokenKind.CloseParen, ")");
         return new VariantPatternSyntax(identifier, openParen, payload, closeParen);
+    }
+
+    private PatternSyntax ParseRecordPattern(SyntaxToken identifier)
+    {
+        var openBrace = MatchToken(TokenKind.OpenBrace, "{");
+        var fields = new List<RecordFieldPatternSyntax>();
+
+        ConsumeSeparators();
+        while (Current().Kind != TokenKind.CloseBrace && Current().Kind != TokenKind.EndOfFile)
+        {
+            var start = position;
+            var fieldIdentifier = MatchToken(TokenKind.Identifier, "identifier");
+            var colonToken = MatchToken(TokenKind.Colon, ":");
+            var pattern = ParsePattern();
+            fields.Add(new RecordFieldPatternSyntax(fieldIdentifier, colonToken, pattern));
+
+            if (Current().Kind == TokenKind.Comma)
+            {
+                NextToken();
+            }
+
+            ConsumeSeparators();
+            if (position == start)
+            {
+                NextToken();
+            }
+        }
+
+        var closeBrace = MatchToken(TokenKind.CloseBrace, "}");
+        return new RecordPatternSyntax(identifier, openBrace, fields, closeBrace);
     }
 
     private ExpressionSyntax ParseCallExpression(ExpressionSyntax callee)

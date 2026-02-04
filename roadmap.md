@@ -22,6 +22,7 @@ Language core:
 - Tuple destructuring in let declarations
 - Tuple type syntax in function signatures
 - Pattern match v1 (literals, wildcard, identifiers, tuples)
+- Pattern match v1 (record patterns)
 - Records v1 and sum types v1
 - Builtins: print, println, input, len, abs, min, max
 
