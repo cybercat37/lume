@@ -116,6 +116,9 @@ public sealed class Lowerer
             BoundTupleExpression tuple => new LoweredTupleExpression(
                 tuple.Elements.Select(LowerExpression).ToList(),
                 tuple.Type),
+            BoundListExpression list => new LoweredListExpression(
+                list.Elements.Select(LowerExpression).ToList(),
+                list.Type),
             BoundRecordLiteralExpression record => new LoweredRecordLiteralExpression(
                 record.RecordType,
                 record.Fields.Select(field => new LoweredRecordFieldAssignment(

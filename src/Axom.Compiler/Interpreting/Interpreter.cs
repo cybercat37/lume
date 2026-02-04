@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using Axom.Compiler.Binding;
@@ -149,6 +150,8 @@ public sealed class Interpreter
                     return EvaluateLambda(lambda);
                 case LoweredTupleExpression tuple:
                     return EvaluateTupleExpression(tuple);
+                case LoweredListExpression list:
+                    return EvaluateListExpression(list);
                 case LoweredTupleAccessExpression tupleAccess:
                     return EvaluateTupleAccessExpression(tupleAccess);
                 case LoweredRecordLiteralExpression record:
@@ -181,6 +184,17 @@ public sealed class Interpreter
         private object? EvaluateTupleExpression(LoweredTupleExpression tuple)
         {
             return tuple.Elements.Select(EvaluateExpression).ToArray();
+        }
+
+        private object? EvaluateListExpression(LoweredListExpression list)
+        {
+            var valuesList = new List<object?>();
+            foreach (var element in list.Elements)
+            {
+                valuesList.Add(EvaluateExpression(element));
+            }
+
+            return valuesList;
         }
 
         private object? EvaluateTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
@@ -632,6 +646,7 @@ public sealed class Interpreter
                 null => string.Empty,
                 bool boolValue => boolValue ? "true" : "false",
                 double doubleValue => doubleValue.ToString(CultureInfo.InvariantCulture),
+                List<object?> list => $"[{string.Join(", ", list.Select(FormatValue))}]",
                 RecordValue record => record.ToString(),
                 SumValue sum => sum.ToString(),
                 _ => value.ToString() ?? string.Empty

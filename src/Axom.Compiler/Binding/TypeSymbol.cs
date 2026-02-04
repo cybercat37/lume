@@ -8,6 +8,7 @@ public sealed class TypeSymbol
     public IReadOnlyList<TypeSymbol>? ParameterTypes { get; }
     public TypeSymbol? ReturnType { get; }
     public IReadOnlyList<TypeSymbol>? TupleElementTypes { get; }
+    public TypeSymbol? ListElementType { get; }
     public IReadOnlyList<SumVariantSymbol>? SumVariants { get; }
 
     private TypeSymbol(
@@ -15,12 +16,14 @@ public sealed class TypeSymbol
         IReadOnlyList<TypeSymbol>? parameterTypes = null,
         TypeSymbol? returnType = null,
         IReadOnlyList<TypeSymbol>? tupleElementTypes = null,
+        TypeSymbol? listElementType = null,
         IReadOnlyList<SumVariantSymbol>? sumVariants = null)
     {
         Name = name;
         ParameterTypes = parameterTypes;
         ReturnType = returnType;
         TupleElementTypes = tupleElementTypes;
+        ListElementType = listElementType;
         SumVariants = sumVariants;
     }
 
@@ -43,6 +46,12 @@ public sealed class TypeSymbol
         var signature = string.Join(", ", elementTypes.Select(type => type.Name));
         var name = $"({signature})";
         return new TypeSymbol(name, tupleElementTypes: elementTypes);
+    }
+
+    public static TypeSymbol List(TypeSymbol elementType)
+    {
+        var name = $"List<{elementType.Name}>";
+        return new TypeSymbol(name, listElementType: elementType);
     }
 
     public static TypeSymbol Record(string name)

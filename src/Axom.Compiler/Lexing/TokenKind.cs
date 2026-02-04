@@ -41,6 +41,8 @@ public enum TokenKind
     Dot,
     OpenParen,
     CloseParen,
+    OpenBracket,
+    CloseBracket,
     OpenBrace,
     CloseBrace,
     Semicolon

@@ -114,6 +114,12 @@ public sealed class Lexer
             case '/':
                 Next();
                 return new SyntaxToken(TokenKind.Slash, new TextSpan(start, 1), "/", null);
+            case '[':
+                Next();
+                return new SyntaxToken(TokenKind.OpenBracket, new TextSpan(start, 1), "[", null);
+            case ']':
+                Next();
+                return new SyntaxToken(TokenKind.CloseBracket, new TextSpan(start, 1), "]", null);
             case '!':
                 if (Peek(1) == '=')
                 {

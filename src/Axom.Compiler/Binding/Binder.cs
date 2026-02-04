@@ -448,6 +448,8 @@ public sealed class Binder
                 return BindMatchExpression(match);
             case TupleExpressionSyntax tuple:
                 return BindTupleExpression(tuple);
+            case ListExpressionSyntax list:
+                return BindListExpression(list);
             case RecordLiteralExpressionSyntax record:
                 return BindRecordLiteralExpression(record);
             case FieldAccessExpressionSyntax fieldAccess:
@@ -882,6 +884,41 @@ public sealed class Binder
 
         var tupleType = TypeSymbol.Tuple(elementTypes);
         return new BoundTupleExpression(elements, tupleType);
+    }
+
+    private BoundExpression BindListExpression(ListExpressionSyntax list)
+    {
+        if (list.Elements.Count == 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                list.Span,
+                "List literals cannot be empty."));
+            return new BoundListExpression(Array.Empty<BoundExpression>(), TypeSymbol.Error);
+        }
+
+        var elements = new List<BoundExpression>();
+        TypeSymbol? elementType = null;
+        foreach (var element in list.Elements)
+        {
+            var bound = BindExpression(element);
+            elements.Add(bound);
+            if (elementType is null)
+            {
+                elementType = bound.Type;
+            }
+            else if (elementType != bound.Type && elementType != TypeSymbol.Error && bound.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    element.Span,
+                    "List literal elements must have the same type."));
+                elementType = TypeSymbol.Error;
+            }
+        }
+
+        elementType ??= TypeSymbol.Error;
+        return new BoundListExpression(elements, TypeSymbol.List(elementType));
     }
 
     private void ReportMatchDiagnostics(MatchExpressionSyntax match, TypeSymbol targetType)

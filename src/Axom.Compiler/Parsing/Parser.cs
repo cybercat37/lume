@@ -412,6 +412,8 @@ public sealed class Parser
 
                 var closeParen = MatchToken(TokenKind.CloseParen, ")");
                 return new ParenthesizedExpressionSyntax(openParen, expression, closeParen);
+            case TokenKind.OpenBracket:
+                return ParseListExpression();
             case TokenKind.TrueKeyword:
             case TokenKind.FalseKeyword:
             case TokenKind.NumberLiteral:
@@ -444,6 +446,34 @@ public sealed class Parser
                 }
                 return new LiteralExpressionSyntax(missing);
         }
+    }
+
+    private ExpressionSyntax ParseListExpression()
+    {
+        var openBracket = MatchToken(TokenKind.OpenBracket, "[");
+        var elements = new List<ExpressionSyntax>();
+
+        ConsumeSeparators();
+        while (Current().Kind != TokenKind.CloseBracket && Current().Kind != TokenKind.EndOfFile)
+        {
+            var start = position;
+            var expression = ParseExpression();
+            elements.Add(expression);
+
+            if (Current().Kind == TokenKind.Comma)
+            {
+                NextToken();
+            }
+
+            ConsumeSeparators();
+            if (position == start)
+            {
+                NextToken();
+            }
+        }
+
+        var closeBracket = MatchToken(TokenKind.CloseBracket, "]");
+        return new ListExpressionSyntax(openBracket, elements, closeBracket);
     }
 
     private ExpressionSyntax ParseMatchExpression()

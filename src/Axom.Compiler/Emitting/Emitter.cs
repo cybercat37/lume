@@ -144,6 +144,7 @@ public sealed class Emitter
             LoweredFunctionExpression function => EscapeIdentifier(function.Function.Name),
             LoweredLambdaExpression lambda => WriteLambdaExpression(lambda),
             LoweredTupleExpression tuple => WriteTupleExpression(tuple),
+            LoweredListExpression list => WriteListExpression(list),
             LoweredTupleAccessExpression tupleAccess => WriteTupleAccessExpression(tupleAccess),
             LoweredRecordLiteralExpression record => WriteRecordLiteralExpression(record),
             LoweredFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
@@ -195,6 +196,13 @@ public sealed class Emitter
     {
         var elements = string.Join(", ", tuple.Elements.Select(WriteExpression));
         return $"({elements})";
+    }
+
+    private static string WriteListExpression(LoweredListExpression list)
+    {
+        var elementType = list.Type.ListElementType ?? TypeSymbol.Error;
+        var elements = string.Join(", ", list.Elements.Select(WriteExpression));
+        return $"new List<{TypeToCSharp(elementType)}> {{ {elements} }}";
     }
 
     private static string WriteTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
@@ -425,6 +433,11 @@ public sealed class Emitter
 
     private static string TypeToCSharp(TypeSymbol type)
     {
+        if (type.ListElementType is not null)
+        {
+            return $"List<{TypeToCSharp(type.ListElementType)}>";
+        }
+
         if (type.TupleElementTypes is not null)
         {
             var elementTypes = type.TupleElementTypes.Select(TypeToCSharp);
