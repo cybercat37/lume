@@ -60,6 +60,14 @@ println match (1, 2) {
   _ -> 0
 }
 
+println "*** tuple destructuring (let) ***"
+let (left, right) = (10, 20)
+println left + right
+
+println "*** tuple types in signatures ***"
+fn swap(pair: (Int, String)) -> (String, Int) => ("ok", 1)
+println swap((1, "x"))
+
 println "*** input (commented) ***"
 println "// input() is available but skipped in demo"
 
@@ -88,6 +96,18 @@ fn fact(n: Int) -> Int => match n {
   1 -> 1
   _ -> n * fact(n - 1)
 }
+
+println "*** record patterns + guards ***"
+print match user {
+  User { name: n, age: a } if a > 40 -> "old"
+  User { name: n, age: a } if a > 30 -> n
+  _ -> "other"
+}
+
+println "*** list literals ***"
+println [1, 2, 3]
+println ["a", "b", "c"]
+println [1.5, 2.25, 3.75]
 
 println fib(8)
 println fact(5)
