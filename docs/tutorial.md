@@ -4,7 +4,8 @@ Concise tutorial for experienced developers who want to learn Axom quickly.
 
 Axom favors explicit flow and a compact language surface. Instead of many branching constructs, it centers on `match` and a few orthogonal concepts, so behavior stays obvious at a glance.
 
-> **Status note**: This tutorial covers all language features as per the specification. Implemented features are marked with ✅, planned ones with 🔜.
+Implementation status is tracked in `roadmap.md`.
+
 
 ---
 
@@ -55,7 +56,6 @@ dotnet tool update --global Axom.CLI --prerelease
 
 See `examples/nuget-tool/README.md` for a local tool manifest example.
 
-**Status**: ✅ Implemented (match v1: literals, wildcard, identifier, tuples)
 
 ---
 
@@ -122,7 +122,6 @@ print match value {
 }
 ```
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -145,7 +144,6 @@ let mut counter = 0
 counter = counter + 1
 ```
 
-**Status**: ✅ Implemented (`let`, `let mut`, assignments)
 
 ---
 
@@ -158,7 +156,6 @@ counter = counter + 1
 | `Bool` | Boolean | `true`, `false` |
 | `String` | UTF-8 string | `"hello"` |
 
-**Status**: ✅ Implemented
 
 Numeric conversions are explicit and provided by builtin functions:
 
@@ -207,7 +204,6 @@ let not = !false
 let msg = "Hello" + " " + "World"
 ```
 
-**Status**: ✅ Implemented (arithmetic, comparison, logical, string concatenation)
 
 ---
 
@@ -224,7 +220,6 @@ let x = 10
 }
 ```
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -244,7 +239,6 @@ let user_id @intent("Lookup user id") = input()
 
 Annotations have no runtime effect. Tooling may warn if intent does not match inferred effects.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -257,7 +251,6 @@ let quote = "He said \"Hello\""
 let backslash = "path\\to\\file"
 ```
 
-**Status**: ✅ Implemented (`\n`, `\t`, `\r`, `\"`, `\\`)
 
 ---
 
@@ -267,7 +260,6 @@ let backslash = "path\\to\\file"
 
 Axom **does not have** `if`, `else`, `while`, `for`, or `loop`. This is an intentional design choice.
 
-**Status**: 🔜 Design finalized, future implementation
 
 ---
 
@@ -293,7 +285,6 @@ print match (1, 2) {
 
 Pattern matching must be exhaustive (use `_` when needed).
 
-**Status**: ✅ Implemented (subset)
 
 ---
 
@@ -315,7 +306,6 @@ fn countdown(n: Int) {
 
 The compiler optimizes tail calls to prevent stack overflow.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -335,7 +325,6 @@ let evens = items.filter(fn(x) { x % 2 == 0 })
 range(1, 10).each(fn(i) { println i })
 ```
 
-**Status**: 🔜 Planned (Step 8: Standard Library)
 
 ---
 
@@ -351,7 +340,6 @@ fn add(a: Int, b: Int) -> Int {
 
 Return is implicit from the last expression. Explicit `return` is allowed for early exit.
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -365,7 +353,6 @@ fn greet(name: String) {
 
 Functions without a return type have type `Unit`.
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -385,7 +372,6 @@ let process = fn(x: Int) {
 }
 ```
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -398,7 +384,6 @@ print x
 
 `fn main()` is optional. CLI arguments will be added in the future.
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -416,7 +401,6 @@ let user = User { name: "Alice", age: 30 }
 let name = user.name
 ```
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -432,7 +416,6 @@ let success = Ok(42)
 let failure = Error("Something went wrong")
 ```
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -447,7 +430,6 @@ let num = identity(42)
 let str = identity("hello")
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -458,7 +440,6 @@ let pair = (1, "hello")
 let (x, y) = pair
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -482,7 +463,6 @@ type Option<T> {
 
 Functions that may fail **must** return `Result` or `Option`. Exceptions are not used for control flow.
 
-**Status**: 🔜 Planned (Step 8: Standard Library)
 
 ---
 
@@ -508,7 +488,6 @@ Semantics:
 - `Some(x)?` → evaluates to `x`
 - `None?` → returns `None` from the current function
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -526,7 +505,6 @@ let name = match maybe_name {
 }
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -539,7 +517,6 @@ let name = option.unwrap()
 
 Use only when you're certain there won't be an error.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -551,7 +528,6 @@ Axom does not expose try/catch in the core language. Interop with .NET exception
 let x = DotNet.try(() => SomeApi.Call())?
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -566,7 +542,6 @@ let first = numbers[0]?
 
 Lists are immutable by default.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -582,7 +557,6 @@ let name = map["name"]?
 
 Keys are `String` only for now.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -598,7 +572,6 @@ let sum = [1, 2, 3].fold(0, fn(acc, x) { acc + x })
 let evens = [1, 2, 3, 4].filter(fn(x) { x % 2 == 0 })
 ```
 
-**Status**: 🔜 Planned (Step 8: Standard Library)
 
 ---
 
@@ -608,7 +581,6 @@ let evens = [1, 2, 3, 4].filter(fn(x) { x % 2 == 0 })
 range(1, 10).each(fn(i) { println i })
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -618,7 +590,6 @@ range(1, 10).each(fn(i) { println i })
 
 Each `.axom` file is a module. No nested modules for now.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -630,7 +601,6 @@ import std.collections as coll
 import std.math.{max, min}
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -641,7 +611,6 @@ pub fn public_function() { }
 fn private_function() { }
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -657,7 +626,6 @@ Backend mapping:
 - Non-suspensive → synchronous .NET methods
 - Suspensive → `ValueTask<T>`
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -670,7 +638,6 @@ let data = fetch_data()
 let processed = process(data)
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -688,7 +655,6 @@ scope {
 
 Fire-and-forget is intentionally impossible.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -697,7 +663,6 @@ Fire-and-forget is intentionally impossible.
 - Cancellation is implicit and scoped
 - Blocking operations are forbidden
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -709,7 +674,6 @@ let result = par compute(data)?
 
 `par` is the only supported way to express CPU parallelism.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -723,7 +687,6 @@ All bindings are immutable by default:
 let x = 10
 ```
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -737,7 +700,6 @@ counter = counter + 1
 - `mut` is scope-local
 - Cannot be captured by spawned tasks
 
-**Status**: ✅ Implemented
 
 ---
 
@@ -759,7 +721,6 @@ Available types:
 
 Builders must be "frozen" to produce immutable values.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -772,7 +733,6 @@ let result = System.Console.ReadLine()
 let number = Int32.Parse("42")
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -780,7 +740,6 @@ let number = Int32.Parse("42")
 
 NuGet packages can be used directly.
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -788,7 +747,6 @@ NuGet packages can be used directly.
 
 Generated code compiles to standard .NET assemblies.
 
-**Status**: ✅ Implemented (C# emission)
 
 ---
 
@@ -800,7 +758,6 @@ let age = 30
 let msg = f"Hello, {name}! You are {age} years old."
 ```
 
-**Status**: 🔜 Planned
 
 ---
 
@@ -883,7 +840,3 @@ numbers.each(fn(x) { sum = sum + x })
 - **Agent guide**: [AGENTS.md](../AGENTS.md)
 
 ---
-
-## 15. Implementation Status (Summary)
-
-Status is tracked in `roadmap.md` to keep a single source of truth.

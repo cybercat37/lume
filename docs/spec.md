@@ -76,7 +76,7 @@ This section captures agreed design choices to guide implementation.
 - Result error variant is `Error`; default error type is `String` for now.
 
 ### Comments & Docs
-- Doc comments use `///` with Markdown; doc tooling later.
+- Traditional comments are not supported; intent annotations are the planned alternative.
 
 ### Intent Annotations (Planned)
 - Intent annotations are structured metadata, not general-purpose comments.
