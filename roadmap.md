@@ -37,7 +37,7 @@ Runtime + tooling:
 | Pattern match v1 | Exhaustive match, diagnostics | Implemented | Prior roadmap listed as pending; now consolidated here |
 | Float type v1 | Float literals + ops | Implemented | Prior roadmap listed as next focus; now consolidated here |
 | Tail-call optimization | Compiler optimizes tail calls | Partial | Interpreter supports TCO; codegen pending |
-| Comments vs intent | Spec says doc comments; intent spec says no comments | Inconsistent | VSCode extension says comments unsupported |
+| Comments vs intent | No traditional comments; intent is the planned alternative | Implemented | Spec + intent proposal aligned |
 | Result/Option + ? | Explicit error types + propagation | Not implemented | Spec and tutorial list planned |
 | Collections + iterators | List/Map + combinators | Not implemented | Spec + proposal exist |
 | Tuples (general) | Tuple literals + destructuring | Partial | Match tuples exist; general tuples planned |
@@ -57,11 +57,11 @@ Objective: make docs and roadmaps consistent with the actual implementation.
 DoD:
 - README/spec/tutorial/step docs agree on what is implemented vs planned.
 - Prior roadmap entries reflect current reality.
-- Resolve comment vs intent documentation conflict.
+- Confirm intent annotations as the only documentation path.
 
 Key tasks:
 - Reconcile tutorial “planned” sections with tests and README.
-- Decide whether doc comments exist or intent annotations replace them.
+- Ensure docs/tools do not reference traditional comments.
 
 ### M1: Compiler Modularity + Lowering Pass
 Objective: introduce an explicit lowering stage to decouple binding from execution.
