@@ -1547,6 +1547,12 @@ public sealed class Binder
 
     private TypeSymbol BindType(TypeSyntax type)
     {
+        if (type is TupleTypeSyntax tupleType)
+        {
+            var elementTypes = tupleType.Elements.Select(BindType).ToList();
+            return TypeSymbol.Tuple(elementTypes);
+        }
+
         if (type is NameTypeSyntax nameType)
         {
             var name = nameType.IdentifierToken.Text;

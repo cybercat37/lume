@@ -62,6 +62,16 @@ public sealed class TypeSymbol
         return obj is TypeSymbol other && string.Equals(Name, other.Name, StringComparison.Ordinal);
     }
 
+    public static bool operator ==(TypeSymbol? left, TypeSymbol? right)
+    {
+        return Equals(left, right);
+    }
+
+    public static bool operator !=(TypeSymbol? left, TypeSymbol? right)
+    {
+        return !Equals(left, right);
+    }
+
     public override int GetHashCode()
     {
         return StringComparer.Ordinal.GetHashCode(Name);

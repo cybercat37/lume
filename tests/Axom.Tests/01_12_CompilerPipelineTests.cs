@@ -84,6 +84,17 @@ public class CompilerPipelineTests
     }
 
     [Fact]
+    public void Compile_tuple_typed_parameter_and_return()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("fn swap(pair: (Int, String)) -> (String, Int) => (\"a\", 1)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("(int, string)", result.GeneratedCode);
+        Assert.Contains("(string, int)", result.GeneratedCode);
+    }
+
+    [Fact]
     public void Compile_arithmetic_generates_expression()
     {
         var compiler = new CompilerDriver();

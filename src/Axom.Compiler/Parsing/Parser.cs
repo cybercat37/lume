@@ -648,8 +648,36 @@ public sealed class Parser
 
     private TypeSyntax ParseTypeSyntax()
     {
+        if (Current().Kind == TokenKind.OpenParen)
+        {
+            return ParseTupleTypeSyntax();
+        }
+
         var identifier = MatchToken(TokenKind.Identifier, "type name");
         return new NameTypeSyntax(identifier);
+    }
+
+    private TypeSyntax ParseTupleTypeSyntax()
+    {
+        var openParen = MatchToken(TokenKind.OpenParen, "(");
+        var first = ParseTypeSyntax();
+        if (Current().Kind != TokenKind.Comma)
+        {
+            var closeParen = MatchToken(TokenKind.CloseParen, ")");
+            return first is TupleTypeSyntax
+                ? new TupleTypeSyntax(openParen, ((TupleTypeSyntax)first).Elements, closeParen)
+                : first;
+        }
+
+        var elements = new List<TypeSyntax> { first };
+        while (Current().Kind == TokenKind.Comma)
+        {
+            NextToken();
+            elements.Add(ParseTypeSyntax());
+        }
+
+        var close = MatchToken(TokenKind.CloseParen, ")");
+        return new TupleTypeSyntax(openParen, elements, close);
     }
 
     private void ConsumeSeparators()
