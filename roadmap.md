@@ -19,6 +19,7 @@ Language core:
 - Operators: arithmetic, comparison, logical, unary, string concatenation
 - Numeric conversions: float(Int), int(Float)
 - Functions and lambdas (first-class, captures)
+- Tuple destructuring in let declarations
 - Pattern match v1 (literals, wildcard, identifiers, tuples)
 - Records v1 and sum types v1
 - Builtins: print, println, input, len, abs, min, max
