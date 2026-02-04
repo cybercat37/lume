@@ -458,9 +458,16 @@ public sealed class Parser
         {
             var start = position;
             var pattern = ParsePattern();
+            SyntaxToken? ifKeyword = null;
+            ExpressionSyntax? guard = null;
+            if (Current().Kind == TokenKind.IfKeyword)
+            {
+                ifKeyword = NextToken();
+                guard = ParseExpression();
+            }
             var arrowToken = MatchToken(TokenKind.ArrowType, "->");
             var armExpression = ParseExpression();
-            arms.Add(new MatchArmSyntax(pattern, arrowToken, armExpression));
+            arms.Add(new MatchArmSyntax(pattern, ifKeyword, guard, arrowToken, armExpression));
             ConsumeSeparators();
 
             if (position == start)

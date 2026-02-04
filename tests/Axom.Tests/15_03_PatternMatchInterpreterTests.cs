@@ -41,4 +41,25 @@ print match user {
         Assert.Equal("Ada", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Match_guard_filters_arm()
+    {
+        var sourceText = new SourceText(@"
+type User { name: String, age: Int }
+let user = User { name: ""Ada"", age: 36 }
+print match user {
+  User { name: n, age: a } if a > 40 -> ""old""
+  User { name: n, age: a } if a > 30 -> n
+  _ -> ""other""
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("Ada", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

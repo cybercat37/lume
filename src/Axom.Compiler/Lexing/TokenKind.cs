@@ -15,6 +15,7 @@ public enum TokenKind
     ReturnKeyword,
     TypeKeyword,
     MatchKeyword,
+    IfKeyword,
     TrueKeyword,
     FalseKeyword,
     NumberLiteral,

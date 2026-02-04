@@ -56,4 +56,21 @@ let result = match user {
 
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Match_guard_requires_bool()
+    {
+        var sourceText = new SourceText(@"
+let result = match 2 {
+  2 if 123 -> ""two""
+  _ -> ""other""
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+    }
 }

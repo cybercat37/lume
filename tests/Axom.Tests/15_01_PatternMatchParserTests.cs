@@ -48,4 +48,19 @@ let result = match user {
 
         Assert.Empty(syntaxTree.Diagnostics);
     }
+
+    [Fact]
+    public void Match_guard_parses()
+    {
+        var sourceText = new SourceText(@"
+let result = match 2 {
+  2 if true -> ""two""
+  _ -> ""other""
+}
+", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
 }

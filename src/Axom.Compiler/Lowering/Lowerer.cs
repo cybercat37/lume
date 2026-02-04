@@ -153,10 +153,19 @@ public sealed class Lowerer
             var loweredArmExpression = LowerExpression(arm.Expression);
             var patternResult = LowerPattern(arm.Pattern, matchValue);
 
+            var assignStatement = new LoweredExpressionStatement(
+                new LoweredAssignmentExpression(resultTemp, loweredArmExpression));
+
+            LoweredStatement armBody = new LoweredBlockStatement(new List<LoweredStatement> { assignStatement });
+            if (arm.Guard is not null)
+            {
+                var guardCondition = LowerExpression(arm.Guard);
+                armBody = new LoweredIfStatement(guardCondition, armBody, elseStatement);
+            }
+
             var armStatements = new List<LoweredStatement>();
             armStatements.AddRange(patternResult.Bindings);
-            armStatements.Add(new LoweredExpressionStatement(
-                new LoweredAssignmentExpression(resultTemp, loweredArmExpression)));
+            armStatements.Add(armBody);
 
             var armBlock = new LoweredBlockStatement(armStatements);
             elseStatement = new LoweredIfStatement(patternResult.Condition, armBlock, elseStatement);
@@ -190,14 +199,23 @@ public sealed class Lowerer
             var armStatements = new List<LoweredStatement>();
             armStatements.AddRange(patternResult.Bindings);
 
+            LoweredStatement armBody;
             if (arm.Expression is BoundMatchExpression nestedMatch)
             {
-                armStatements.Add(LowerMatchReturnStatement(nestedMatch));
+                armBody = LowerMatchReturnStatement(nestedMatch);
             }
             else
             {
-                armStatements.Add(new LoweredReturnStatement(LowerExpression(arm.Expression)));
+                armBody = new LoweredReturnStatement(LowerExpression(arm.Expression));
             }
+
+            if (arm.Guard is not null)
+            {
+                var guardCondition = LowerExpression(arm.Guard);
+                armBody = new LoweredIfStatement(guardCondition, armBody, elseStatement);
+            }
+
+            armStatements.Add(armBody);
 
             var armBlock = new LoweredBlockStatement(armStatements);
             elseStatement = new LoweredIfStatement(patternResult.Condition, armBlock, elseStatement);

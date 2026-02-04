@@ -660,8 +660,20 @@ public sealed class Binder
         {
             scope = new BoundScope(previousScope);
             var boundPattern = BindPattern(arm.Pattern, valueExpression.Type);
+            BoundExpression? boundGuard = null;
+            if (arm.Guard is not null)
+            {
+                boundGuard = BindExpression(arm.Guard);
+                if (boundGuard.Type != TypeSymbol.Bool && boundGuard.Type != TypeSymbol.Error)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        arm.Guard.Span,
+                        "Match guard must be Bool."));
+                }
+            }
             var boundExpression = BindExpression(arm.Expression);
-            arms.Add(new BoundMatchArm(boundPattern, boundExpression));
+            arms.Add(new BoundMatchArm(boundPattern, boundGuard, boundExpression));
             scope = previousScope;
 
             if (matchType is null)
@@ -896,6 +908,11 @@ public sealed class Binder
                     continue;
                 }
 
+                if (arm.Guard is not null)
+                {
+                    continue;
+                }
+
                 if (IsSumCatchAll(pattern, sumDefinition, out var variantName))
                 {
                     sumSeenCatchAll = true;
@@ -945,6 +962,11 @@ public sealed class Binder
                     SourceText,
                     pattern.Span,
                     "Unreachable match arm."));
+                continue;
+            }
+
+            if (arm.Guard is not null)
+            {
                 continue;
             }
 
