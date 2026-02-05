@@ -454,6 +454,8 @@ public sealed class Binder
                 return BindRecordLiteralExpression(record);
             case FieldAccessExpressionSyntax fieldAccess:
                 return BindFieldAccessExpression(fieldAccess);
+            case IndexExpressionSyntax index:
+                return BindIndexExpression(index);
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
@@ -528,6 +530,31 @@ public sealed class Binder
         }
 
         return new BoundRecordLiteralExpression(definition.Type, assignments);
+    }
+
+    private BoundExpression BindIndexExpression(IndexExpressionSyntax index)
+    {
+        var target = BindExpression(index.Target);
+        var indexExpression = BindExpression(index.Index);
+
+        if (target.Type.ListElementType is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                index.Target.Span,
+                "Indexing is only supported on list types."));
+            return new BoundIndexExpression(target, indexExpression, TypeSymbol.Error);
+        }
+
+        if (indexExpression.Type != TypeSymbol.Int && indexExpression.Type != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                index.Index.Span,
+                "List index must be Int."));
+        }
+
+        return new BoundIndexExpression(target, indexExpression, target.Type.ListElementType);
     }
 
     private BoundExpression BindFieldAccessExpression(FieldAccessExpressionSyntax fieldAccess)

@@ -119,6 +119,10 @@ public sealed class Lowerer
             BoundListExpression list => new LoweredListExpression(
                 list.Elements.Select(LowerExpression).ToList(),
                 list.Type),
+            BoundIndexExpression index => new LoweredIndexExpression(
+                LowerExpression(index.Target),
+                LowerExpression(index.Index),
+                index.Type),
             BoundRecordLiteralExpression record => new LoweredRecordLiteralExpression(
                 record.RecordType,
                 record.Fields.Select(field => new LoweredRecordFieldAssignment(

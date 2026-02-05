@@ -105,6 +105,16 @@ public class CompilerPipelineTests
     }
 
     [Fact]
+    public void Compile_list_indexing_generates_code()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("let xs = [1, 2, 3]\nprint xs[0]", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("xs[0]", result.GeneratedCode);
+    }
+
+    [Fact]
     public void Compile_arithmetic_generates_expression()
     {
         var compiler = new CompilerDriver();

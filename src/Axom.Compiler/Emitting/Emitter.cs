@@ -145,6 +145,7 @@ public sealed class Emitter
             LoweredLambdaExpression lambda => WriteLambdaExpression(lambda),
             LoweredTupleExpression tuple => WriteTupleExpression(tuple),
             LoweredListExpression list => WriteListExpression(list),
+            LoweredIndexExpression index => WriteIndexExpression(index),
             LoweredTupleAccessExpression tupleAccess => WriteTupleAccessExpression(tupleAccess),
             LoweredRecordLiteralExpression record => WriteRecordLiteralExpression(record),
             LoweredFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
@@ -203,6 +204,13 @@ public sealed class Emitter
         var elementType = list.Type.ListElementType ?? TypeSymbol.Error;
         var elements = string.Join(", ", list.Elements.Select(WriteExpression));
         return $"new List<{TypeToCSharp(elementType)}> {{ {elements} }}";
+    }
+
+    private static string WriteIndexExpression(LoweredIndexExpression index)
+    {
+        var target = WriteExpression(index.Target);
+        var indexValue = WriteExpression(index.Index);
+        return $"{target}[{indexValue}]";
     }
 
     private static string WriteTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)

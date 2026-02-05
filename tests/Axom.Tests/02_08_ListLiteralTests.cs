@@ -38,4 +38,17 @@ public class ListLiteralTests
         Assert.Equal("[1, 2, 3]", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void List_indexing_prints_element()
+    {
+        var sourceText = new SourceText("print [10, 20, 30][1]", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("20", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

@@ -152,6 +152,8 @@ public sealed class Interpreter
                     return EvaluateTupleExpression(tuple);
                 case LoweredListExpression list:
                     return EvaluateListExpression(list);
+                case LoweredIndexExpression index:
+                    return EvaluateIndexExpression(index);
                 case LoweredTupleAccessExpression tupleAccess:
                     return EvaluateTupleAccessExpression(tupleAccess);
                 case LoweredRecordLiteralExpression record:
@@ -195,6 +197,25 @@ public sealed class Interpreter
             }
 
             return valuesList;
+        }
+
+        private object? EvaluateIndexExpression(LoweredIndexExpression index)
+        {
+            var target = EvaluateExpression(index.Target);
+            var indexValue = EvaluateExpression(index.Index);
+            if (target is List<object?> list && indexValue is int intIndex)
+            {
+                if (intIndex >= 0 && intIndex < list.Count)
+                {
+                    return list[intIndex];
+                }
+
+                diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "List index out of range."));
+                return null;
+            }
+
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "List index failed."));
+            return null;
         }
 
         private object? EvaluateTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
