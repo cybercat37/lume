@@ -176,6 +176,7 @@ DoD:
 Key tasks:
 - Runtime primitives and scheduler model.
 - Effect tagging for suspensive functions.
+- Concurrency syntax stubs (scope/spawn/join) in parser/binder.
 
 ### M10: .NET Interop Surface
 Objective: controlled access to .NET APIs and NuGet packages.

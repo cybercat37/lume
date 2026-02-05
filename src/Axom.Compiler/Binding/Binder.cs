@@ -337,6 +337,12 @@ public sealed class Binder
                     statement.Span,
                     "Type declarations are only allowed at the top level."));
                 return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Unit));
+            case ScopeStatementSyntax scopeStatement:
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    scopeStatement.ScopeKeyword.Span,
+                    "Concurrency scope is not implemented yet."));
+                return BindBlockStatement(scopeStatement.Body);
             case ExpressionStatementSyntax expressionStatement:
                 return new BoundExpressionStatement(BindExpression(expressionStatement.Expression));
             default:
@@ -513,6 +519,18 @@ public sealed class Binder
                 return BindIndexExpression(index);
             case QuestionExpressionSyntax question:
                 return BindQuestionExpression(question);
+            case SpawnExpressionSyntax spawn:
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    spawn.SpawnKeyword.Span,
+                    "spawn is not implemented yet."));
+                return new BoundLiteralExpression(null, TypeSymbol.Error);
+            case JoinExpressionSyntax join:
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    join.JoinKeyword.Span,
+                    "join is not implemented yet."));
+                return new BoundLiteralExpression(null, TypeSymbol.Error);
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:

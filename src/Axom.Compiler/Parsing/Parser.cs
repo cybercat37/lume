@@ -91,6 +91,7 @@ public sealed class Parser
         {
             TokenKind.OpenBrace => ParseBlockStatement(),
             TokenKind.LetKeyword => ParseVariableDeclaration(),
+            TokenKind.ScopeKeyword => ParseScopeStatement(),
             TokenKind.PrintKeyword => ParsePrintStatement(),
             TokenKind.PrintlnKeyword => ParsePrintStatement(),
             TokenKind.ReturnKeyword => ParseReturnStatement(),
@@ -98,6 +99,13 @@ public sealed class Parser
             TokenKind.FnKeyword when Peek(1).Kind == TokenKind.Identifier => ParseFunctionDeclaration(),
             _ => ParseExpressionStatement()
         };
+    }
+
+    private StatementSyntax ParseScopeStatement()
+    {
+        var scopeKeyword = MatchToken(TokenKind.ScopeKeyword, "scope");
+        var body = (BlockStatementSyntax)ParseBlockStatement();
+        return new ScopeStatementSyntax(scopeKeyword, body);
     }
 
     private StatementSyntax ParseTypeDeclaration()
@@ -457,6 +465,14 @@ public sealed class Parser
 
                 var closeParen = MatchToken(TokenKind.CloseParen, ")");
                 return new ParenthesizedExpressionSyntax(openParen, expression, closeParen);
+            case TokenKind.SpawnKeyword:
+                var spawnKeyword = MatchToken(TokenKind.SpawnKeyword, "spawn");
+                var spawnBody = (BlockStatementSyntax)ParseBlockStatement();
+                return new SpawnExpressionSyntax(spawnKeyword, spawnBody);
+            case TokenKind.JoinKeyword:
+                var joinKeyword = MatchToken(TokenKind.JoinKeyword, "join");
+                var joined = ParseExpression();
+                return new JoinExpressionSyntax(joinKeyword, joined);
             case TokenKind.OpenBracket:
                 return ParseListOrMapExpression();
             case TokenKind.TrueKeyword:
