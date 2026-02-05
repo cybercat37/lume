@@ -144,5 +144,10 @@ println add_one_result(0)
 println add_one_result(2)
 println Some(2).unwrap()
 
+println "*** generics (functions) ***"
+fn id<T>(x: T) -> T => x
+println id(1)
+println id("hi")
+
 println fib(8)
 println fact(5)

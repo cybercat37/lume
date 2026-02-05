@@ -16,6 +16,7 @@ public sealed class Binder
     private FunctionSymbol? currentFunction;
     private readonly Stack<LambdaBindingContext> lambdaStack = new();
     private List<TypeSymbol>? returnTypes;
+    private Dictionary<string, TypeSymbol>? genericTypeParameters;
     private readonly Dictionary<string, TypeSymbol> recordTypes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, BoundRecordTypeDeclaration> recordDefinitions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TypeSymbol> sumTypes = new(StringComparer.Ordinal);
@@ -261,6 +262,26 @@ public sealed class Binder
                 continue;
             }
 
+            var previousGenericParameters = genericTypeParameters;
+            genericTypeParameters = new Dictionary<string, TypeSymbol>(StringComparer.Ordinal);
+            var genericParameters = new List<TypeSymbol>();
+            foreach (var typeParameter in declaration.TypeParameters)
+            {
+                var typeName = typeParameter.Text;
+                if (genericTypeParameters.ContainsKey(typeName))
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        typeParameter.Span,
+                        $"Type parameter '{typeName}' is already declared."));
+                    continue;
+                }
+
+                var typeSymbol = TypeSymbol.Generic(typeName);
+                genericTypeParameters[typeName] = typeSymbol;
+                genericParameters.Add(typeSymbol);
+            }
+
             var parameters = new List<ParameterSymbol>();
             foreach (var parameter in declaration.Parameters)
             {
@@ -272,7 +293,7 @@ public sealed class Binder
                 ? TypeSymbol.Unit
                 : BindType(declaration.ReturnType);
 
-            var symbol = new FunctionSymbol(name, parameters, returnType);
+            var symbol = new FunctionSymbol(name, parameters, genericParameters, returnType);
             var declared = scope.TryDeclareFunction(symbol);
             if (declared is null)
             {
@@ -281,6 +302,8 @@ public sealed class Binder
                     declaration.IdentifierToken.Span,
                     $"Function '{name}' is already declared in this scope."));
             }
+
+            genericTypeParameters = previousGenericParameters;
         }
     }
 
@@ -339,9 +362,38 @@ public sealed class Binder
     private BoundFunctionDeclaration BindFunctionDeclaration(FunctionDeclarationSyntax declaration)
     {
         var name = declaration.IdentifierToken.Text;
+        var previousGenericParameters = genericTypeParameters;
+        genericTypeParameters = new Dictionary<string, TypeSymbol>(StringComparer.Ordinal);
+        var genericParameters = new List<TypeSymbol>();
+        foreach (var typeParameter in declaration.TypeParameters)
+        {
+            var typeName = typeParameter.Text;
+            if (recordTypes.ContainsKey(typeName) || sumTypes.ContainsKey(typeName))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    typeParameter.Span,
+                    $"Type parameter '{typeName}' conflicts with existing type."));
+            }
+
+            if (genericTypeParameters.ContainsKey(typeName))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    typeParameter.Span,
+                    $"Type parameter '{typeName}' is already declared."));
+                continue;
+            }
+
+            var symbol = TypeSymbol.Generic(typeName);
+            genericTypeParameters[typeName] = symbol;
+            genericParameters.Add(symbol);
+        }
+
         var functionSymbol = scope.TryLookupFunction(name) ?? new FunctionSymbol(
             name,
             declaration.Parameters.Select(parameter => new ParameterSymbol(parameter.IdentifierToken.Text, BindType(parameter.Type))).ToList(),
+            genericParameters,
             declaration.ReturnType is null ? TypeSymbol.Unit : BindType(declaration.ReturnType));
 
         var previousScope = scope;
@@ -390,6 +442,7 @@ public sealed class Binder
         currentFunction = previousFunction;
         returnTypes = previousReturnTypes;
         scope = previousScope;
+        genericTypeParameters = previousGenericParameters;
         return new BoundFunctionDeclaration(functionSymbol, parameterSymbols, body);
     }
 
@@ -1482,11 +1535,29 @@ public sealed class Binder
         }
         else
         {
+            var substitutions = new Dictionary<TypeSymbol, TypeSymbol>();
             for (var i = 0; i < parameterTypes.Count; i++)
             {
                 var expected = parameterTypes[i];
                 var actual = boundArguments[i].Type;
-                if (expected != actual && actual != TypeSymbol.Error)
+                if (expected.IsGenericParameter)
+                {
+                    if (substitutions.TryGetValue(expected, out var existing))
+                    {
+                        if (existing != actual && actual != TypeSymbol.Error)
+                        {
+                            diagnostics.Add(Diagnostic.Error(
+                                SourceText,
+                                call.Span,
+                                $"Type parameter '{expected.Name}' expects '{existing}' but got '{actual}'."));
+                        }
+                    }
+                    else
+                    {
+                        substitutions[expected] = actual;
+                    }
+                }
+                else if (expected != actual && actual != TypeSymbol.Error)
                 {
                     diagnostics.Add(Diagnostic.Error(
                         SourceText,
@@ -1494,10 +1565,14 @@ public sealed class Binder
                         $"Function expects '{expected}' but got '{actual}'."));
                 }
             }
+
+            var returnType = callee.Type.ReturnType ?? TypeSymbol.Error;
+            returnType = SubstituteGenericTypes(returnType, substitutions);
+            return new BoundCallExpression(callee, boundArguments, returnType);
         }
 
-        var returnType = callee.Type.ReturnType ?? TypeSymbol.Error;
-        return new BoundCallExpression(callee, boundArguments, returnType);
+        var fallbackReturnType = callee.Type.ReturnType ?? TypeSymbol.Error;
+        return new BoundCallExpression(callee, boundArguments, fallbackReturnType);
     }
 
     private BoundExpression? BindBuiltinCall(
@@ -1596,6 +1671,34 @@ public sealed class Binder
         }
 
         return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+    }
+
+    private static TypeSymbol SubstituteGenericTypes(TypeSymbol type, IReadOnlyDictionary<TypeSymbol, TypeSymbol> substitutions)
+    {
+        if (type.IsGenericParameter && substitutions.TryGetValue(type, out var mapped))
+        {
+            return mapped;
+        }
+
+        if (type.ListElementType is not null)
+        {
+            var element = SubstituteGenericTypes(type.ListElementType, substitutions);
+            return TypeSymbol.List(element);
+        }
+
+        if (type.MapValueType is not null)
+        {
+            var value = SubstituteGenericTypes(type.MapValueType, substitutions);
+            return TypeSymbol.Map(value);
+        }
+
+        if (type.TupleElementTypes is not null)
+        {
+            var elements = type.TupleElementTypes.Select(element => SubstituteGenericTypes(element, substitutions)).ToList();
+            return TypeSymbol.Tuple(elements);
+        }
+
+        return type;
     }
 
     private BoundStatement BindReturnStatement(ReturnStatementSyntax returnStatement)
@@ -1835,6 +1938,10 @@ public sealed class Binder
         if (type is NameTypeSyntax nameType)
         {
             var name = nameType.IdentifierToken.Text;
+            if (genericTypeParameters is not null && genericTypeParameters.TryGetValue(name, out var genericType))
+            {
+                return genericType;
+            }
             var resolved = name switch
             {
                 "Int" => TypeSymbol.Int,

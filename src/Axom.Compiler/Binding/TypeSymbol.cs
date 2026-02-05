@@ -11,6 +11,7 @@ public sealed class TypeSymbol
     public TypeSymbol? ListElementType { get; }
     public TypeSymbol? MapValueType { get; }
     public IReadOnlyList<SumVariantSymbol>? SumVariants { get; }
+    public bool IsGenericParameter { get; }
 
     private TypeSymbol(
         string name,
@@ -19,7 +20,8 @@ public sealed class TypeSymbol
         IReadOnlyList<TypeSymbol>? tupleElementTypes = null,
         TypeSymbol? listElementType = null,
         TypeSymbol? mapValueType = null,
-        IReadOnlyList<SumVariantSymbol>? sumVariants = null)
+        IReadOnlyList<SumVariantSymbol>? sumVariants = null,
+        bool isGenericParameter = false)
     {
         Name = name;
         ParameterTypes = parameterTypes;
@@ -28,6 +30,7 @@ public sealed class TypeSymbol
         ListElementType = listElementType;
         MapValueType = mapValueType;
         SumVariants = sumVariants;
+        IsGenericParameter = isGenericParameter;
     }
 
     public static TypeSymbol Int { get; } = new("Int");
@@ -66,6 +69,11 @@ public sealed class TypeSymbol
     public static TypeSymbol Record(string name)
     {
         return new TypeSymbol(name);
+    }
+
+    public static TypeSymbol Generic(string name)
+    {
+        return new TypeSymbol(name, isGenericParameter: true);
     }
 
     public static TypeSymbol Sum(string name)

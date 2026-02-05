@@ -164,6 +164,29 @@ public sealed class Parser
     {
         var fnKeyword = MatchToken(TokenKind.FnKeyword, "fn");
         var identifier = MatchToken(TokenKind.Identifier, "identifier");
+        SyntaxToken? typeParameterOpenToken = null;
+        SyntaxToken? typeParameterCloseToken = null;
+        var typeParameters = Array.Empty<SyntaxToken>();
+        if (Current().Kind == TokenKind.Less && Peek(1).Kind == TokenKind.Identifier)
+        {
+            typeParameterOpenToken = MatchToken(TokenKind.Less, "<");
+            var typeParameterList = new List<SyntaxToken>();
+            while (Current().Kind != TokenKind.Greater && Current().Kind != TokenKind.EndOfFile)
+            {
+                var typeParam = MatchToken(TokenKind.Identifier, "type parameter");
+                typeParameterList.Add(typeParam);
+                if (Current().Kind == TokenKind.Comma)
+                {
+                    NextToken();
+                }
+                else
+                {
+                    break;
+                }
+            }
+            typeParameterCloseToken = MatchToken(TokenKind.Greater, ">");
+            typeParameters = typeParameterList.ToArray();
+        }
         var openParen = MatchToken(TokenKind.OpenParen, "(");
         var parameters = ParseParameterList();
         var closeParen = MatchToken(TokenKind.CloseParen, ")");
@@ -183,6 +206,9 @@ public sealed class Parser
             return new FunctionDeclarationSyntax(
                 fnKeyword,
                 identifier,
+                typeParameterOpenToken,
+                typeParameters,
+                typeParameterCloseToken,
                 openParen,
                 parameters,
                 closeParen,
@@ -197,6 +223,9 @@ public sealed class Parser
         return new FunctionDeclarationSyntax(
             fnKeyword,
             identifier,
+            typeParameterOpenToken,
+            typeParameters,
+            typeParameterCloseToken,
             openParen,
             parameters,
             closeParen,

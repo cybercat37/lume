@@ -369,9 +369,12 @@ public sealed class Emitter
     private static void WriteFunction(StringBuilder builder, LoweredFunctionDeclaration function)
     {
         var returnType = TypeToCSharp(function.Symbol.ReturnType);
+        var typeParameters = function.Symbol.GenericParameters.Count > 0
+            ? $"<{string.Join(", ", function.Symbol.GenericParameters.Select(parameter => EscapeIdentifier(parameter.Name)))}>"
+            : string.Empty;
         var parameters = string.Join(", ", function.Parameters.Select(parameter =>
             $"{TypeToCSharp(parameter.Type)} {EscapeIdentifier(parameter.Name)}"));
-        builder.AppendLine($"    static {returnType} {EscapeIdentifier(function.Symbol.Name)}({parameters})");
+        builder.AppendLine($"    static {returnType} {EscapeIdentifier(function.Symbol.Name)}{typeParameters}({parameters})");
         builder.AppendLine("    {");
         var writer = new IndentedWriter(builder, 2);
         foreach (var statement in function.Body.Statements)

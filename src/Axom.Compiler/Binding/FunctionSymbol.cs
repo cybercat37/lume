@@ -6,17 +6,20 @@ public sealed class FunctionSymbol
 {
     public string Name { get; }
     public IReadOnlyList<ParameterSymbol> Parameters { get; }
+    public IReadOnlyList<TypeSymbol> GenericParameters { get; }
     public TypeSymbol ReturnType { get; private set; }
     public bool IsBuiltin { get; }
 
     public FunctionSymbol(
         string name,
         IReadOnlyList<ParameterSymbol> parameters,
+        IReadOnlyList<TypeSymbol> genericParameters,
         TypeSymbol returnType,
         bool isBuiltin = false)
     {
         Name = name;
         Parameters = parameters;
+        GenericParameters = genericParameters;
         ReturnType = returnType;
         IsBuiltin = isBuiltin;
     }

@@ -7,6 +7,9 @@ public sealed class FunctionDeclarationSyntax : StatementSyntax
 {
     public SyntaxToken FnKeyword { get; }
     public SyntaxToken IdentifierToken { get; }
+    public SyntaxToken? TypeParameterOpenToken { get; }
+    public IReadOnlyList<SyntaxToken> TypeParameters { get; }
+    public SyntaxToken? TypeParameterCloseToken { get; }
     public SyntaxToken OpenParenToken { get; }
     public IReadOnlyList<FunctionParameterSyntax> Parameters { get; }
     public SyntaxToken CloseParenToken { get; }
@@ -19,6 +22,9 @@ public sealed class FunctionDeclarationSyntax : StatementSyntax
     public FunctionDeclarationSyntax(
         SyntaxToken fnKeyword,
         SyntaxToken identifierToken,
+        SyntaxToken? typeParameterOpenToken,
+        IReadOnlyList<SyntaxToken> typeParameters,
+        SyntaxToken? typeParameterCloseToken,
         SyntaxToken openParenToken,
         IReadOnlyList<FunctionParameterSyntax> parameters,
         SyntaxToken closeParenToken,
@@ -30,6 +36,9 @@ public sealed class FunctionDeclarationSyntax : StatementSyntax
     {
         FnKeyword = fnKeyword;
         IdentifierToken = identifierToken;
+        TypeParameterOpenToken = typeParameterOpenToken;
+        TypeParameters = typeParameters;
+        TypeParameterCloseToken = typeParameterCloseToken;
         OpenParenToken = openParenToken;
         Parameters = parameters;
         CloseParenToken = closeParenToken;

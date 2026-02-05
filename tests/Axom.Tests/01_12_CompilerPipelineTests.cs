@@ -135,6 +135,16 @@ public class CompilerPipelineTests
     }
 
     [Fact]
+    public void Compile_generic_identity_generates_code()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("fn id<T>(x: T) -> T => x\nprint id(1)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("id<T>", result.GeneratedCode);
+    }
+
+    [Fact]
     public void Compile_arithmetic_generates_expression()
     {
         var compiler = new CompilerDriver();

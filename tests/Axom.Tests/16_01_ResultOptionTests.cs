@@ -95,4 +95,23 @@ print Some(2).unwrap()
         Assert.Equal("2", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Generic_identity_infers_type()
+    {
+        var sourceText = new SourceText(@"
+fn id<T>(x: T) -> T => x
+print id(5)
+print id(""hi"")
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var lines = result.Output.Split('\n');
+        Assert.Equal("5", lines[0].Trim());
+        Assert.Equal("hi", lines[1].Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }
