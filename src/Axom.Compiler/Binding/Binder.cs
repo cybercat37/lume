@@ -541,24 +541,37 @@ public sealed class Binder
         var target = BindExpression(index.Target);
         var indexExpression = BindExpression(index.Index);
 
-        if (target.Type.ListElementType is null)
+        if (target.Type.ListElementType is not null)
         {
-            diagnostics.Add(Diagnostic.Error(
-                SourceText,
-                index.Target.Span,
-                "Indexing is only supported on list types."));
-            return new BoundIndexExpression(target, indexExpression, TypeSymbol.Error);
+            if (indexExpression.Type != TypeSymbol.Int && indexExpression.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    index.Index.Span,
+                    "List index must be Int."));
+            }
+
+            return new BoundIndexExpression(target, indexExpression, target.Type.ListElementType);
         }
 
-        if (indexExpression.Type != TypeSymbol.Int && indexExpression.Type != TypeSymbol.Error)
+        if (target.Type.MapValueType is not null)
         {
-            diagnostics.Add(Diagnostic.Error(
-                SourceText,
-                index.Index.Span,
-                "List index must be Int."));
+            if (indexExpression.Type != TypeSymbol.String && indexExpression.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    index.Index.Span,
+                    "Map index must be String."));
+            }
+
+            return new BoundIndexExpression(target, indexExpression, target.Type.MapValueType);
         }
 
-        return new BoundIndexExpression(target, indexExpression, target.Type.ListElementType);
+        diagnostics.Add(Diagnostic.Error(
+            SourceText,
+            index.Target.Span,
+            "Indexing is only supported on list and map types."));
+        return new BoundIndexExpression(target, indexExpression, TypeSymbol.Error);
     }
 
     private BoundExpression BindQuestionExpression(QuestionExpressionSyntax question)

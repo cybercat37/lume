@@ -77,4 +77,17 @@ public class ListLiteralTests
 
         Assert.NotEmpty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Map_indexing_prints_value()
+    {
+        var sourceText = new SourceText("print [\"a\": 1, \"b\": 2][\"b\"]", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("2", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

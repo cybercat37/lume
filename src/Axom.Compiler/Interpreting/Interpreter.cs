@@ -218,6 +218,17 @@ public sealed class Interpreter
                 return null;
             }
 
+            if (target is Dictionary<string, object?> map && indexValue is string key)
+            {
+                if (map.TryGetValue(key, out var value))
+                {
+                    return value;
+                }
+
+                diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Map key not found."));
+                return null;
+            }
+
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "List index failed."));
             return null;
         }
