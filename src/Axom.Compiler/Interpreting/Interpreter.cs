@@ -156,6 +156,8 @@ public sealed class Interpreter
                     return EvaluateIndexExpression(index);
                 case LoweredMapExpression map:
                     return EvaluateMapExpression(map);
+                case LoweredUnwrapExpression unwrap:
+                    return EvaluateUnwrapExpression(unwrap);
                 case LoweredTupleAccessExpression tupleAccess:
                     return EvaluateTupleAccessExpression(tupleAccess);
                 case LoweredRecordLiteralExpression record:
@@ -238,6 +240,24 @@ public sealed class Interpreter
             }
 
             return dictionary;
+        }
+
+        private object? EvaluateUnwrapExpression(LoweredUnwrapExpression unwrap)
+        {
+            var target = EvaluateExpression(unwrap.Target);
+            if (target is SumValue sum)
+            {
+                if (string.Equals(sum.Variant.Name, unwrap.FailureVariant.Name, StringComparison.Ordinal))
+                {
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Unwrap failed."));
+                    return null;
+                }
+
+                return sum.Payload;
+            }
+
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Unwrap failed."));
+            return null;
         }
 
         private object? EvaluateTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)

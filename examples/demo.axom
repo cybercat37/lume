@@ -47,11 +47,11 @@ println "record field"
 println user.name
 
 println "*** sum types and match ***"
-type Result { Ok(Int) Error(String) }
+type Result { Ok(Int) Err(String) }
 let value = Ok(42)
 print match value {
   Ok(x) -> x
-  Error(_) -> 0
+  Err(_) -> 0
 }
 
 println "*** tuples and match ***"
@@ -113,6 +113,34 @@ println [10, 20, 30][1]
 println "*** map literals ***"
 println ["a": 1, "b": 2]
 println ["ok": true, "err": false]
+println "*** option/result + ? + unwrap ***"
+type Option { Some(Int) None }
+
+fn maybe(x: Int) -> Option => match x {
+  0 -> None
+  _ -> Some(x)
+}
+
+fn add_one(x: Int) -> Option {
+  let value = maybe(x)?
+  return Some(value + 1)
+}
+
+fn parse(x: Int) -> Result => match x {
+  0 -> Err("bad")
+  _ -> Ok(x)
+}
+
+fn add_one_result(x: Int) -> Result {
+  let value = parse(x)?
+  return Ok(value + 1)
+}
+
+println add_one(0)
+println add_one(2)
+println add_one_result(0)
+println add_one_result(2)
+println Some(2).unwrap()
 
 println fib(8)
 println fact(5)

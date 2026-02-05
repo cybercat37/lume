@@ -458,6 +458,8 @@ public sealed class Binder
                 return BindFieldAccessExpression(fieldAccess);
             case IndexExpressionSyntax index:
                 return BindIndexExpression(index);
+            case QuestionExpressionSyntax question:
+                return BindQuestionExpression(question);
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
@@ -557,6 +559,39 @@ public sealed class Binder
         }
 
         return new BoundIndexExpression(target, indexExpression, target.Type.ListElementType);
+    }
+
+    private BoundExpression BindQuestionExpression(QuestionExpressionSyntax question)
+    {
+        var expression = BindExpression(question.Expression);
+        if (!TryGetOptionOrResultShape(expression.Type, out var successVariant, out var failureVariant))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                question.QuestionToken.Span,
+                "? can only be used on Option/Result types."));
+            return new BoundQuestionExpression(expression, new SumVariantSymbol("", TypeSymbol.Error, TypeSymbol.Error), new SumVariantSymbol("", TypeSymbol.Error, null), TypeSymbol.Error);
+        }
+
+        if (currentFunction is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                question.QuestionToken.Span,
+                "? can only be used inside functions."));
+            return new BoundQuestionExpression(expression, successVariant, failureVariant, TypeSymbol.Error);
+        }
+
+        if (currentFunction.ReturnType != expression.Type && currentFunction.ReturnType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                question.QuestionToken.Span,
+                "? requires the function to return the same Option/Result type."));
+        }
+
+        var payloadType = successVariant.PayloadType ?? TypeSymbol.Error;
+        return new BoundQuestionExpression(expression, successVariant, failureVariant, payloadType);
     }
 
     private BoundExpression BindFieldAccessExpression(FieldAccessExpressionSyntax fieldAccess)
@@ -1203,6 +1238,40 @@ public sealed class Binder
         return sumDefinitions.TryGetValue(type.Name, out var sum) ? sum : null;
     }
 
+    private bool TryGetOptionOrResultShape(
+        TypeSymbol type,
+        out SumVariantSymbol successVariant,
+        out SumVariantSymbol failureVariant)
+    {
+        successVariant = new SumVariantSymbol(string.Empty, TypeSymbol.Error, TypeSymbol.Error);
+        failureVariant = new SumVariantSymbol(string.Empty, TypeSymbol.Error, null);
+        var sum = TryGetSumDefinition(type);
+        if (sum is null)
+        {
+            return false;
+        }
+
+        var some = sum.Variants.FirstOrDefault(variant => string.Equals(variant.Name, "Some", StringComparison.Ordinal));
+        var none = sum.Variants.FirstOrDefault(variant => string.Equals(variant.Name, "None", StringComparison.Ordinal));
+        if (some is not null && none is not null)
+        {
+            successVariant = some;
+            failureVariant = none;
+            return true;
+        }
+
+        var ok = sum.Variants.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
+        var err = sum.Variants.FirstOrDefault(variant => string.Equals(variant.Name, "Err", StringComparison.Ordinal));
+        if (ok is not null && err is not null)
+        {
+            successVariant = ok;
+            failureVariant = err;
+            return true;
+        }
+
+        return false;
+    }
+
     private BoundExpression BindUnaryExpression(UnaryExpressionSyntax unary)
     {
         var operand = BindExpression(unary.Operand);
@@ -1346,6 +1415,24 @@ public sealed class Binder
             }
 
             return new BoundSumConstructorExpression(variant, payload);
+        }
+
+        if (call.Callee is FieldAccessExpressionSyntax fieldAccess &&
+            string.Equals(fieldAccess.IdentifierToken.Text, "unwrap", StringComparison.Ordinal) &&
+            call.Arguments.Count == 0)
+        {
+            var target = BindExpression(fieldAccess.Target);
+            if (TryGetOptionOrResultShape(target.Type, out var successVariant, out var failureVariant))
+            {
+                var payloadType = successVariant.PayloadType ?? TypeSymbol.Error;
+                return new BoundUnwrapExpression(target, successVariant, failureVariant, payloadType);
+            }
+
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                fieldAccess.Span,
+                "unwrap() can only be used on Option/Result types."));
+            return new BoundUnwrapExpression(target, new SumVariantSymbol("", TypeSymbol.Error, TypeSymbol.Error), new SumVariantSymbol("", TypeSymbol.Error, null), TypeSymbol.Error);
         }
 
         var callee = BindExpression(call.Callee);

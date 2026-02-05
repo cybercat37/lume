@@ -45,5 +45,6 @@ public enum TokenKind
     CloseBracket,
     OpenBrace,
     CloseBrace,
-    Semicolon
+    Semicolon,
+    QuestionToken
 }

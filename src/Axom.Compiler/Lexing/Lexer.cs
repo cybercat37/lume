@@ -126,9 +126,12 @@ public sealed class Lexer
                     position += 2;
                     return new SyntaxToken(TokenKind.BangEqual, new TextSpan(start, 2), "!=", null);
                 }
-                
+
                 Next();
                 return new SyntaxToken(TokenKind.Bang, new TextSpan(start, 1), "!", null);
+            case '?':
+                Next();
+                return new SyntaxToken(TokenKind.QuestionToken, new TextSpan(start, 1), "?", null);
             case '&':
                 if (Peek(1) == '&')
                 {

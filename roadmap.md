@@ -27,6 +27,7 @@ Language core:
 - List literals (non-empty, uniform type)
 - Map literals (string keys, uniform value type)
 - Records v1 and sum types v1
+- Option/Result patterns with ? and unwrap()
 - Builtins: print, println, input, len, abs, min, max
 
 Runtime + tooling:

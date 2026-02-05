@@ -147,6 +147,7 @@ public sealed class Emitter
             LoweredListExpression list => WriteListExpression(list),
             LoweredIndexExpression index => WriteIndexExpression(index),
             LoweredMapExpression map => WriteMapExpression(map),
+            LoweredUnwrapExpression unwrap => WriteUnwrapExpression(unwrap),
             LoweredTupleAccessExpression tupleAccess => WriteTupleAccessExpression(tupleAccess),
             LoweredRecordLiteralExpression record => WriteRecordLiteralExpression(record),
             LoweredFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
@@ -220,6 +221,14 @@ public sealed class Emitter
         var entries = string.Join(", ", map.Entries.Select(entry =>
             $"{{ {WriteExpression(entry.Key)}, {WriteExpression(entry.Value)} }}"));
         return $"new Dictionary<string, {TypeToCSharp(valueType)}> {{ {entries} }}";
+    }
+
+    private static string WriteUnwrapExpression(LoweredUnwrapExpression unwrap)
+    {
+        var target = WriteExpression(unwrap.Target);
+        var payloadType = TypeToCSharp(unwrap.Type);
+        var failureTag = unwrap.FailureVariant.Name.Replace("\"", "\\\"");
+        return $"(() => {{ var __tmp = {target}; if (__tmp.Tag == \"{failureTag}\") throw new InvalidOperationException(\"Unwrap failed.\"); return ({payloadType})__tmp.Value; }})()";
     }
 
     private static string WriteTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)

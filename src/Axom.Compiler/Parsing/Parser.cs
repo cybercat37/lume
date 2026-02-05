@@ -374,7 +374,7 @@ public sealed class Parser
     private ExpressionSyntax ParsePostfixExpression(bool allowRecordLiteral)
     {
         var expression = ParsePrimaryExpression(allowRecordLiteral);
-        while (Current().Kind == TokenKind.OpenParen || Current().Kind == TokenKind.Dot || Current().Kind == TokenKind.OpenBracket)
+        while (Current().Kind == TokenKind.OpenParen || Current().Kind == TokenKind.Dot || Current().Kind == TokenKind.OpenBracket || Current().Kind == TokenKind.QuestionToken)
         {
             if (Current().Kind == TokenKind.OpenParen)
             {
@@ -388,6 +388,13 @@ public sealed class Parser
                 var index = ParseExpression();
                 var closeBracket = MatchToken(TokenKind.CloseBracket, "]");
                 expression = new IndexExpressionSyntax(expression, openBracket, index, closeBracket);
+                continue;
+            }
+
+            if (Current().Kind == TokenKind.QuestionToken)
+            {
+                var questionToken = MatchToken(TokenKind.QuestionToken, "?");
+                expression = new QuestionExpressionSyntax(expression, questionToken);
                 continue;
             }
 

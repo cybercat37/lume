@@ -128,6 +128,11 @@ public sealed class Lowerer
                     LowerExpression(entry.Key),
                     LowerExpression(entry.Value))).ToList(),
                 map.Type),
+            BoundQuestionExpression question => LowerQuestionExpression(question),
+            BoundUnwrapExpression unwrap => new LoweredUnwrapExpression(
+                LowerExpression(unwrap.Expression),
+                unwrap.FailureVariant,
+                unwrap.Type),
             BoundRecordLiteralExpression record => new LoweredRecordLiteralExpression(
                 record.RecordType,
                 record.Fields.Select(field => new LoweredRecordFieldAssignment(
@@ -186,6 +191,38 @@ public sealed class Lowerer
         statements.Add(elseStatement);
 
         return new LoweredBlockExpression(statements, new LoweredNameExpression(resultTemp));
+    }
+
+    private LoweredExpression LowerQuestionExpression(BoundQuestionExpression question)
+    {
+        var valueTemp = NewTemp(question.Expression.Type);
+        var tempName = new LoweredNameExpression(valueTemp);
+
+        var statements = new List<LoweredStatement>
+        {
+            new LoweredVariableDeclaration(valueTemp, LowerExpression(question.Expression))
+        };
+
+        var failureTag = new LoweredLiteralExpression(question.FailureVariant.Name, TypeSymbol.String);
+        var isFailure = new LoweredBinaryExpression(
+            new LoweredSumTagExpression(tempName),
+            Lexing.TokenKind.EqualEqual,
+            failureTag,
+            TypeSymbol.Bool);
+
+        LoweredExpression? failurePayload = question.FailureVariant.PayloadType is null
+            ? null
+            : new LoweredSumValueExpression(tempName, question.FailureVariant.PayloadType);
+
+        var failureReturn = new LoweredReturnStatement(new LoweredSumConstructorExpression(
+            question.FailureVariant,
+            failurePayload));
+
+        statements.Add(new LoweredIfStatement(isFailure, failureReturn, null));
+
+        var successPayloadType = question.SuccessVariant.PayloadType ?? TypeSymbol.Error;
+        var successValue = new LoweredSumValueExpression(tempName, successPayloadType);
+        return new LoweredBlockExpression(statements, successValue);
     }
 
     private LoweredStatement LowerMatchReturnStatement(BoundMatchExpression match)
