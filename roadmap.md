@@ -128,6 +128,7 @@ DoD:
 Key tasks:
 - Extend pattern AST/binder.
 - Improve exhaustiveness analysis.
+- Rename match guard keyword from `if` to `when` (syntax cleanup; breaking).
 
 ### M6: Modules, Imports, Visibility
 Objective: establish module boundary and namespacing model.
