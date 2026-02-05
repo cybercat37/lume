@@ -108,6 +108,8 @@ println "*** list literals ***"
 println [1, 2, 3]
 println ["a", "b", "c"]
 println [1.5, 2.25, 3.75]
+println "*** list indexing ***"
+println [10, 20, 30][1]
 
 println fib(8)
 println fact(5)
