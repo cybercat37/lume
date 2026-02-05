@@ -146,6 +146,7 @@ public sealed class Emitter
             LoweredTupleExpression tuple => WriteTupleExpression(tuple),
             LoweredListExpression list => WriteListExpression(list),
             LoweredIndexExpression index => WriteIndexExpression(index),
+            LoweredMapExpression map => WriteMapExpression(map),
             LoweredTupleAccessExpression tupleAccess => WriteTupleAccessExpression(tupleAccess),
             LoweredRecordLiteralExpression record => WriteRecordLiteralExpression(record),
             LoweredFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
@@ -211,6 +212,14 @@ public sealed class Emitter
         var target = WriteExpression(index.Target);
         var indexValue = WriteExpression(index.Index);
         return $"{target}[{indexValue}]";
+    }
+
+    private static string WriteMapExpression(LoweredMapExpression map)
+    {
+        var valueType = map.Type.MapValueType ?? TypeSymbol.Error;
+        var entries = string.Join(", ", map.Entries.Select(entry =>
+            $"{{ {WriteExpression(entry.Key)}, {WriteExpression(entry.Value)} }}"));
+        return $"new Dictionary<string, {TypeToCSharp(valueType)}> {{ {entries} }}";
     }
 
     private static string WriteTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
@@ -441,6 +450,11 @@ public sealed class Emitter
 
     private static string TypeToCSharp(TypeSymbol type)
     {
+        if (type.MapValueType is not null)
+        {
+            return $"Dictionary<string, {TypeToCSharp(type.MapValueType)}>";
+        }
+
         if (type.ListElementType is not null)
         {
             return $"List<{TypeToCSharp(type.ListElementType)}>";

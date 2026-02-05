@@ -25,6 +25,7 @@ Language core:
 - Pattern match v1 (record patterns)
 - Pattern match v2 (guards for variants/records)
 - List literals (non-empty, uniform type)
+- Map literals (string keys, uniform value type)
 - Records v1 and sum types v1
 - Builtins: print, println, input, len, abs, min, max
 

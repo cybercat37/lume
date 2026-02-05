@@ -123,6 +123,11 @@ public sealed class Lowerer
                 LowerExpression(index.Target),
                 LowerExpression(index.Index),
                 index.Type),
+            BoundMapExpression map => new LoweredMapExpression(
+                map.Entries.Select(entry => new LoweredMapEntry(
+                    LowerExpression(entry.Key),
+                    LowerExpression(entry.Value))).ToList(),
+                map.Type),
             BoundRecordLiteralExpression record => new LoweredRecordLiteralExpression(
                 record.RecordType,
                 record.Fields.Select(field => new LoweredRecordFieldAssignment(

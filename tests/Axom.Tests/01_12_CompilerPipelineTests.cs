@@ -115,6 +115,16 @@ public class CompilerPipelineTests
     }
 
     [Fact]
+    public void Compile_map_literal_generates_code()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("let m = [\"a\": 1, \"b\": 2]", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("new Dictionary<string, int>", result.GeneratedCode);
+    }
+
+    [Fact]
     public void Compile_arithmetic_generates_expression()
     {
         var compiler = new CompilerDriver();

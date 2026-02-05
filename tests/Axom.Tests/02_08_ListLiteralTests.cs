@@ -51,4 +51,30 @@ public class ListLiteralTests
         Assert.Equal("20", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Map_literal_prints()
+    {
+        var sourceText = new SourceText("print [\"a\": 1, \"b\": 2]", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Contains("a: 1", result.Output.Trim());
+        Assert.Contains("b: 2", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Map_literal_requires_string_keys()
+    {
+        var sourceText = new SourceText("let m = [1: 2]", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+    }
 }

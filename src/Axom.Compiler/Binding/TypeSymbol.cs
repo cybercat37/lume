@@ -9,6 +9,7 @@ public sealed class TypeSymbol
     public TypeSymbol? ReturnType { get; }
     public IReadOnlyList<TypeSymbol>? TupleElementTypes { get; }
     public TypeSymbol? ListElementType { get; }
+    public TypeSymbol? MapValueType { get; }
     public IReadOnlyList<SumVariantSymbol>? SumVariants { get; }
 
     private TypeSymbol(
@@ -17,6 +18,7 @@ public sealed class TypeSymbol
         TypeSymbol? returnType = null,
         IReadOnlyList<TypeSymbol>? tupleElementTypes = null,
         TypeSymbol? listElementType = null,
+        TypeSymbol? mapValueType = null,
         IReadOnlyList<SumVariantSymbol>? sumVariants = null)
     {
         Name = name;
@@ -24,6 +26,7 @@ public sealed class TypeSymbol
         ReturnType = returnType;
         TupleElementTypes = tupleElementTypes;
         ListElementType = listElementType;
+        MapValueType = mapValueType;
         SumVariants = sumVariants;
     }
 
@@ -52,6 +55,12 @@ public sealed class TypeSymbol
     {
         var name = $"List<{elementType.Name}>";
         return new TypeSymbol(name, listElementType: elementType);
+    }
+
+    public static TypeSymbol Map(TypeSymbol valueType)
+    {
+        var name = $"Map<String, {valueType.Name}>";
+        return new TypeSymbol(name, mapValueType: valueType);
     }
 
     public static TypeSymbol Record(string name)

@@ -422,7 +422,7 @@ public sealed class Parser
                 var closeParen = MatchToken(TokenKind.CloseParen, ")");
                 return new ParenthesizedExpressionSyntax(openParen, expression, closeParen);
             case TokenKind.OpenBracket:
-                return ParseListExpression();
+                return ParseListOrMapExpression();
             case TokenKind.TrueKeyword:
             case TokenKind.FalseKeyword:
             case TokenKind.NumberLiteral:
@@ -457,32 +457,70 @@ public sealed class Parser
         }
     }
 
-    private ExpressionSyntax ParseListExpression()
+    private ExpressionSyntax ParseListOrMapExpression()
     {
         var openBracket = MatchToken(TokenKind.OpenBracket, "[");
-        var elements = new List<ExpressionSyntax>();
-
         ConsumeSeparators();
-        while (Current().Kind != TokenKind.CloseBracket && Current().Kind != TokenKind.EndOfFile)
+        if (Current().Kind == TokenKind.CloseBracket)
         {
-            var start = position;
-            var expression = ParseExpression();
-            elements.Add(expression);
-
-            if (Current().Kind == TokenKind.Comma)
-            {
-                NextToken();
-            }
-
-            ConsumeSeparators();
-            if (position == start)
-            {
-                NextToken();
-            }
+            var closeEmpty = MatchToken(TokenKind.CloseBracket, "]");
+            diagnostics.Add(Diagnostic.Error(sourceText, closeEmpty.Span, "List and map literals cannot be empty."));
+            return new ListExpressionSyntax(openBracket, Array.Empty<ExpressionSyntax>(), closeEmpty);
         }
 
-        var closeBracket = MatchToken(TokenKind.CloseBracket, "]");
-        return new ListExpressionSyntax(openBracket, elements, closeBracket);
+        var firstStart = position;
+        var firstExpression = ParseExpression();
+        if (Current().Kind == TokenKind.Colon)
+        {
+            var entries = new List<MapEntrySyntax>();
+            var colonToken = MatchToken(TokenKind.Colon, ":");
+            var valueExpression = ParseExpression();
+            entries.Add(new MapEntrySyntax(firstExpression, colonToken, valueExpression));
+
+            ConsumeSeparators();
+            while (Current().Kind == TokenKind.Comma)
+            {
+                NextToken();
+                ConsumeSeparators();
+                if (Current().Kind == TokenKind.CloseBracket)
+                {
+                    break;
+                }
+
+                var key = ParseExpression();
+                var colon = MatchToken(TokenKind.Colon, ":");
+                var value = ParseExpression();
+                entries.Add(new MapEntrySyntax(key, colon, value));
+
+                ConsumeSeparators();
+            }
+
+            if (position == firstStart)
+            {
+                NextToken();
+            }
+
+            var closeBracket = MatchToken(TokenKind.CloseBracket, "]");
+            return new MapExpressionSyntax(openBracket, entries, closeBracket);
+        }
+
+        var elements = new List<ExpressionSyntax> { firstExpression };
+        ConsumeSeparators();
+        while (Current().Kind == TokenKind.Comma)
+        {
+            NextToken();
+            ConsumeSeparators();
+            if (Current().Kind == TokenKind.CloseBracket)
+            {
+                break;
+            }
+
+            elements.Add(ParseExpression());
+            ConsumeSeparators();
+        }
+
+        var close = MatchToken(TokenKind.CloseBracket, "]");
+        return new ListExpressionSyntax(openBracket, elements, close);
     }
 
     private ExpressionSyntax ParseMatchExpression()

@@ -154,6 +154,8 @@ public sealed class Interpreter
                     return EvaluateListExpression(list);
                 case LoweredIndexExpression index:
                     return EvaluateIndexExpression(index);
+                case LoweredMapExpression map:
+                    return EvaluateMapExpression(map);
                 case LoweredTupleAccessExpression tupleAccess:
                     return EvaluateTupleAccessExpression(tupleAccess);
                 case LoweredRecordLiteralExpression record:
@@ -216,6 +218,26 @@ public sealed class Interpreter
 
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "List index failed."));
             return null;
+        }
+
+        private object? EvaluateMapExpression(LoweredMapExpression map)
+        {
+            var dictionary = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var entry in map.Entries)
+            {
+                var keyValue = EvaluateExpression(entry.Key);
+                var valueValue = EvaluateExpression(entry.Value);
+                if (keyValue is string key)
+                {
+                    dictionary[key] = valueValue;
+                }
+                else
+                {
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Map key must be String."));
+                }
+            }
+
+            return dictionary;
         }
 
         private object? EvaluateTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
@@ -668,6 +690,7 @@ public sealed class Interpreter
                 bool boolValue => boolValue ? "true" : "false",
                 double doubleValue => doubleValue.ToString(CultureInfo.InvariantCulture),
                 List<object?> list => $"[{string.Join(", ", list.Select(FormatValue))}]",
+                Dictionary<string, object?> map => $"{{ {string.Join(", ", map.Select(pair => $"{pair.Key}: {FormatValue(pair.Value)}"))} }}",
                 RecordValue record => record.ToString(),
                 SumValue sum => sum.ToString(),
                 _ => value.ToString() ?? string.Empty

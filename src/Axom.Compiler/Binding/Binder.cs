@@ -450,6 +450,8 @@ public sealed class Binder
                 return BindTupleExpression(tuple);
             case ListExpressionSyntax list:
                 return BindListExpression(list);
+            case MapExpressionSyntax map:
+                return BindMapExpression(map);
             case RecordLiteralExpressionSyntax record:
                 return BindRecordLiteralExpression(record);
             case FieldAccessExpressionSyntax fieldAccess:
@@ -946,6 +948,51 @@ public sealed class Binder
 
         elementType ??= TypeSymbol.Error;
         return new BoundListExpression(elements, TypeSymbol.List(elementType));
+    }
+
+    private BoundExpression BindMapExpression(MapExpressionSyntax map)
+    {
+        if (map.Entries.Count == 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                map.Span,
+                "Map literals cannot be empty."));
+            return new BoundMapExpression(Array.Empty<BoundMapEntry>(), TypeSymbol.Error);
+        }
+
+        var entries = new List<BoundMapEntry>();
+        TypeSymbol? valueType = null;
+        foreach (var entry in map.Entries)
+        {
+            var key = BindExpression(entry.Key);
+            var value = BindExpression(entry.Value);
+            entries.Add(new BoundMapEntry(key, value));
+
+            if (key.Type != TypeSymbol.String && key.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    entry.Key.Span,
+                    "Map keys must be String."));
+            }
+
+            if (valueType is null)
+            {
+                valueType = value.Type;
+            }
+            else if (valueType != value.Type && valueType != TypeSymbol.Error && value.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    entry.Value.Span,
+                    "Map literal values must have the same type."));
+                valueType = TypeSymbol.Error;
+            }
+        }
+
+        valueType ??= TypeSymbol.Error;
+        return new BoundMapExpression(entries, TypeSymbol.Map(valueType));
     }
 
     private void ReportMatchDiagnostics(MatchExpressionSyntax match, TypeSymbol targetType)

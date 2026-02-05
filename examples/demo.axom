@@ -110,6 +110,9 @@ println ["a", "b", "c"]
 println [1.5, 2.25, 3.75]
 println "*** list indexing ***"
 println [10, 20, 30][1]
+println "*** map literals ***"
+println ["a": 1, "b": 2]
+println ["ok": true, "err": false]
 
 println fib(8)
 println fact(5)
