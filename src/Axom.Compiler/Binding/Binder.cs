@@ -1512,20 +1512,37 @@ public sealed class Binder
         }
 
         if (call.Callee is FieldAccessExpressionSyntax fieldAccess &&
-            string.Equals(fieldAccess.IdentifierToken.Text, "unwrap", StringComparison.Ordinal) &&
+            string.Equals(fieldAccess.IdentifierToken.Text, "join", StringComparison.Ordinal) &&
             call.Arguments.Count == 0)
         {
             var target = BindExpression(fieldAccess.Target);
+            if (target.Type.TaskResultType is null)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    fieldAccess.Span,
+                    "join() can only be used on task values."));
+                return new BoundJoinExpression(target, TypeSymbol.Error);
+            }
+
+            return new BoundJoinExpression(target, target.Type.TaskResultType);
+        }
+
+        if (call.Callee is FieldAccessExpressionSyntax unwrapFieldAccess &&
+            string.Equals(unwrapFieldAccess.IdentifierToken.Text, "unwrap", StringComparison.Ordinal) &&
+            call.Arguments.Count == 0)
+        {
+            var target = BindExpression(unwrapFieldAccess.Target);
             if (TryGetOptionOrResultShape(target.Type, out var successVariant, out var failureVariant))
             {
                 var payloadType = successVariant.PayloadType ?? TypeSymbol.Error;
                 return new BoundUnwrapExpression(target, successVariant, failureVariant, payloadType);
             }
 
-            diagnostics.Add(Diagnostic.Error(
-                SourceText,
-                fieldAccess.Span,
-                "unwrap() can only be used on Option/Result types."));
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    unwrapFieldAccess.Span,
+                    "unwrap() can only be used on Option/Result types."));
             return new BoundUnwrapExpression(target, new SumVariantSymbol("", TypeSymbol.Error, TypeSymbol.Error), new SumVariantSymbol("", TypeSymbol.Error, null), TypeSymbol.Error);
         }
 

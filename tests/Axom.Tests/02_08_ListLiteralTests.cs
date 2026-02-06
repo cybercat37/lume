@@ -112,4 +112,26 @@ scope {
         Assert.Equal("7", lines[1].Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Spawn_join_method_prints_values()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let a = spawn { 1 + 1 }
+  let b = spawn { 3 + 4 }
+  print a.join()
+  print b.join()
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var lines = result.Output.Split('\n');
+        Assert.Equal("2", lines[0].Trim());
+        Assert.Equal("7", lines[1].Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

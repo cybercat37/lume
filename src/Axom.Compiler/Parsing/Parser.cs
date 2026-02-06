@@ -440,7 +440,15 @@ public sealed class Parser
             }
 
             var dotToken = MatchToken(TokenKind.Dot, ".");
-            var identifierToken = MatchToken(TokenKind.Identifier, "field name");
+            SyntaxToken identifierToken;
+            if (Current().Kind == TokenKind.JoinKeyword)
+            {
+                identifierToken = NextToken();
+            }
+            else
+            {
+                identifierToken = MatchToken(TokenKind.Identifier, "field name");
+            }
             expression = new FieldAccessExpressionSyntax(expression, dotToken, identifierToken);
         }
 
