@@ -148,7 +148,7 @@ public class CompilerPipelineTests
     public void Compile_spawn_join_generates_code()
     {
         var compiler = new CompilerDriver();
-        var result = compiler.Compile("scope { let a = spawn { 1 }\nprint join a }", "test.axom");
+        var result = compiler.Compile("scope { let a = spawn { 1 }\nprint a.join() }", "test.axom");
 
         Assert.True(result.Success);
         Assert.Contains("Task.Run", result.GeneratedCode);

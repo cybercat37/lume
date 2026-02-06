@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using System.Threading.Tasks;
 using Axom.Compiler.Binding;
 using Axom.Compiler.Diagnostics;
 using Axom.Compiler.Lowering;
@@ -45,16 +46,26 @@ public sealed class Interpreter
         private readonly StringBuilder output;
         private readonly List<Diagnostic> diagnostics;
         private readonly Queue<string> inputBuffer;
+        private readonly object inputLock;
+        private readonly Stack<ScopeFrame> scopeFrames;
         private FunctionSymbol? currentFunction;
 
-        public Evaluator(LoweredProgram program, Queue<string> inputBuffer)
+        public Evaluator(
+            LoweredProgram program,
+            Queue<string> inputBuffer,
+            Dictionary<VariableSymbol, object?>? initialValues = null,
+            object? sharedInputLock = null)
         {
             this.program = program;
-            values = new Dictionary<VariableSymbol, object?>();
+            values = initialValues is null
+                ? new Dictionary<VariableSymbol, object?>()
+                : new Dictionary<VariableSymbol, object?>(initialValues);
             functions = program.Functions.ToDictionary(func => func.Symbol, func => func);
             output = new StringBuilder();
             diagnostics = new List<Diagnostic>();
             this.inputBuffer = inputBuffer;
+            inputLock = sharedInputLock ?? new object();
+            scopeFrames = new Stack<ScopeFrame>();
         }
 
         public InterpreterResult Evaluate()
@@ -76,10 +87,31 @@ public sealed class Interpreter
             switch (statement)
             {
                 case LoweredBlockStatement block:
+                    if (block.IsScopeBlock)
+                    {
+                        var frame = new ScopeFrame();
+                        scopeFrames.Push(frame);
+                        try
+                        {
+                            foreach (var inner in block.Statements)
+                            {
+                                EvaluateStatement(inner);
+                            }
+                        }
+                        finally
+                        {
+                            scopeFrames.Pop();
+                            AutoJoinScope(frame);
+                        }
+
+                        return;
+                    }
+
                     foreach (var inner in block.Statements)
                     {
                         EvaluateStatement(inner);
                     }
+
                     return;
                 case LoweredVariableDeclaration declaration:
                     values[declaration.Symbol] = EvaluateExpression(declaration.Initializer);
@@ -141,7 +173,10 @@ public sealed class Interpreter
                 case LoweredBinaryExpression binary:
                     return EvaluateBinaryExpression(binary);
                 case LoweredInputExpression:
-                    return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
+                    lock (inputLock)
+                    {
+                        return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
+                    }
                 case LoweredCallExpression call:
                     return EvaluateCall(call);
                 case LoweredFunctionExpression functionExpression:
@@ -278,30 +313,34 @@ public sealed class Interpreter
         private object? EvaluateSpawnExpression(LoweredSpawnExpression spawn)
         {
             var snapshot = new Dictionary<VariableSymbol, object?>(values);
-            var handle = new SpawnHandle(() =>
+            var task = Task.Run(() =>
             {
-                values.Clear();
-                foreach (var pair in snapshot)
-                {
-                    values[pair.Key] = pair.Value;
-                }
-
-                try
-                {
-                    return EvaluateBlockExpression(spawn.Body);
-                }
-                finally
-                {
-                    values.Clear();
-                    foreach (var pair in snapshot)
-                    {
-                        values[pair.Key] = pair.Value;
-                    }
-                }
+                var evaluator = new Evaluator(program, inputBuffer, snapshot, inputLock);
+                return evaluator.EvaluateSpawnBody(spawn.Body);
             });
 
-            handle.Run();
+            var handle = new SpawnHandle(task);
+            if (scopeFrames.Count > 0)
+            {
+                scopeFrames.Peek().Handles.Add(handle);
+            }
+
             return handle;
+        }
+
+        private SpawnOutcome EvaluateSpawnBody(LoweredBlockExpression body)
+        {
+            object? value;
+            try
+            {
+                value = EvaluateBlockExpression(body);
+            }
+            catch (ReturnSignal signal)
+            {
+                value = signal.Value;
+            }
+
+            return new SpawnOutcome(value, output.ToString(), diagnostics.ToList());
         }
 
         private object? EvaluateJoinExpression(LoweredJoinExpression join)
@@ -309,11 +348,40 @@ public sealed class Interpreter
             var target = EvaluateExpression(join.Expression);
             if (target is SpawnHandle handle)
             {
-                return handle.Result;
+                return MergeSpawnOutcome(handle).Value;
             }
 
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "join expects a task handle."));
             return null;
+        }
+
+        private void AutoJoinScope(ScopeFrame frame)
+        {
+            foreach (var handle in frame.Handles)
+            {
+                MergeSpawnOutcome(handle);
+            }
+        }
+
+        private SpawnOutcome MergeSpawnOutcome(SpawnHandle handle)
+        {
+            var outcome = handle.GetOrWait();
+            if (!handle.HasMergedOutcome)
+            {
+                if (outcome.Diagnostics.Count > 0)
+                {
+                    diagnostics.AddRange(outcome.Diagnostics);
+                }
+
+                if (!string.IsNullOrEmpty(outcome.Output))
+                {
+                    output.Append(outcome.Output);
+                }
+
+                handle.MarkMerged();
+            }
+
+            return outcome;
         }
 
         private object? EvaluateTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
@@ -854,18 +922,33 @@ public sealed class Interpreter
 
         private sealed class SpawnHandle
         {
-            private readonly Func<object?> run;
-            public object? Result { get; private set; }
+            private readonly Task<SpawnOutcome> task;
+            private SpawnOutcome? outcome;
 
-            public SpawnHandle(Func<object?> run)
+            public bool HasMergedOutcome { get; private set; }
+
+            public SpawnHandle(Task<SpawnOutcome> task)
             {
-                this.run = run;
+                this.task = task;
             }
 
-            public void Run()
+            public SpawnOutcome GetOrWait()
             {
-                Result = run();
+                outcome ??= task.GetAwaiter().GetResult();
+                return outcome;
+            }
+
+            public void MarkMerged()
+            {
+                HasMergedOutcome = true;
             }
         }
+
+        private sealed class ScopeFrame
+        {
+            public List<SpawnHandle> Handles { get; } = new();
+        }
+
+        private sealed record SpawnOutcome(object? Value, string Output, List<Diagnostic> Diagnostics);
     }
 }

@@ -364,7 +364,7 @@ Sequential calls to suspensive functions implicitly await.
 
 Primitives:
 - `scope { }`
-- `spawn expr`
+- `spawn { ... }`
 - `task.join()`
 
 Fire-and-forget is intentionally impossible.

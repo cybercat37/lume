@@ -17,6 +17,7 @@ public sealed class Binder
     private readonly Stack<LambdaBindingContext> lambdaStack = new();
     private List<TypeSymbol>? returnTypes;
     private Dictionary<string, TypeSymbol>? genericTypeParameters;
+    private int scopeStatementDepth;
     private readonly Dictionary<string, TypeSymbol> recordTypes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, BoundRecordTypeDeclaration> recordDefinitions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TypeSymbol> sumTypes = new(StringComparer.Ordinal);
@@ -43,6 +44,7 @@ public sealed class Binder
         sumTypes.Clear();
         sumDefinitions.Clear();
         variantDefinitions.Clear();
+        scopeStatementDepth = 0;
         DeclareBuiltins();
 
         var statements = new List<BoundStatement>();
@@ -338,7 +340,15 @@ public sealed class Binder
                     "Type declarations are only allowed at the top level."));
                 return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Unit));
             case ScopeStatementSyntax scopeStatement:
-                return BindBlockStatement(scopeStatement.Body);
+                scopeStatementDepth++;
+                try
+                {
+                    return BindBlockStatement(scopeStatement.Body, isScopeBlock: true);
+                }
+                finally
+                {
+                    scopeStatementDepth--;
+                }
             case ExpressionStatementSyntax expressionStatement:
                 return new BoundExpressionStatement(BindExpression(expressionStatement.Expression));
             default:
@@ -346,7 +356,7 @@ public sealed class Binder
         }
     }
 
-    private BoundStatement BindBlockStatement(BlockStatementSyntax block)
+    private BoundStatement BindBlockStatement(BlockStatementSyntax block, bool isScopeBlock = false)
     {
         var previousScope = scope;
         scope = new BoundScope(previousScope);
@@ -358,7 +368,7 @@ public sealed class Binder
         }
 
         scope = previousScope;
-        return new BoundBlockStatement(statements);
+        return new BoundBlockStatement(statements, isScopeBlock);
     }
 
     private BoundFunctionDeclaration BindFunctionDeclaration(FunctionDeclarationSyntax declaration)
@@ -517,8 +527,6 @@ public sealed class Binder
                 return BindQuestionExpression(question);
             case SpawnExpressionSyntax spawn:
                 return BindSpawnExpression(spawn);
-            case JoinExpressionSyntax join:
-                return BindJoinExpression(join);
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
@@ -668,24 +676,17 @@ public sealed class Binder
 
     private BoundExpression BindSpawnExpression(SpawnExpressionSyntax spawn)
     {
-        var body = (BoundBlockStatement)BindBlockStatement(spawn.Body);
-        var inferred = InferReturnType(TypeSymbol.Unit, body, null, allowUnitFallback: true);
-        return new BoundSpawnExpression(body, TypeSymbol.Task(inferred));
-    }
-
-    private BoundExpression BindJoinExpression(JoinExpressionSyntax join)
-    {
-        var expression = BindExpression(join.Expression);
-        if (expression.Type.TaskResultType is null)
+        if (scopeStatementDepth == 0)
         {
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
-                join.JoinKeyword.Span,
-                "join expects a task."));
-            return new BoundJoinExpression(expression, TypeSymbol.Error);
+                spawn.SpawnKeyword.Span,
+                "spawn can only be used inside a scope block."));
         }
 
-        return new BoundJoinExpression(expression, expression.Type.TaskResultType);
+        var body = (BoundBlockStatement)BindBlockStatement(spawn.Body);
+        var inferred = InferReturnType(TypeSymbol.Unit, body, null, allowUnitFallback: true);
+        return new BoundSpawnExpression(body, TypeSymbol.Task(inferred));
     }
 
     private BoundExpression BindFieldAccessExpression(FieldAccessExpressionSyntax fieldAccess)

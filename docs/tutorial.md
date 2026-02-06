@@ -648,10 +648,10 @@ let processed = process(data)
 
 ```axom
 scope {
-  let task1 = spawn compute1()
-  let task2 = spawn compute2()
-  let result1 = task1.join()?
-  let result2 = task2.join()?
+  let task1 = spawn { compute1() }
+  let task2 = spawn { compute2() }
+  let result1 = task1.join()
+  let result2 = task2.join()
   result1 + result2
 }
 ```

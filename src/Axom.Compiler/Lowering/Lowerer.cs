@@ -47,7 +47,7 @@ public sealed class Lowerer
     private LoweredBlockStatement LowerBlockStatement(BoundBlockStatement block)
     {
         var lowered = block.Statements.Select(LowerStatement).ToList();
-        return new LoweredBlockStatement(lowered);
+        return new LoweredBlockStatement(lowered, block.IsScopeBlock);
     }
 
     private LoweredBlockExpression LowerSpawnBlock(BoundBlockStatement block)

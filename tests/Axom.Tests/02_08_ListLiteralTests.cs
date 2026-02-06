@@ -98,8 +98,8 @@ public class ListLiteralTests
 scope {
   let a = spawn { 1 + 1 }
   let b = spawn { 3 + 4 }
-  print join a
-  print join b
+  print a.join()
+  print b.join()
 }
 ", "test.axom");
         var syntaxTree = SyntaxTree.Parse(sourceText);
@@ -132,6 +132,78 @@ scope {
         var lines = result.Output.Split('\n');
         Assert.Equal("2", lines[0].Trim());
         Assert.Equal("7", lines[1].Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Spawn_join_twice_does_not_repeat_spawn_side_effects()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let task = spawn {
+    print 1
+    42
+  }
+  print task.join()
+  print task.join()
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var lines = result.Output.Split('\n');
+        Assert.Equal("1", lines[0].Trim());
+        Assert.Equal("42", lines[1].Trim());
+        Assert.Equal("42", lines[2].Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Scope_auto_joins_spawned_tasks()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let task = spawn {
+    print 1
+    42
+  }
+}
+print 2
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var lines = result.Output.Split('\n');
+        Assert.Equal("1", lines[0].Trim());
+        Assert.Equal("2", lines[1].Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Scope_auto_join_does_not_duplicate_joined_task_output()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let task = spawn {
+    print 1
+    42
+  }
+  print task.join()
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var lines = result.Output.Split('\n');
+        Assert.Equal(2, lines.Length);
+        Assert.Equal("1", lines[0].Trim());
+        Assert.Equal("42", lines[1].Trim());
         Assert.Empty(result.Diagnostics);
     }
 }

@@ -31,7 +31,6 @@ public sealed class Parser
         TokenKind.OpenParen,
         TokenKind.OpenBracket,
         TokenKind.SpawnKeyword,
-        TokenKind.JoinKeyword,
         TokenKind.Plus,
         TokenKind.Minus,
         TokenKind.Bang
@@ -481,10 +480,6 @@ public sealed class Parser
                 var spawnKeyword = MatchToken(TokenKind.SpawnKeyword, "spawn");
                 var spawnBody = (BlockStatementSyntax)ParseBlockStatement();
                 return new SpawnExpressionSyntax(spawnKeyword, spawnBody);
-            case TokenKind.JoinKeyword:
-                var joinKeyword = MatchToken(TokenKind.JoinKeyword, "join");
-                var joined = ParseExpression();
-                return new JoinExpressionSyntax(joinKeyword, joined);
             case TokenKind.OpenBracket:
                 return ParseListOrMapExpression();
             case TokenKind.TrueKeyword:

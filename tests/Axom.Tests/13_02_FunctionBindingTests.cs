@@ -125,4 +125,34 @@ let f = fn(y: Int) => x + y
 
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Spawn_outside_scope_produces_diagnostic()
+    {
+        var sourceText = new SourceText("let task = spawn { 1 }", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains("inside a scope", result.Diagnostics[0].Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Spawn_inside_scope_binds_without_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let task = spawn { 1 }
+  print task.join()
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
 }

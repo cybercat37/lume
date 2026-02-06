@@ -160,8 +160,8 @@ println "*** concurrency (runtime prototype) ***"
 scope {
   let a = spawn { 1 + 1 }
   let b = spawn { 3 + 4 }
-  println join a
-  println join b
+  println a.join()
+  println b.join()
 }
 
 
