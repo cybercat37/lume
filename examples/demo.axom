@@ -57,7 +57,6 @@ print match value {
 println "*** tuples and match ***"
 println match (1, 2) {
   (a, b) -> a + b
-  _ -> 0
 }
 
 println "*** tuple destructuring (let) ***"
@@ -115,6 +114,14 @@ println ["a": 1, "b": 2]
 println ["ok": true, "err": false]
 println "*** map indexing ***"
 println ["a": 1, "b": 2]["b"]
+
+println "*** collections with variables ***"
+let nums = [4, 5, 6]
+println nums[2]
+
+let settings = ["host": "localhost", "mode": "dev"]
+println settings["host"]
+
 println "*** option/result + ? + unwrap ***"
 type Option { Some(Int) None }
 
