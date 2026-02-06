@@ -158,6 +158,10 @@ public sealed class Interpreter
                     return EvaluateMapExpression(map);
                 case LoweredUnwrapExpression unwrap:
                     return EvaluateUnwrapExpression(unwrap);
+                case LoweredSpawnExpression spawn:
+                    return EvaluateSpawnExpression(spawn);
+                case LoweredJoinExpression join:
+                    return EvaluateJoinExpression(join);
                 case LoweredTupleAccessExpression tupleAccess:
                     return EvaluateTupleAccessExpression(tupleAccess);
                 case LoweredRecordLiteralExpression record:
@@ -268,6 +272,47 @@ public sealed class Interpreter
             }
 
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Unwrap failed."));
+            return null;
+        }
+
+        private object? EvaluateSpawnExpression(LoweredSpawnExpression spawn)
+        {
+            var snapshot = new Dictionary<VariableSymbol, object?>(values);
+            var handle = new SpawnHandle(() =>
+            {
+                values.Clear();
+                foreach (var pair in snapshot)
+                {
+                    values[pair.Key] = pair.Value;
+                }
+
+                try
+                {
+                    return EvaluateBlockExpression(spawn.Body);
+                }
+                finally
+                {
+                    values.Clear();
+                    foreach (var pair in snapshot)
+                    {
+                        values[pair.Key] = pair.Value;
+                    }
+                }
+            });
+
+            handle.Run();
+            return handle;
+        }
+
+        private object? EvaluateJoinExpression(LoweredJoinExpression join)
+        {
+            var target = EvaluateExpression(join.Expression);
+            if (target is SpawnHandle handle)
+            {
+                return handle.Result;
+            }
+
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "join expects a task handle."));
             return null;
         }
 
@@ -804,6 +849,22 @@ public sealed class Interpreter
                 }
 
                 return $"{Variant.Name}({FormatValue(Payload)})";
+            }
+        }
+
+        private sealed class SpawnHandle
+        {
+            private readonly Func<object?> run;
+            public object? Result { get; private set; }
+
+            public SpawnHandle(Func<object?> run)
+            {
+                this.run = run;
+            }
+
+            public void Run()
+            {
+                Result = run();
             }
         }
     }

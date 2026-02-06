@@ -338,10 +338,6 @@ public sealed class Binder
                     "Type declarations are only allowed at the top level."));
                 return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Unit));
             case ScopeStatementSyntax scopeStatement:
-                diagnostics.Add(Diagnostic.Error(
-                    SourceText,
-                    scopeStatement.ScopeKeyword.Span,
-                    "Concurrency scope is not implemented yet."));
                 return BindBlockStatement(scopeStatement.Body);
             case ExpressionStatementSyntax expressionStatement:
                 return new BoundExpressionStatement(BindExpression(expressionStatement.Expression));
@@ -520,17 +516,9 @@ public sealed class Binder
             case QuestionExpressionSyntax question:
                 return BindQuestionExpression(question);
             case SpawnExpressionSyntax spawn:
-                diagnostics.Add(Diagnostic.Error(
-                    SourceText,
-                    spawn.SpawnKeyword.Span,
-                    "spawn is not implemented yet."));
-                return new BoundLiteralExpression(null, TypeSymbol.Error);
+                return BindSpawnExpression(spawn);
             case JoinExpressionSyntax join:
-                diagnostics.Add(Diagnostic.Error(
-                    SourceText,
-                    join.JoinKeyword.Span,
-                    "join is not implemented yet."));
-                return new BoundLiteralExpression(null, TypeSymbol.Error);
+                return BindJoinExpression(join);
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
@@ -676,6 +664,28 @@ public sealed class Binder
 
         var payloadType = successVariant.PayloadType ?? TypeSymbol.Error;
         return new BoundQuestionExpression(expression, successVariant, failureVariant, payloadType);
+    }
+
+    private BoundExpression BindSpawnExpression(SpawnExpressionSyntax spawn)
+    {
+        var body = (BoundBlockStatement)BindBlockStatement(spawn.Body);
+        var inferred = InferReturnType(TypeSymbol.Unit, body, null, allowUnitFallback: true);
+        return new BoundSpawnExpression(body, TypeSymbol.Task(inferred));
+    }
+
+    private BoundExpression BindJoinExpression(JoinExpressionSyntax join)
+    {
+        var expression = BindExpression(join.Expression);
+        if (expression.Type.TaskResultType is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                join.JoinKeyword.Span,
+                "join expects a task."));
+            return new BoundJoinExpression(expression, TypeSymbol.Error);
+        }
+
+        return new BoundJoinExpression(expression, expression.Type.TaskResultType);
     }
 
     private BoundExpression BindFieldAccessExpression(FieldAccessExpressionSyntax fieldAccess)
@@ -1909,6 +1919,26 @@ public sealed class Binder
         }
 
         return first;
+    }
+
+    private static List<TypeSymbol> CollectReturnTypes(BoundBlockStatement body)
+    {
+        var types = new List<TypeSymbol>();
+        foreach (var statement in body.Statements)
+        {
+            if (statement is BoundReturnStatement returnStatement)
+            {
+                types.Add(returnStatement.Expression?.Type ?? TypeSymbol.Unit);
+                continue;
+            }
+
+            if (statement is BoundBlockStatement block)
+            {
+                types.AddRange(CollectReturnTypes(block));
+            }
+        }
+
+        return types;
     }
 
     private static TypeSymbol? GetImplicitReturnType(BoundBlockStatement body)

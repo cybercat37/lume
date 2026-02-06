@@ -20,6 +20,7 @@ public sealed class Parser
         TokenKind.FnKeyword,
         TokenKind.ReturnKeyword,
         TokenKind.TypeKeyword,
+        TokenKind.ScopeKeyword,
         TokenKind.MatchKeyword,
         TokenKind.Identifier,
         TokenKind.InputKeyword,
@@ -28,6 +29,9 @@ public sealed class Parser
         TokenKind.NumberLiteral,
         TokenKind.StringLiteral,
         TokenKind.OpenParen,
+        TokenKind.OpenBracket,
+        TokenKind.SpawnKeyword,
+        TokenKind.JoinKeyword,
         TokenKind.Plus,
         TokenKind.Minus,
         TokenKind.Bang

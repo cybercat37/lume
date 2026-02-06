@@ -50,6 +50,38 @@ public sealed class Lowerer
         return new LoweredBlockStatement(lowered);
     }
 
+    private LoweredBlockExpression LowerSpawnBlock(BoundBlockStatement block)
+    {
+        var statements = new List<LoweredStatement>();
+        LoweredExpression result = new LoweredDefaultExpression(TypeSymbol.Unit);
+        if (block.Statements.Count == 0)
+        {
+            return new LoweredBlockExpression(statements, result);
+        }
+
+        for (var i = 0; i < block.Statements.Count; i++)
+        {
+            var statement = block.Statements[i];
+            if (i == block.Statements.Count - 1 && statement is BoundReturnStatement returnStatement)
+            {
+                result = returnStatement.Expression is null
+                    ? new LoweredDefaultExpression(TypeSymbol.Unit)
+                    : LowerExpression(returnStatement.Expression);
+                continue;
+            }
+            if (i == block.Statements.Count - 1 && statement is BoundExpressionStatement expressionStatement)
+            {
+                result = LowerExpression(expressionStatement.Expression);
+            }
+            else
+            {
+                statements.Add(LowerStatement(statement));
+            }
+        }
+
+        return new LoweredBlockExpression(statements, result);
+    }
+
     private LoweredStatement LowerDeconstructionStatement(BoundDeconstructionStatement deconstruction)
     {
         var valueTemp = NewTemp(deconstruction.Initializer.Type);
@@ -133,6 +165,12 @@ public sealed class Lowerer
                 LowerExpression(unwrap.Expression),
                 unwrap.FailureVariant,
                 unwrap.Type),
+            BoundSpawnExpression spawn => new LoweredSpawnExpression(
+                LowerSpawnBlock(spawn.Body),
+                spawn.Type),
+            BoundJoinExpression join => new LoweredJoinExpression(
+                LowerExpression(join.Expression),
+                join.Type),
             BoundRecordLiteralExpression record => new LoweredRecordLiteralExpression(
                 record.RecordType,
                 record.Fields.Select(field => new LoweredRecordFieldAssignment(

@@ -13,6 +13,15 @@ public sealed class Emitter
     {
         var builder = new StringBuilder();
         builder.AppendLine("using System;");
+        if (RequiresCollections(program))
+        {
+            builder.AppendLine("using System.Collections.Generic;");
+        }
+
+        if (RequiresTasks(program))
+        {
+            builder.AppendLine("using System.Threading.Tasks;");
+        }
         builder.AppendLine();
         foreach (var record in program.RecordTypes)
         {
@@ -42,6 +51,102 @@ public sealed class Emitter
         builder.AppendLine("}");
 
         return builder.ToString();
+    }
+
+    private static bool RequiresCollections(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesCollections) || program.Functions.Any(function => UsesCollections(function.Body));
+    }
+
+    private static bool RequiresTasks(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesTasks) || program.Functions.Any(function => UsesTasks(function.Body));
+    }
+
+    private static bool UsesCollections(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesCollections),
+            LoweredVariableDeclaration declaration => UsesCollections(declaration.Initializer),
+            LoweredPrintStatement print => UsesCollections(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesCollections(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesCollections(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesCollections(ifStatement.Condition) || UsesCollections(ifStatement.Then) || (ifStatement.Else is not null && UsesCollections(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesTasks(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesTasks),
+            LoweredVariableDeclaration declaration => UsesTasks(declaration.Initializer),
+            LoweredPrintStatement print => UsesTasks(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesTasks(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesTasks(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesTasks(ifStatement.Condition) || UsesTasks(ifStatement.Then) || (ifStatement.Else is not null && UsesTasks(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesCollections(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredListExpression => true,
+            LoweredMapExpression => true,
+            LoweredIndexExpression index => UsesCollections(index.Target) || UsesCollections(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesCollections),
+            LoweredCallExpression call => UsesCollections(call.Callee) || call.Arguments.Any(UsesCollections),
+            LoweredUnaryExpression unary => UsesCollections(unary.Operand),
+            LoweredBinaryExpression binary => UsesCollections(binary.Left) || UsesCollections(binary.Right),
+            LoweredAssignmentExpression assignment => UsesCollections(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesCollections) || UsesCollections(block.Result),
+            LoweredLambdaExpression lambda => UsesCollections(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesCollections(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesCollections(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesCollections(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesCollections(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesCollections(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesCollections(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesCollections(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesCollections(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesCollections(unwrap.Target),
+            LoweredSpawnExpression spawn => UsesCollections(spawn.Body),
+            LoweredJoinExpression join => UsesCollections(join.Expression),
+            _ => false
+        };
+    }
+
+    private static bool UsesTasks(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredSpawnExpression => true,
+            LoweredJoinExpression => true,
+            LoweredCallExpression call => UsesTasks(call.Callee) || call.Arguments.Any(UsesTasks),
+            LoweredUnaryExpression unary => UsesTasks(unary.Operand),
+            LoweredBinaryExpression binary => UsesTasks(binary.Left) || UsesTasks(binary.Right),
+            LoweredAssignmentExpression assignment => UsesTasks(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesTasks) || UsesTasks(block.Result),
+            LoweredLambdaExpression lambda => UsesTasks(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesTasks(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesTasks(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesTasks(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesTasks(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesTasks(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesTasks(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesTasks(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesTasks(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesTasks(unwrap.Target),
+            LoweredIndexExpression index => UsesTasks(index.Target) || UsesTasks(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesTasks),
+            LoweredListExpression list => list.Elements.Any(UsesTasks),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesTasks(entry.Key) || UsesTasks(entry.Value)),
+            _ => false
+        };
     }
 
     public string EmitCached(LoweredProgram program, EmitCache cache)
@@ -148,6 +253,8 @@ public sealed class Emitter
             LoweredIndexExpression index => WriteIndexExpression(index),
             LoweredMapExpression map => WriteMapExpression(map),
             LoweredUnwrapExpression unwrap => WriteUnwrapExpression(unwrap),
+            LoweredSpawnExpression spawn => WriteSpawnExpression(spawn),
+            LoweredJoinExpression join => WriteJoinExpression(join),
             LoweredTupleAccessExpression tupleAccess => WriteTupleAccessExpression(tupleAccess),
             LoweredRecordLiteralExpression record => WriteRecordLiteralExpression(record),
             LoweredFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
@@ -229,6 +336,19 @@ public sealed class Emitter
         var payloadType = TypeToCSharp(unwrap.Type);
         var failureTag = unwrap.FailureVariant.Name.Replace("\"", "\\\"");
         return $"(() => {{ var __tmp = {target}; if (__tmp.Tag == \"{failureTag}\") throw new InvalidOperationException(\"Unwrap failed.\"); return ({payloadType})__tmp.Value; }})()";
+    }
+
+    private static string WriteSpawnExpression(LoweredSpawnExpression spawn)
+    {
+        var taskType = TypeToCSharp(spawn.Type.TaskResultType ?? TypeSymbol.Error);
+        var body = WriteExpression(spawn.Body);
+        return $"Task.Run<{taskType}>(() => {body})";
+    }
+
+    private static string WriteJoinExpression(LoweredJoinExpression join)
+    {
+        var target = WriteExpression(join.Expression);
+        return $"{target}.Result";
     }
 
     private static string WriteTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
@@ -465,6 +585,11 @@ public sealed class Emitter
         if (type.MapValueType is not null)
         {
             return $"Dictionary<string, {TypeToCSharp(type.MapValueType)}>";
+        }
+
+        if (type.TaskResultType is not null)
+        {
+            return $"Task<{TypeToCSharp(type.TaskResultType)}>";
         }
 
         if (type.ListElementType is not null)

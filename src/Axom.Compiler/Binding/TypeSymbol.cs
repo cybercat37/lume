@@ -10,6 +10,7 @@ public sealed class TypeSymbol
     public IReadOnlyList<TypeSymbol>? TupleElementTypes { get; }
     public TypeSymbol? ListElementType { get; }
     public TypeSymbol? MapValueType { get; }
+    public TypeSymbol? TaskResultType { get; }
     public IReadOnlyList<SumVariantSymbol>? SumVariants { get; }
     public bool IsGenericParameter { get; }
 
@@ -20,6 +21,7 @@ public sealed class TypeSymbol
         IReadOnlyList<TypeSymbol>? tupleElementTypes = null,
         TypeSymbol? listElementType = null,
         TypeSymbol? mapValueType = null,
+        TypeSymbol? taskResultType = null,
         IReadOnlyList<SumVariantSymbol>? sumVariants = null,
         bool isGenericParameter = false)
     {
@@ -29,6 +31,7 @@ public sealed class TypeSymbol
         TupleElementTypes = tupleElementTypes;
         ListElementType = listElementType;
         MapValueType = mapValueType;
+        TaskResultType = taskResultType;
         SumVariants = sumVariants;
         IsGenericParameter = isGenericParameter;
     }
@@ -64,6 +67,12 @@ public sealed class TypeSymbol
     {
         var name = $"Map<String, {valueType.Name}>";
         return new TypeSymbol(name, mapValueType: valueType);
+    }
+
+    public static TypeSymbol Task(TypeSymbol resultType)
+    {
+        var name = $"Task<{resultType.Name}>";
+        return new TypeSymbol(name, taskResultType: resultType);
     }
 
     public static TypeSymbol Record(string name)
