@@ -170,25 +170,31 @@ scope {
 }
 
 println "*** channels (v1) ***"
-let (tx, rx) = channel<Int>()
+
+type Msg {
+  Value(Int)
+  Stop
+}
+
+let (tx, rx) = channel<Msg>()
 
 fn sender_loop(n: Int) {
   match n == 5 {
-    true -> tx.send(-1)
+    true -> tx.send(Stop)
     false -> sender_step(n)
   }
 }
 
 fn sender_step(n: Int) {
-  tx.send(n)
+  tx.send(Value(n))
   sender_loop(n + 1)
 }
 
 fn worker_loop() {
-  let value = rx.recv()
-  match value == -1 {
-    true -> worker_done()
-    false -> worker_step(value)
+  let msg = rx.recv()
+  match msg {
+    Value(value) -> worker_step(value)
+    Stop -> worker_done()
   }
 }
 
