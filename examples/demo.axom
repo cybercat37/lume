@@ -163,6 +163,7 @@ scope {
   println a.join()
   println b.join()
 }
+println par (10 + 20)
 
 
 println fib(8)

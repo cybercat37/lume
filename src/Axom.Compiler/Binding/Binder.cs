@@ -527,6 +527,8 @@ public sealed class Binder
                 return BindQuestionExpression(question);
             case SpawnExpressionSyntax spawn:
                 return BindSpawnExpression(spawn);
+            case ParExpressionSyntax par:
+                return BindParExpression(par);
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
@@ -687,6 +689,12 @@ public sealed class Binder
         var body = (BoundBlockStatement)BindBlockStatement(spawn.Body);
         var inferred = InferReturnType(TypeSymbol.Unit, body, null, allowUnitFallback: true);
         return new BoundSpawnExpression(body, TypeSymbol.Task(inferred));
+    }
+
+    private BoundExpression BindParExpression(ParExpressionSyntax par)
+    {
+        var expression = BindExpression(par.Expression);
+        return new BoundParExpression(expression, expression.Type);
     }
 
     private BoundExpression BindFieldAccessExpression(FieldAccessExpressionSyntax fieldAccess)

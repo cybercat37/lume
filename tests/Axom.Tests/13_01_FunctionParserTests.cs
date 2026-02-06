@@ -60,4 +60,14 @@ fn id(x: Int) {
 
         Assert.NotEmpty(syntaxTree.Diagnostics);
     }
+
+    [Fact]
+    public void Par_expression_parses()
+    {
+        var sourceText = new SourceText("let value = par (1 + 2)", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
 }

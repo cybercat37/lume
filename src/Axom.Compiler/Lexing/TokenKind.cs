@@ -19,6 +19,7 @@ public enum TokenKind
     ScopeKeyword,
     SpawnKeyword,
     JoinKeyword,
+    ParKeyword,
     TrueKeyword,
     FalseKeyword,
     NumberLiteral,

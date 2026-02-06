@@ -31,6 +31,7 @@ public sealed class Parser
         TokenKind.OpenParen,
         TokenKind.OpenBracket,
         TokenKind.SpawnKeyword,
+        TokenKind.ParKeyword,
         TokenKind.Plus,
         TokenKind.Minus,
         TokenKind.Bang
@@ -388,7 +389,9 @@ public sealed class Parser
         {
             var operatorToken = NextToken();
             var operand = ParseBinaryExpression(allowRecordLiteral, unaryPrecedence);
-            left = new UnaryExpressionSyntax(operatorToken, operand);
+            left = operatorToken.Kind == TokenKind.ParKeyword
+                ? new ParExpressionSyntax(operatorToken, operand)
+                : new UnaryExpressionSyntax(operatorToken, operand);
         }
         else
         {
@@ -971,6 +974,7 @@ public sealed class Parser
             TokenKind.Plus => 6,
             TokenKind.Minus => 6,
             TokenKind.Bang => 6,
+            TokenKind.ParKeyword => 6,
             _ => 0
         };
     }

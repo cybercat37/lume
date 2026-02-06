@@ -167,6 +167,17 @@ public class CompilerPipelineTests
     }
 
     [Fact]
+    public void Compile_par_expression_generates_task_run_and_result()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print par (1 + 2)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("Task.Run", result.GeneratedCode);
+        Assert.Contains(".Result", result.GeneratedCode);
+    }
+
+    [Fact]
     public void Compile_arithmetic_generates_expression()
     {
         var compiler = new CompilerDriver();

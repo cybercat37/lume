@@ -155,4 +155,16 @@ scope {
 
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Par_expression_binds_without_diagnostic()
+    {
+        var sourceText = new SourceText("let value = par (1 + 2)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
 }
