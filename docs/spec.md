@@ -408,6 +408,12 @@ Rules:
 - Protocol termination is explicit in message type (for example `Stop`).
 - Current implementation supports `channel<T>()`, `send`, and blocking `recv` for task communication.
 
+Known limitations (current implementation):
+- Escape/lifetime checks for channel endpoints are not fully enforced in the binder yet.
+- Channel close/cancellation semantics are not implemented yet (termination is protocol-driven).
+- Parser support for `channel<T>()` is currently specialized rather than a general generic-call mechanism.
+- Buffer policy is currently minimal runtime behavior; no configurable backpressure strategy.
+
 ```axom
 type Msg {
   Value(Int)

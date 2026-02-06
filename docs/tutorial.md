@@ -743,6 +743,11 @@ Endpoints are scoped values: they can be passed to child scopes/tasks, but they 
 
 Current implementation supports channel creation, send, and blocking recv in scope/spawn workflows.
 
+Current limitations to keep in mind:
+- Endpoint lifetime/escape diagnostics are still being hardened.
+- There is no explicit close API yet; use a message protocol (for example `Stop`) to end workers.
+- Channel buffering/backpressure is not configurable in v1.
+
 
 ---
 

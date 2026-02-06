@@ -179,6 +179,9 @@ Key tasks:
 - Runtime primitives and scheduler model.
 - Effect tagging for suspensive functions.
 - Concurrency syntax stubs (scope/spawn/join) in parser/binder.
+- Harden channel endpoint lifetime/escape diagnostics in binder.
+- Define channel close/cancellation behavior for structured shutdown.
+- Add configurable buffering/backpressure policy for channels.
 
 ### M10: .NET Interop Surface
 Objective: controlled access to .NET APIs and NuGet packages.
