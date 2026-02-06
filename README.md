@@ -22,7 +22,7 @@ Axom is a minimal, opinionated language for .NET focused on clarity over clevern
 If you like the .NET ecosystem but want a smaller, more deliberate language, Axom offers a few concrete advantages:
 
 - **Smaller surface area** — fewer constructs and one obvious way to do things means less incidental complexity than C#.
-- **Explicit errors** — errors are values (`Result`/`Option` planned), making failure paths visible instead of hidden in exceptions.
+- **Explicit errors** — errors are values (`Result`/`Option`), making failure paths visible instead of hidden in exceptions.
 - **Immutable by default** — safer state handling with mutation opt-in (`let mut`).
 - **Match-first control flow** — `match` is the primary branching tool, keeping logic explicit and centralized.
 - **.NET interop without losing Axom’s shape** — you can call into existing C# libraries while writing Axom code.
@@ -123,6 +123,8 @@ There is a minimal local VS Code extension for Axom syntax highlighting:
 
 Project status, implemented features, and future plans live in the single source of truth:
 - `roadmap.md`
+
+Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 
 ## Building and Running
 
@@ -230,7 +232,6 @@ Axom intentionally omits `if`, `while`, `for`, and `loop`. Instead:
 ### Explicit Error Handling
 
 ```axom
-// Planned syntax
 pub fn load(id: Int) -> Result<User, String> {
   let raw = db.get(id)?
   Ok(parse(raw)?)
@@ -242,10 +243,12 @@ Errors are values (`Result`/`Option`), not exceptions.
 ### Immutability by Default
 
 ```axom
-let x = 10        // Immutable
-let mut y = 20    // Mutable (scope-local only)
+let x = 10
+let mut y = 20
 y = y + 1
 ```
+
+`let` is immutable by default; `let mut` enables local mutable state.
 
 ## Contributing
 

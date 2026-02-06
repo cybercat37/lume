@@ -42,22 +42,24 @@ Runtime + tooling:
 
 ## Gap Analysis (Spec vs Implementation)
 
+Status labels used across docs: `Implemented`, `Partial`, `Planned`.
+
 | Area | Spec Expectation | Current Status | Notes / Gaps |
 | --- | --- | --- | --- |
 | Pattern match v1 | Exhaustive match, diagnostics | Implemented | Prior roadmap listed as pending; now consolidated here |
 | Float type v1 | Float literals + ops | Implemented | Prior roadmap listed as next focus; now consolidated here |
 | Tail-call optimization | Compiler optimizes tail calls | Partial | Interpreter supports TCO; codegen pending |
 | Comments vs intent | No traditional comments; intent is the planned alternative | Implemented | Spec + intent proposal aligned |
-| Result/Option + ? | Explicit error types + propagation | Not implemented | Spec and tutorial list planned |
-| Collections + iterators | List/Map + combinators | Not implemented | Spec + proposal exist |
+| Result/Option + ? | Explicit error types + propagation | Implemented | `?` and `.unwrap()` available for `Result` and `Option` |
+| Collections + iterators | List/Map + combinators | Partial | List/Map literals implemented; iterator combinators remain planned |
 | Tuples (general) | Tuple literals + destructuring | Partial | Match tuples exist; general tuples planned |
-| Generics | Minimal generics | Not implemented | Roadmap v0.5 item |
-| Modules/imports | One-file modules + import | Not implemented | Spec planned |
-| String interpolation | f"...{expr}..." | Not implemented | Spec planned |
-| Intent annotations | @intent + effect checks + docs | Not implemented | Step 14 pending |
-| Concurrency model | scope/spawn/join/cancel/par | Not implemented | Spec planned |
-| .NET interop | Direct calls + NuGet | Not implemented | Spec planned |
-| Pipeline operator + combinators | \|> and combinators | Not implemented | Proposal only |
+| Generics | Minimal generics | Partial | Function generics are implemented; type generics remain planned |
+| Modules/imports | One-file modules + import | Planned | Spec planned |
+| String interpolation | f"...{expr}..." | Planned | Spec planned |
+| Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
+| Concurrency model | scope/spawn/join/cancel/par | Partial | Runtime prototype + parser/binder stubs exist; full semantics pending |
+| .NET interop | Direct calls + NuGet | Planned | Spec planned |
+| Pipeline operator + combinators | \|> and combinators | Planned | Proposal only |
 
 ## Milestones (Priority Ordered)
 
@@ -85,19 +87,19 @@ Key tasks:
 - Define lowered node set and conversions.
 - Update diagnostics flow to remain consistent.
 
-### M2: Generics v1 + Tuples + Destructuring
-Objective: unlock reusable types and tuple-first programming.
+### M2: Generics v1 + Tuples + Destructuring (Done)
+Objective: unlock reusable functions and tuple-first programming.
 
 DoD:
-- Generic parameters on functions and types.
-- Tuple literals, tuple types, destructuring in let and match.
+- Generic parameters on functions.
+- Tuple type syntax in function signatures and tuple destructuring in let/match.
 - Diagnostics for arity/type mismatches.
 
 Key tasks:
-- Decide monomorphization vs boxing strategy for codegen.
-- Extend binder/type checker for tuple unification.
+- Extend generics from functions to types (follow-up).
+- Continue tuple support beyond current syntax/usage.
 
-### M3: Collections v1 + Iteration
+### M3: Collections v1 + Iteration (Partial)
 Objective: core list/map literals and iteration helpers.
 
 DoD:
@@ -105,23 +107,22 @@ DoD:
 - Map literal syntax (String keys) + lookups.
 - Stdlib each/map/fold/filter for lists.
 
-Key tasks:
-- Interpreter support for list/map semantics.
-- Codegen mapping to C# collections.
+Status:
+- List/map literal support is implemented.
+- Iterator combinators remain pending.
 
-### M4: Error Handling Core
+### M4: Error Handling Core (Done)
 Objective: Result/Option and propagation semantics.
 
 DoD:
 - Result/Option types in stdlib.
-- Postfix ? works for Result and Option.
-- .unwrap() with clear diagnostics.
+- Postfix `?` works for `Result` and `Option`.
+- `.unwrap()` with clear diagnostics.
 
 Key tasks:
-- Control-flow lowering for early return.
-- Update diagnostics snapshots for error propagation.
+- Extend diagnostics quality and examples for complex propagation chains.
 
-### M5: Pattern Match v2
+### M5: Pattern Match v2 (Partial)
 Objective: match guards + list patterns + richer exhaustiveness.
 
 DoD:
@@ -129,10 +130,9 @@ DoD:
 - Exhaustiveness and unreachable diagnostics for new pattern types.
 - Interpreter/codegen parity.
 
-Key tasks:
-- Extend pattern AST/binder.
-- Improve exhaustiveness analysis.
-- Rename match guard keyword from `if` to `when` (syntax cleanup; breaking).
+Status:
+- Guards for variants/records are implemented.
+- List/rest patterns and related exhaustiveness work remain pending.
 
 ### M6: Modules, Imports, Visibility
 Objective: establish module boundary and namespacing model.

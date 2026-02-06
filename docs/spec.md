@@ -26,6 +26,8 @@ code.
 
 This section captures agreed design choices to guide implementation.
 
+Status labels used across docs: `Implemented`, `Partial`, `Planned`.
+
 ### Functions
 - Parameters require type annotations: `fn add(x: Int, y: Int) -> Int { x + y }`.
 - Return is implicit from the last expression; `return` is allowed for early exit.
@@ -62,16 +64,16 @@ This section captures agreed design choices to guide implementation.
 
 ### Modules & Visibility
 - One file = one module; no nested modules for now.
-- `import` with aliasing and selective imports is supported.
-- Visibility: `pub` or private only.
+- `import` with aliasing and selective imports is planned.
+- Visibility (`pub`/private) is planned with modules.
 
 ### Pattern Matching
-- Current implementation supports literal, `_`, identifier, and tuple patterns.
+- Current implementation supports literal, `_`, identifier, tuple, and record patterns.
 - Non-exhaustive match is an error; `_` is optional but recommended.
-- Guards, list patterns, and rest patterns are planned.
+- Guards for record/variant matches are implemented; list/rest patterns are planned.
 
 ### Option/Result
-- Option/Result live in stdlib; `?` applies only to `Result`.
+- Option/Result live in stdlib; `?` applies to both `Result` and `Option`.
 - `.unwrap()` exists (panic on None/Error).
 - Result error variant is `Error`; default error type is `String` for now.
 
@@ -174,11 +176,15 @@ Exceptions are not used for control flow in the core language.
 
 ### 2.2 Error Propagation Operator `?`
 
-The postfix operator `?` applies only to `Result<T, E>`.
+The postfix operator `?` applies to `Result<T, E>` and `Option<T>`.
 
 For Result:
 - `Ok(x)?` → evaluates to `x`
 - `Error(e)?` → returns `Error(e)` from the current function
+
+For Option:
+- `Some(x)?` → evaluates to `x`
+- `None?` → returns `None` from the current function
 
 Example:
 
@@ -196,7 +202,8 @@ pub fn load(id: Int) -> Result<User, Err> {
 
 - `match` expressions must be exhaustive
 - Non-exhaustive matches are compile-time errors
-- Current implementation works on literals and tuples
+- Current implementation supports literals, `_`, identifiers, tuples, and record patterns
+- Guards are available for record/variant patterns
 
 ```axom
 let message = match count {
@@ -272,19 +279,14 @@ The compiler optimizes tail calls to prevent stack overflow.
 For collections, use iterator combinators:
 
 ```axom
-// Iterate with side effects
 items.each(fn(x) { println x })
 
-// Transform
 let doubled = items.map(fn(x) { x * 2 })
 
-// Reduce
 let sum = items.fold(0, fn(acc, x) { acc + x })
 
-// Filter
 let evens = items.filter(fn(x) { x % 2 == 0 })
 
-// Numeric ranges
 range(1, 10).each(fn(i) { println i })
 ```
 
@@ -388,7 +390,7 @@ let result = par compute(data)?
 
 ## 6. Types & Data
 
-- Primitive types: Int (64-bit), Bool, String
+- Primitive types: Int (64-bit), Float (64-bit), Bool, String
 - Records (with `type` keyword)
 - Sum types
 - Generics (minimal, with `<T>` syntax)
@@ -447,4 +449,4 @@ Notes:
 
 ---
 
-Status: Draft v0.2 (see `roadmap.md` for implementation status)
+Status: Draft v0.4 (see `roadmap.md` for implementation status)

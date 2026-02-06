@@ -5,6 +5,7 @@ Concise tutorial for experienced developers who want to learn Axom quickly.
 Axom favors explicit flow and a compact language surface. Instead of many branching constructs, it centers on `match` and a few orthogonal concepts, so behavior stays obvious at a glance.
 
 Implementation status is tracked in `roadmap.md`.
+Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 
 
 ---
@@ -223,7 +224,7 @@ let x = 10
 
 ---
 
-### 2.5 Intent Annotations
+### 2.5 Intent Annotations (Planned)
 
 Intent annotations are built-in attributes used for diagnostics and documentation.
 
@@ -309,7 +310,7 @@ The compiler optimizes tail calls to prevent stack overflow.
 
 ---
 
-### 3.4 Iteration with Standard Library
+### 3.4 Iteration with Standard Library (Planned)
 
 For collections, use iterator combinators:
 
@@ -347,7 +348,7 @@ Return is implicit from the last expression. Explicit `return` is allowed for ea
 
 ```axom
 fn greet(name: String) {
-  println f"Hello, {name}!"
+  println "Hello, " + name + "!"
 }
 ```
 
@@ -407,9 +408,9 @@ let name = user.name
 ### 5.2 Sum Types (Enums with Payload)
 
 ```axom
-type Result<T, E> {
-  Ok(T)
-  Error(E)
+type Result {
+  Ok(Int)
+  Error(String)
 }
 
 let success = Ok(42)
@@ -419,7 +420,7 @@ let failure = Error("Something went wrong")
 
 ---
 
-### 5.3 Generics
+### 5.3 Generics (Partial)
 
 ```axom
 fn identity<T>(x: T) -> T {
@@ -433,12 +434,14 @@ let str = identity("hello")
 
 ---
 
-### 5.4 Tuples
+### 5.4 Tuples (Partial)
 
 ```axom
 let pair = (1, "hello")
 let (x, y) = pair
 ```
+
+Tuple destructuring is implemented; full tuple coverage is still in progress.
 
 
 ---
@@ -450,13 +453,13 @@ let (x, y) = pair
 Axom uses explicit types for error handling:
 
 ```axom
-type Result<T, E> {
-  Ok(T)
-  Error(E)
+type ParseResult {
+  Ok(String)
+  Error(String)
 }
 
-type Option<T> {
-  Some(T)
+type MaybeName {
+  Some(String)
   None
 }
 ```
@@ -520,7 +523,7 @@ Use only when you're certain there won't be an error.
 
 ---
 
-### 6.5 .NET Exception Interop
+### 6.5 .NET Exception Interop (Planned)
 
 Axom does not expose try/catch in the core language. Interop with .NET exceptions is explicit:
 
@@ -560,7 +563,7 @@ Keys are `String` only for now.
 
 ---
 
-### 7.3 Iterator Combinators
+### 7.3 Iterator Combinators (Planned)
 
 ```axom
 [1, 2, 3].each(fn(x) { println x })
@@ -575,7 +578,7 @@ let evens = [1, 2, 3, 4].filter(fn(x) { x % 2 == 0 })
 
 ---
 
-### 7.4 Range
+### 7.4 Range (Planned)
 
 ```axom
 range(1, 10).each(fn(i) { println i })
@@ -584,7 +587,7 @@ range(1, 10).each(fn(i) { println i })
 
 ---
 
-## 8. Modules and Visibility
+## 8. Modules and Visibility (Planned)
 
 ### 8.1 One File = One Module
 
@@ -614,7 +617,7 @@ fn private_function() { }
 
 ---
 
-## 9. Concurrency and Parallelism
+## 9. Concurrency and Parallelism (Planned/Prototype)
 
 ### 9.1 Effects and Suspension
 
@@ -724,7 +727,7 @@ Builders must be "frozen" to produce immutable values.
 
 ---
 
-## 11. .NET Interoperability
+## 11. .NET Interoperability (Planned)
 
 ### 11.1 Direct Calls
 
@@ -750,7 +753,7 @@ Generated code compiles to standard .NET assemblies.
 
 ---
 
-## 12. String Interpolation
+## 12. String Interpolation (Planned)
 
 ```axom
 let name = "Alice"

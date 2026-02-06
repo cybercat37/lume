@@ -107,7 +107,7 @@ lowers to a compiler-generated function equivalent to:
 
 ```axom
 fn __map(items) {
-  // build result list with tail recursion or loop
+  __map_impl(items)
 }
 ```
 
