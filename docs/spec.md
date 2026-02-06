@@ -392,6 +392,60 @@ CPU parallelism uses `scope` + `spawn { ... }` + `task.join()`.
 
 ---
 
+### 5.6 Message Passing (Planned)
+
+Axom message passing uses typed channels.
+
+Primitives:
+- `channel<T>() -> (Sender<T>, Receiver<T>)`
+- `tx.send(value)`
+- `rx.recv() -> T`
+
+Rules:
+- `recv()` is blocking until a message arrives.
+- No explicit `close()` in user code.
+- Channel lifetime is scoped; endpoints cannot escape owner scope.
+- Protocol termination is explicit in message type (for example `Stop`).
+
+```axom
+type Msg {
+  Value(Int)
+  Stop
+}
+
+fn sender_loop(tx: Sender<Msg>, n: Int) {
+  match n == 10 {
+    true -> tx.send(Stop)
+    false -> {
+      tx.send(Value(n))
+      wait(1000)
+      sender_loop(tx, n + 1)
+    }
+  }
+}
+
+fn worker_loop(rx: Receiver<Msg>) {
+  let msg = rx.recv()
+  match msg {
+    Value(x) -> {
+      println x
+      worker_loop(rx)
+    }
+    Stop -> println "done"
+  }
+}
+
+scope {
+  let (tx, rx) = channel<Msg>()
+  let sender_task = spawn { sender_loop(tx, 0) }
+  let worker_task = spawn { worker_loop(rx) }
+  sender_task.join()
+  worker_task.join()
+}
+```
+
+---
+
 ## 6. Types & Data
 
 - Primitive types: Int (64-bit), Float (64-bit), Bool, String

@@ -692,6 +692,58 @@ CPU parallelism uses `scope` + `spawn { ... }` + `task.join()`.
 
 ---
 
+### 9.6 Message Passing with Channels (Planned)
+
+Channels provide typed communication between spawned tasks.
+
+- `channel<T>()` returns `(Sender<T>, Receiver<T>)`
+- `send` enqueues one message
+- `recv` blocks until one message is available
+
+`recv()` returns `T` in this model, so protocol termination is represented in the message type.
+
+```axom
+type Msg {
+  Value(Int)
+  Stop
+}
+
+fn sender_loop(tx: Sender<Msg>, n: Int) {
+  match n == 10 {
+    true -> tx.send(Stop)
+    false -> {
+      tx.send(Value(n))
+      wait(1000)
+      sender_loop(tx, n + 1)
+    }
+  }
+}
+
+fn worker_loop(rx: Receiver<Msg>) {
+  let msg = rx.recv()
+  match msg {
+    Value(x) -> {
+      println x
+      worker_loop(rx)
+    }
+    Stop -> println "done"
+  }
+}
+
+scope {
+  let (tx, rx) = channel<Msg>()
+  let sender_task = spawn { sender_loop(tx, 0) }
+  let worker_task = spawn { worker_loop(rx) }
+  sender_task.join()
+  worker_task.join()
+}
+```
+
+Endpoints are scoped values: they can be passed to child scopes/tasks, but they do not escape the owner scope.
+
+
+---
+
 ## 10. Mutability
 
 ### 10.1 Immutability by Default
