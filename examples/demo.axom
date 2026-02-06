@@ -157,13 +157,17 @@ println id(1)
 println id("hi")
 
 println "*** concurrency (runtime prototype) ***"
+fn heavy(x: Int) -> Int => x * x + 1
+
 scope {
-  let a = spawn { 1 + 1 }
-  let b = spawn { 3 + 4 }
-  println a.join()
-  println b.join()
+  let a = spawn { heavy(2) }
+  let b = spawn { heavy(3) }
+  let total = a.join() + b.join()
+  println total
 }
-println par (10 + 20)
+
+println par heavy(5)
+println par ((1 + 2) * (3 + 4))
 
 
 println fib(8)
