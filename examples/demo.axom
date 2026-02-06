@@ -149,6 +149,14 @@ fn id<T>(x: T) -> T => x
 println id(1)
 println id("hi")
 
+println "*** concurrency (runtime prototype) ***"
+scope {
+  let a = spawn { 1 + 1 }
+  let b = spawn { 3 + 4 }
+  println join a
+  println join b
+}
+
 
 println fib(8)
 println fact(5)

@@ -34,6 +34,7 @@ Language core:
 Runtime + tooling:
 - Interpreter and codegen (C# emitter)
 - Dedicated lowering pass with lowered nodes
+- Concurrency runtime prototype (scope/spawn/join)
 - CLI: check, build, run (+ out/verbosity flags)
 - Golden + snapshot tests and fuzz harness
 - Compilation cache and large input guardrail
