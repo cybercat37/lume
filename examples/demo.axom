@@ -166,9 +166,6 @@ scope {
   println total
 }
 
-println par heavy(5)
-println par ((1 + 2) * (3 + 4))
-
 
 println fib(8)
 println fact(5)

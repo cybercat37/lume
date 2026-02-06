@@ -57,7 +57,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Modules/imports | One-file modules + import | Planned | Spec planned |
 | String interpolation | f"...{expr}..." | Planned | Spec planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
-| Concurrency model | scope/spawn/join/cancel/par | Partial | Runtime prototype + parser/binder stubs exist; full semantics pending |
+| Concurrency model | scope/spawn/join/cancel | Partial | Runtime prototype + parser/binder stubs exist; full semantics pending |
 | .NET interop | Direct calls + NuGet | Planned | Spec planned |
 | Pipeline operator + combinators | \|> and combinators | Planned | Proposal only |
 
@@ -172,7 +172,7 @@ Objective: structured concurrency and explicit parallel execution.
 DoD:
 - scope/spawn/join semantics with cancellation.
 - Suspensive function typing (ValueTask mapping).
-- par for CPU parallelism.
+- CPU parallelism via structured `scope` + `spawn` patterns.
 
 Key tasks:
 - Runtime primitives and scheduler model.

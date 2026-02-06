@@ -40,23 +40,4 @@ public class LexerKeywordTests
         Assert.Equal(TokenKind.EndOfFile, tokens[^1].Kind);
     }
 
-    [Fact]
-    public void Par_keyword_is_tokenized()
-    {
-        var sourceText = new SourceText("print par 1", "test.axom");
-        var lexer = new Lexer(sourceText);
-
-        var tokens = new List<SyntaxToken>();
-        SyntaxToken token;
-        do
-        {
-            token = lexer.Lex();
-            tokens.Add(token);
-        } while (token.Kind != TokenKind.EndOfFile);
-
-        Assert.Equal(TokenKind.PrintKeyword, tokens[0].Kind);
-        Assert.Equal(TokenKind.ParKeyword, tokens[1].Kind);
-        Assert.Equal(TokenKind.NumberLiteral, tokens[2].Kind);
-        Assert.Equal(TokenKind.EndOfFile, tokens[^1].Kind);
-    }
 }

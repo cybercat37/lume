@@ -168,11 +168,6 @@ public sealed class Lowerer
             BoundSpawnExpression spawn => new LoweredSpawnExpression(
                 LowerSpawnBlock(spawn.Body),
                 spawn.Type),
-            BoundParExpression par => new LoweredJoinExpression(
-                new LoweredSpawnExpression(
-                    new LoweredBlockExpression(Array.Empty<LoweredStatement>(), LowerExpression(par.Expression)),
-                    TypeSymbol.Task(par.Type)),
-                par.Type),
             BoundJoinExpression join => new LoweredJoinExpression(
                 LowerExpression(join.Expression),
                 join.Type),

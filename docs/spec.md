@@ -381,10 +381,14 @@ Fire-and-forget is intentionally impossible.
 ### 5.5 CPU Parallelism
 
 ```axom
-let result = par compute(data)?
+scope {
+  let a = spawn { compute_a(data) }
+  let b = spawn { compute_b(data) }
+  let result = a.join() + b.join()
+}
 ```
 
-`par` is the only supported way to express CPU parallelism.
+CPU parallelism uses `scope` + `spawn { ... }` + `task.join()`.
 
 ---
 
