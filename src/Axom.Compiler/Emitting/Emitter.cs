@@ -18,6 +18,11 @@ public sealed class Emitter
             builder.AppendLine("using System.Collections.Generic;");
         }
 
+        if (RequiresChannels(program))
+        {
+            builder.AppendLine("using System.Collections.Concurrent;");
+        }
+
         if (RequiresTasks(program))
         {
             builder.AppendLine("using System.Threading.Tasks;");
@@ -31,6 +36,12 @@ public sealed class Emitter
         foreach (var sum in program.SumTypes)
         {
             WriteSumType(builder, sum);
+            builder.AppendLine();
+        }
+
+        if (RequiresChannels(program))
+        {
+            WriteChannelRuntime(builder);
             builder.AppendLine();
         }
         builder.AppendLine("class Program");
@@ -63,6 +74,11 @@ public sealed class Emitter
         return program.Statements.Any(UsesTasks) || program.Functions.Any(function => UsesTasks(function.Body));
     }
 
+    private static bool RequiresChannels(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesChannels) || program.Functions.Any(function => UsesChannels(function.Body));
+    }
+
     private static bool UsesCollections(LoweredStatement statement)
     {
         return statement switch
@@ -87,6 +103,20 @@ public sealed class Emitter
             LoweredExpressionStatement expressionStatement => UsesTasks(expressionStatement.Expression),
             LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesTasks(returnStatement.Expression),
             LoweredIfStatement ifStatement => UsesTasks(ifStatement.Condition) || UsesTasks(ifStatement.Then) || (ifStatement.Else is not null && UsesTasks(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesChannels(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesChannels),
+            LoweredVariableDeclaration declaration => UsesChannels(declaration.Initializer),
+            LoweredPrintStatement print => UsesChannels(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesChannels(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesChannels(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesChannels(ifStatement.Condition) || UsesChannels(ifStatement.Then) || (ifStatement.Else is not null && UsesChannels(ifStatement.Else)),
             _ => false
         };
     }
@@ -145,6 +175,38 @@ public sealed class Emitter
             LoweredTupleExpression tuple => tuple.Elements.Any(UsesTasks),
             LoweredListExpression list => list.Elements.Any(UsesTasks),
             LoweredMapExpression map => map.Entries.Any(entry => UsesTasks(entry.Key) || UsesTasks(entry.Value)),
+            _ => false
+        };
+    }
+
+    private static bool UsesChannels(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredChannelCreateExpression => true,
+            LoweredChannelSendExpression => true,
+            LoweredChannelReceiveExpression => true,
+            LoweredCallExpression call => UsesChannels(call.Callee) || call.Arguments.Any(UsesChannels),
+            LoweredUnaryExpression unary => UsesChannels(unary.Operand),
+            LoweredBinaryExpression binary => UsesChannels(binary.Left) || UsesChannels(binary.Right),
+            LoweredAssignmentExpression assignment => UsesChannels(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesChannels) || UsesChannels(block.Result),
+            LoweredLambdaExpression lambda => UsesChannels(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesChannels(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesChannels(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesChannels(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesChannels(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesChannels(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesChannels(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesChannels(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesChannels(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesChannels(unwrap.Target),
+            LoweredIndexExpression index => UsesChannels(index.Target) || UsesChannels(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesChannels),
+            LoweredListExpression list => list.Elements.Any(UsesChannels),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesChannels(entry.Key) || UsesChannels(entry.Value)),
+            LoweredSpawnExpression spawn => UsesChannels(spawn.Body),
+            LoweredJoinExpression join => UsesChannels(join.Expression),
             _ => false
         };
     }
@@ -252,9 +314,12 @@ public sealed class Emitter
             LoweredListExpression list => WriteListExpression(list),
             LoweredIndexExpression index => WriteIndexExpression(index),
             LoweredMapExpression map => WriteMapExpression(map),
+            LoweredChannelCreateExpression channelCreate => WriteChannelCreateExpression(channelCreate),
             LoweredUnwrapExpression unwrap => WriteUnwrapExpression(unwrap),
             LoweredSpawnExpression spawn => WriteSpawnExpression(spawn),
             LoweredJoinExpression join => WriteJoinExpression(join),
+            LoweredChannelSendExpression send => WriteChannelSendExpression(send),
+            LoweredChannelReceiveExpression recv => WriteChannelReceiveExpression(recv),
             LoweredTupleAccessExpression tupleAccess => WriteTupleAccessExpression(tupleAccess),
             LoweredRecordLiteralExpression record => WriteRecordLiteralExpression(record),
             LoweredFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
@@ -349,6 +414,24 @@ public sealed class Emitter
     {
         var target = WriteExpression(join.Expression);
         return $"{target}.Result";
+    }
+
+    private static string WriteChannelCreateExpression(LoweredChannelCreateExpression channelCreate)
+    {
+        return $"AxomChannels.channel<{TypeToCSharp(channelCreate.ElementType)}>()";
+    }
+
+    private static string WriteChannelSendExpression(LoweredChannelSendExpression send)
+    {
+        var sender = WriteExpression(send.Sender);
+        var value = WriteExpression(send.Value);
+        return $"{sender}.send({value})";
+    }
+
+    private static string WriteChannelReceiveExpression(LoweredChannelReceiveExpression recv)
+    {
+        var receiver = WriteExpression(recv.Receiver);
+        return $"{receiver}.recv()";
     }
 
     private static string WriteTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
@@ -582,6 +665,16 @@ public sealed class Emitter
 
     private static string TypeToCSharp(TypeSymbol type)
     {
+        if (type.IsChannelSender && type.ChannelElementType is not null)
+        {
+            return $"AxomSender<{TypeToCSharp(type.ChannelElementType)}>";
+        }
+
+        if (type.IsChannelReceiver && type.ChannelElementType is not null)
+        {
+            return $"AxomReceiver<{TypeToCSharp(type.ChannelElementType)}>";
+        }
+
         if (type.MapValueType is not null)
         {
             return $"Dictionary<string, {TypeToCSharp(type.MapValueType)}>";
@@ -713,6 +806,49 @@ public sealed class Emitter
         "while",
         "var"
     };
+
+    private static void WriteChannelRuntime(StringBuilder builder)
+    {
+        builder.AppendLine("sealed class AxomChannelState<T>");
+        builder.AppendLine("{");
+        builder.AppendLine("    public BlockingCollection<T> Queue { get; } = new();");
+        builder.AppendLine("}");
+        builder.AppendLine();
+        builder.AppendLine("sealed class AxomSender<T>");
+        builder.AppendLine("{");
+        builder.AppendLine("    private readonly AxomChannelState<T> state;");
+        builder.AppendLine("    public AxomSender(AxomChannelState<T> state)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        this.state = state;");
+        builder.AppendLine("    }");
+        builder.AppendLine("    public void send(T value)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        state.Queue.Add(value);");
+        builder.AppendLine("    }");
+        builder.AppendLine("}");
+        builder.AppendLine();
+        builder.AppendLine("sealed class AxomReceiver<T>");
+        builder.AppendLine("{");
+        builder.AppendLine("    private readonly AxomChannelState<T> state;");
+        builder.AppendLine("    public AxomReceiver(AxomChannelState<T> state)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        this.state = state;");
+        builder.AppendLine("    }");
+        builder.AppendLine("    public T recv()");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return state.Queue.Take();");
+        builder.AppendLine("    }");
+        builder.AppendLine("}");
+        builder.AppendLine();
+        builder.AppendLine("static class AxomChannels");
+        builder.AppendLine("{");
+        builder.AppendLine("    public static (AxomSender<T>, AxomReceiver<T>) channel<T>()");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var state = new AxomChannelState<T>();");
+        builder.AppendLine("        return (new AxomSender<T>(state), new AxomReceiver<T>(state));");
+        builder.AppendLine("    }");
+        builder.AppendLine("}");
+    }
 
     private static string EscapeString(string value)
     {

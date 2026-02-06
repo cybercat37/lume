@@ -169,6 +169,46 @@ scope {
   println total
 }
 
+println "*** channels (v1) ***"
+let (tx, rx) = channel<Int>()
+
+fn sender_loop(n: Int) {
+  match n == 5 {
+    true -> tx.send(-1)
+    false -> sender_step(n)
+  }
+}
+
+fn sender_step(n: Int) {
+  tx.send(n)
+  sender_loop(n + 1)
+}
+
+fn worker_loop() {
+  let value = rx.recv()
+  match value == -1 {
+    true -> worker_done()
+    false -> worker_step(value)
+  }
+}
+
+fn worker_done() {
+  println "done"
+}
+
+fn worker_step(value: Int) {
+  println value
+  worker_loop()
+}
+
+scope {
+  let sender = spawn { sender_loop(0) }
+  let worker = spawn { worker_loop() }
+
+  sender.join()
+  worker.join()
+}
+
 
 println fib(8)
 println fact(5)

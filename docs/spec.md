@@ -392,7 +392,7 @@ CPU parallelism uses `scope` + `spawn { ... }` + `task.join()`.
 
 ---
 
-### 5.6 Message Passing (Planned)
+### 5.6 Message Passing (Partial)
 
 Axom message passing uses typed channels.
 
@@ -406,6 +406,7 @@ Rules:
 - No explicit `close()` in user code.
 - Channel lifetime is scoped; endpoints cannot escape owner scope.
 - Protocol termination is explicit in message type (for example `Stop`).
+- Current implementation supports `channel<T>()`, `send`, and blocking `recv` for task communication.
 
 ```axom
 type Msg {

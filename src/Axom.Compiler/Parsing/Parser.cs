@@ -495,6 +495,12 @@ public sealed class Parser
 
                 return new InputExpressionSyntax(NextToken());
             case TokenKind.Identifier:
+                if (string.Equals(Current().Text, "channel", StringComparison.Ordinal) &&
+                    Peek(1).Kind == TokenKind.Less)
+                {
+                    return ParseChannelExpression();
+                }
+
                 if (allowRecordLiteral && Peek(1).Kind == TokenKind.OpenBrace)
                 {
                     return ParseRecordLiteralExpression();
@@ -514,6 +520,17 @@ public sealed class Parser
                 }
                 return new LiteralExpressionSyntax(missing);
         }
+    }
+
+    private ExpressionSyntax ParseChannelExpression()
+    {
+        var channelIdentifier = MatchToken(TokenKind.Identifier, "channel");
+        var lessToken = MatchToken(TokenKind.Less, "<");
+        var elementType = ParseTypeSyntax();
+        var greaterToken = MatchToken(TokenKind.Greater, ">");
+        var openParenToken = MatchToken(TokenKind.OpenParen, "(");
+        var closeParenToken = MatchToken(TokenKind.CloseParen, ")");
+        return new ChannelExpressionSyntax(channelIdentifier, lessToken, elementType, greaterToken, openParenToken, closeParenToken);
     }
 
     private ExpressionSyntax ParseListOrMapExpression()

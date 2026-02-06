@@ -692,7 +692,7 @@ CPU parallelism uses `scope` + `spawn { ... }` + `task.join()`.
 
 ---
 
-### 9.6 Message Passing with Channels (Planned)
+### 9.6 Message Passing with Channels (Partial)
 
 Channels provide typed communication between spawned tasks.
 
@@ -740,6 +740,8 @@ scope {
 ```
 
 Endpoints are scoped values: they can be passed to child scopes/tasks, but they do not escape the owner scope.
+
+Current implementation supports channel creation, send, and blocking recv in scope/spawn workflows.
 
 
 ---

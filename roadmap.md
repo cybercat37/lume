@@ -57,7 +57,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Modules/imports | One-file modules + import | Planned | Spec planned |
 | String interpolation | f"...{expr}..." | Planned | Spec planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
-| Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channels are planned |
+| Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv is implemented |
 | .NET interop | Direct calls + NuGet | Planned | Spec planned |
 | Pipeline operator + combinators | \|> and combinators | Planned | Proposal only |
 

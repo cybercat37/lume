@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
@@ -191,12 +192,18 @@ public sealed class Interpreter
                     return EvaluateIndexExpression(index);
                 case LoweredMapExpression map:
                     return EvaluateMapExpression(map);
+                case LoweredChannelCreateExpression channelCreate:
+                    return EvaluateChannelCreateExpression(channelCreate);
                 case LoweredUnwrapExpression unwrap:
                     return EvaluateUnwrapExpression(unwrap);
                 case LoweredSpawnExpression spawn:
                     return EvaluateSpawnExpression(spawn);
                 case LoweredJoinExpression join:
                     return EvaluateJoinExpression(join);
+                case LoweredChannelSendExpression send:
+                    return EvaluateChannelSendExpression(send);
+                case LoweredChannelReceiveExpression recv:
+                    return EvaluateChannelReceiveExpression(recv);
                 case LoweredTupleAccessExpression tupleAccess:
                     return EvaluateTupleAccessExpression(tupleAccess);
                 case LoweredRecordLiteralExpression record:
@@ -290,6 +297,40 @@ public sealed class Interpreter
             }
 
             return dictionary;
+        }
+
+        private object? EvaluateChannelCreateExpression(LoweredChannelCreateExpression channelCreate)
+        {
+            var state = new ChannelState();
+            var sender = new ChannelSender(state);
+            var receiver = new ChannelReceiver(state);
+            return new object?[] { sender, receiver };
+        }
+
+        private object? EvaluateChannelSendExpression(LoweredChannelSendExpression send)
+        {
+            var senderValue = EvaluateExpression(send.Sender);
+            var value = EvaluateExpression(send.Value);
+            if (senderValue is ChannelSender sender)
+            {
+                sender.Send(value);
+                return null;
+            }
+
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "send expects a sender handle."));
+            return null;
+        }
+
+        private object? EvaluateChannelReceiveExpression(LoweredChannelReceiveExpression recv)
+        {
+            var receiverValue = EvaluateExpression(recv.Receiver);
+            if (receiverValue is ChannelReceiver receiver)
+            {
+                return receiver.Receive();
+            }
+
+            diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "recv expects a receiver handle."));
+            return null;
         }
 
         private object? EvaluateUnwrapExpression(LoweredUnwrapExpression unwrap)
@@ -947,6 +988,41 @@ public sealed class Interpreter
         private sealed class ScopeFrame
         {
             public List<SpawnHandle> Handles { get; } = new();
+        }
+
+        private sealed class ChannelState
+        {
+            public BlockingCollection<object?> Queue { get; } = new();
+        }
+
+        private sealed class ChannelSender
+        {
+            private readonly ChannelState state;
+
+            public ChannelSender(ChannelState state)
+            {
+                this.state = state;
+            }
+
+            public void Send(object? value)
+            {
+                state.Queue.Add(value);
+            }
+        }
+
+        private sealed class ChannelReceiver
+        {
+            private readonly ChannelState state;
+
+            public ChannelReceiver(ChannelState state)
+            {
+                this.state = state;
+            }
+
+            public object? Receive()
+            {
+                return state.Queue.Take();
+            }
         }
 
         private sealed record SpawnOutcome(object? Value, string Output, List<Diagnostic> Diagnostics);

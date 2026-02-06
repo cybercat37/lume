@@ -156,4 +156,40 @@ scope {
         Assert.Empty(result.Diagnostics);
     }
 
+    [Fact]
+    public void Channel_send_recv_bind_without_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let (tx, rx) = channel<Int>()
+  tx.send(1)
+  print rx.recv()
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Channel_send_type_mismatch_produces_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let (tx, rx) = channel<Int>()
+  tx.send(""x"")
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains("send() expects", result.Diagnostics[0].Message, StringComparison.OrdinalIgnoreCase);
+    }
+
 }

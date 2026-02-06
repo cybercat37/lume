@@ -160,6 +160,7 @@ public sealed class Lowerer
                     LowerExpression(entry.Key),
                     LowerExpression(entry.Value))).ToList(),
                 map.Type),
+            BoundChannelCreateExpression channel => new LoweredChannelCreateExpression(channel.ElementType),
             BoundQuestionExpression question => LowerQuestionExpression(question),
             BoundUnwrapExpression unwrap => new LoweredUnwrapExpression(
                 LowerExpression(unwrap.Expression),
@@ -171,6 +172,12 @@ public sealed class Lowerer
             BoundJoinExpression join => new LoweredJoinExpression(
                 LowerExpression(join.Expression),
                 join.Type),
+            BoundChannelSendExpression send => new LoweredChannelSendExpression(
+                LowerExpression(send.Sender),
+                LowerExpression(send.Value)),
+            BoundChannelReceiveExpression recv => new LoweredChannelReceiveExpression(
+                LowerExpression(recv.Receiver),
+                recv.Type),
             BoundRecordLiteralExpression record => new LoweredRecordLiteralExpression(
                 record.RecordType,
                 record.Fields.Select(field => new LoweredRecordFieldAssignment(

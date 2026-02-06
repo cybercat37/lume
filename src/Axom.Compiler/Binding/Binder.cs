@@ -517,6 +517,8 @@ public sealed class Binder
                 return BindListExpression(list);
             case MapExpressionSyntax map:
                 return BindMapExpression(map);
+            case ChannelExpressionSyntax channel:
+                return BindChannelExpression(channel);
             case RecordLiteralExpressionSyntax record:
                 return BindRecordLiteralExpression(record);
             case FieldAccessExpressionSyntax fieldAccess:
@@ -687,6 +689,12 @@ public sealed class Binder
         var body = (BoundBlockStatement)BindBlockStatement(spawn.Body);
         var inferred = InferReturnType(TypeSymbol.Unit, body, null, allowUnitFallback: true);
         return new BoundSpawnExpression(body, TypeSymbol.Task(inferred));
+    }
+
+    private BoundExpression BindChannelExpression(ChannelExpressionSyntax channel)
+    {
+        var elementType = BindType(channel.ElementType);
+        return new BoundChannelCreateExpression(elementType);
     }
 
     private BoundExpression BindFieldAccessExpression(FieldAccessExpressionSyntax fieldAccess)
@@ -1529,6 +1537,64 @@ public sealed class Binder
             return new BoundJoinExpression(target, target.Type.TaskResultType);
         }
 
+        if (call.Callee is FieldAccessExpressionSyntax sendFieldAccess &&
+            string.Equals(sendFieldAccess.IdentifierToken.Text, "send", StringComparison.Ordinal))
+        {
+            var sender = BindExpression(sendFieldAccess.Target);
+            if (!sender.Type.IsChannelSender || sender.Type.ChannelElementType is null)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    sendFieldAccess.Span,
+                    "send() can only be used on sender values."));
+                var fallbackValue = call.Arguments.Count > 0
+                    ? BindExpression(call.Arguments[0])
+                    : new BoundLiteralExpression(null, TypeSymbol.Error);
+                return new BoundChannelSendExpression(sender, fallbackValue);
+            }
+
+            if (call.Arguments.Count != 1)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    call.Span,
+                    "send() expects 1 argument."));
+                var fallbackValue = call.Arguments.Count > 0
+                    ? BindExpression(call.Arguments[0])
+                    : new BoundLiteralExpression(null, TypeSymbol.Error);
+                return new BoundChannelSendExpression(sender, fallbackValue);
+            }
+
+            var value = BindExpression(call.Arguments[0]);
+            var elementType = sender.Type.ChannelElementType;
+            if (value.Type != elementType && value.Type != TypeSymbol.Error && elementType != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    call.Arguments[0].Span,
+                    $"send() expects '{elementType}' but got '{value.Type}'."));
+            }
+
+            return new BoundChannelSendExpression(sender, value);
+        }
+
+        if (call.Callee is FieldAccessExpressionSyntax recvFieldAccess &&
+            string.Equals(recvFieldAccess.IdentifierToken.Text, "recv", StringComparison.Ordinal) &&
+            call.Arguments.Count == 0)
+        {
+            var receiver = BindExpression(recvFieldAccess.Target);
+            if (!receiver.Type.IsChannelReceiver || receiver.Type.ChannelElementType is null)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    recvFieldAccess.Span,
+                    "recv() can only be used on receiver values."));
+                return new BoundChannelReceiveExpression(receiver, TypeSymbol.Error);
+            }
+
+            return new BoundChannelReceiveExpression(receiver, receiver.Type.ChannelElementType);
+        }
+
         if (call.Callee is FieldAccessExpressionSyntax unwrapFieldAccess &&
             string.Equals(unwrapFieldAccess.IdentifierToken.Text, "unwrap", StringComparison.Ordinal) &&
             call.Arguments.Count == 0)
@@ -1736,6 +1802,20 @@ public sealed class Binder
         {
             var value = SubstituteGenericTypes(type.MapValueType, substitutions);
             return TypeSymbol.Map(value);
+        }
+
+        if (type.ChannelElementType is not null)
+        {
+            var element = SubstituteGenericTypes(type.ChannelElementType, substitutions);
+            if (type.IsChannelSender)
+            {
+                return TypeSymbol.Sender(element);
+            }
+
+            if (type.IsChannelReceiver)
+            {
+                return TypeSymbol.Receiver(element);
+            }
         }
 
         if (type.TupleElementTypes is not null)

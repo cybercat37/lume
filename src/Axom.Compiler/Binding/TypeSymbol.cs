@@ -11,6 +11,9 @@ public sealed class TypeSymbol
     public TypeSymbol? ListElementType { get; }
     public TypeSymbol? MapValueType { get; }
     public TypeSymbol? TaskResultType { get; }
+    public TypeSymbol? ChannelElementType { get; }
+    public bool IsChannelSender { get; }
+    public bool IsChannelReceiver { get; }
     public IReadOnlyList<SumVariantSymbol>? SumVariants { get; }
     public bool IsGenericParameter { get; }
 
@@ -22,6 +25,9 @@ public sealed class TypeSymbol
         TypeSymbol? listElementType = null,
         TypeSymbol? mapValueType = null,
         TypeSymbol? taskResultType = null,
+        TypeSymbol? channelElementType = null,
+        bool isChannelSender = false,
+        bool isChannelReceiver = false,
         IReadOnlyList<SumVariantSymbol>? sumVariants = null,
         bool isGenericParameter = false)
     {
@@ -32,6 +38,9 @@ public sealed class TypeSymbol
         ListElementType = listElementType;
         MapValueType = mapValueType;
         TaskResultType = taskResultType;
+        ChannelElementType = channelElementType;
+        IsChannelSender = isChannelSender;
+        IsChannelReceiver = isChannelReceiver;
         SumVariants = sumVariants;
         IsGenericParameter = isGenericParameter;
     }
@@ -73,6 +82,18 @@ public sealed class TypeSymbol
     {
         var name = $"Task<{resultType.Name}>";
         return new TypeSymbol(name, taskResultType: resultType);
+    }
+
+    public static TypeSymbol Sender(TypeSymbol elementType)
+    {
+        var name = $"Sender<{elementType.Name}>";
+        return new TypeSymbol(name, channelElementType: elementType, isChannelSender: true);
+    }
+
+    public static TypeSymbol Receiver(TypeSymbol elementType)
+    {
+        var name = $"Receiver<{elementType.Name}>";
+        return new TypeSymbol(name, channelElementType: elementType, isChannelReceiver: true);
     }
 
     public static TypeSymbol Record(string name)
