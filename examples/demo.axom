@@ -149,7 +149,10 @@ println add_one(0)
 println add_one(2)
 println add_one_result(0)
 println add_one_result(2)
-println Some(2).unwrap()
+println match Some(2) {
+  Some(v) -> v
+  None -> 0
+}
 
 println "*** generics (functions) ***"
 fn id<T>(x: T) -> T => x

@@ -511,14 +511,21 @@ let name = match maybe_name {
 
 ---
 
-### 6.4 .unwrap()
+### 6.4 Handling Option/Result without `.unwrap()`
 
 ```axom
-let value = result.unwrap()
-let name = option.unwrap()
+let value = match result {
+  Ok(x) -> x
+  Error(_) -> 0
+}
+
+let name = match option {
+  Some(n) -> n
+  None -> "Unknown"
+}
 ```
 
-Use only when you're certain there won't be an error.
+Prefer pattern matching so failures are explicit.
 
 
 ---
@@ -781,9 +788,12 @@ match result {
 }
 ```
 
-❌ **Avoid** `.unwrap()` unless necessary:
+❌ **Avoid** dropping error information:
 ```axom
-let value = result.unwrap()
+match result {
+  Ok(value) -> value
+  Error(_) -> 0
+}
 ```
 
 ---
