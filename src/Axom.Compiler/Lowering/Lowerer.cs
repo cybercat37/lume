@@ -93,14 +93,8 @@ public sealed class Lowerer
             new LoweredVariableDeclaration(valueTemp, LowerExpression(deconstruction.Initializer))
         };
 
-        var thenBlock = new LoweredBlockStatement(patternResult.Bindings);
-        var elseBlock = new LoweredBlockStatement(new List<LoweredStatement>
-        {
-            new LoweredExpressionStatement(new LoweredMatchFailureExpression(TypeSymbol.Unit))
-        });
-
-        statements.Add(new LoweredIfStatement(patternResult.Condition, thenBlock, elseBlock));
-        return new LoweredBlockStatement(statements);
+        statements.AddRange(patternResult.Bindings);
+        return new LoweredBlockStatement(statements, isTransparent: true);
     }
 
     private LoweredStatement LowerReturnStatement(BoundReturnStatement returnStatement)

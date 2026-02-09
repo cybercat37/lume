@@ -1,0 +1,14 @@
+scope {
+  let (tx, rx) = channel<Int>()
+
+  let sender = spawn {
+    tx.send(42)
+  }
+
+  let worker = spawn {
+    println rx.recv()
+  }
+
+  sender.join()
+  worker.join()
+}

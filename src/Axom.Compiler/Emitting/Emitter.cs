@@ -228,6 +228,16 @@ public sealed class Emitter
         switch (statement)
         {
             case LoweredBlockStatement block:
+                if (block.IsTransparent)
+                {
+                    foreach (var inner in block.Statements)
+                    {
+                        WriteStatement(writer, inner);
+                    }
+
+                    return;
+                }
+
                 writer.WriteLine("{");
                 writer.Indent();
                 foreach (var inner in block.Statements)
@@ -405,14 +415,25 @@ public sealed class Emitter
 
     private static string WriteSpawnExpression(LoweredSpawnExpression spawn)
     {
-        var taskType = TypeToCSharp(spawn.Type.TaskResultType ?? TypeSymbol.Error);
         var body = WriteExpression(spawn.Body);
+        var resultType = spawn.Type.TaskResultType ?? TypeSymbol.Error;
+        if (resultType == TypeSymbol.Unit)
+        {
+            return $"Task.Run(() => {body})";
+        }
+
+        var taskType = TypeToCSharp(resultType);
         return $"Task.Run<{taskType}>(() => {body})";
     }
 
     private static string WriteJoinExpression(LoweredJoinExpression join)
     {
         var target = WriteExpression(join.Expression);
+        if (join.Type == TypeSymbol.Unit)
+        {
+            return $"((Func<object?>)(() => {{ {target}.Wait(); return null; }}))()";
+        }
+
         return $"{target}.Result";
     }
 
@@ -495,6 +516,11 @@ public sealed class Emitter
         }
         else
         {
+            if (block.Result is not LoweredDefaultExpression)
+            {
+                writer.WriteLine($"{WriteExpression(block.Result)};");
+            }
+
             writer.WriteLine("return;");
         }
 
@@ -660,7 +686,31 @@ public sealed class Emitter
 
     private static string EscapeIdentifier(string name)
     {
-        return CSharpKeywords.Contains(name) ? $"@{name}" : name;
+        if (string.IsNullOrEmpty(name))
+        {
+            return "_";
+        }
+
+        var builder = new StringBuilder(name.Length + 1);
+        var first = name[0];
+        if (char.IsLetter(first) || first == '_')
+        {
+            builder.Append(first);
+        }
+        else
+        {
+            builder.Append('_');
+            builder.Append(char.IsLetterOrDigit(first) ? first : '_');
+        }
+
+        for (var i = 1; i < name.Length; i++)
+        {
+            var ch = name[i];
+            builder.Append(char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_');
+        }
+
+        var sanitized = builder.ToString();
+        return CSharpKeywords.Contains(sanitized) ? $"@{sanitized}" : sanitized;
     }
 
     private static string TypeToCSharp(TypeSymbol type)

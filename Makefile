@@ -1,4 +1,4 @@
-.PHONY: build test test-pipeline test-hardening fuzz run demo clean pack publish help
+.PHONY: build test test-pipeline test-hardening fuzz run demo demo-example clean pack publish help
 
 # Default target
 help:
@@ -11,6 +11,7 @@ help:
 	@echo "  make run FILE=hello.axom - Compile and run a Axom file"
 	@echo "  make compile FILE=hello.axom - Compile a Axom file (build only)"
 	@echo "  make demo      - Run a quick demo (print \"ciao\")"
+	@echo "  make demo-example - Run examples/demo-run.axom"
 	@echo "  make pack      - Build the NuGet package (tool)"
 	@echo "  make publish PACKAGE=... - Push NuGet package"
 	@echo "  make clean      - Clean build artifacts"
@@ -56,6 +57,10 @@ run:
 demo:
 	@printf 'print "ciao"\n' > out/demo.axom
 	dotnet run --project src/axom -- run out/demo.axom
+
+# Run repository demo file
+demo-example:
+	dotnet run --project src/axom -- run examples/demo-run.axom
 
 # Build the NuGet package
 pack:

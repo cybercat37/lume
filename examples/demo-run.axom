@@ -1,0 +1,27 @@
+println "Axom demo (runnable)"
+
+fn add(x: Int, y: Int) -> Int => x + y
+
+println add(2, 3)
+
+scope {
+  let a = spawn { 1 + 2 }
+  let b = spawn { 3 + 4 }
+  println a.join() + b.join()
+}
+
+println "channels"
+scope {
+  let (tx, rx) = channel<Int>()
+
+  let sender = spawn {
+    tx.send(42)
+  }
+
+  let worker = spawn {
+    println rx.recv()
+  }
+
+  sender.join()
+  worker.join()
+}
