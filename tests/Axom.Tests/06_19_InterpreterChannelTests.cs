@@ -34,4 +34,28 @@ scope {
         Assert.Equal("3", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Scope_close_unblocks_recv_with_error_result()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let (tx, rx) = channel<Int>()
+
+  let worker = spawn {
+    print match rx.recv() {
+      Ok(x) -> x
+      Error(_) -> -1
+    }
+  }
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("-1", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

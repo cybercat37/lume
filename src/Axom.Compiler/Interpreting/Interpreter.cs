@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Axom.Compiler.Binding;
 using Axom.Compiler.Diagnostics;
@@ -102,6 +103,7 @@ public sealed class Interpreter
                         finally
                         {
                             scopeFrames.Pop();
+                            CloseScopeChannels(frame);
                             AutoJoinScope(frame);
                         }
 
@@ -302,6 +304,11 @@ public sealed class Interpreter
         private object? EvaluateChannelCreateExpression(LoweredChannelCreateExpression channelCreate)
         {
             var state = new ChannelState();
+            if (scopeFrames.Count > 0)
+            {
+                scopeFrames.Peek().Channels.Add(state);
+            }
+
             var sender = new ChannelSender(state);
             var receiver = new ChannelReceiver(state);
             return new object?[] { sender, receiver };
@@ -328,8 +335,14 @@ public sealed class Interpreter
             {
                 var elementType = recv.Type.ResultValueType ?? TypeSymbol.Error;
                 var resultType = TypeSymbol.Result(elementType, TypeSymbol.String);
-                var okVariant = new SumVariantSymbol("Ok", resultType, elementType);
-                return new SumValue(okVariant, receiver.Receive());
+                if (receiver.TryReceive(out var value))
+                {
+                    var okVariant = new SumVariantSymbol("Ok", resultType, elementType);
+                    return new SumValue(okVariant, value);
+                }
+
+                var errorVariant = new SumVariantSymbol("Error", resultType, TypeSymbol.String);
+                return new SumValue(errorVariant, "channel closed");
             }
 
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "recv expects a receiver handle."));
@@ -404,6 +417,14 @@ public sealed class Interpreter
             foreach (var handle in frame.Handles)
             {
                 MergeSpawnOutcome(handle);
+            }
+        }
+
+        private static void CloseScopeChannels(ScopeFrame frame)
+        {
+            foreach (var channel in frame.Channels)
+            {
+                channel.Close();
             }
         }
 
@@ -991,11 +1012,20 @@ public sealed class Interpreter
         private sealed class ScopeFrame
         {
             public List<SpawnHandle> Handles { get; } = new();
+            public List<ChannelState> Channels { get; } = new();
         }
 
         private sealed class ChannelState
         {
             public BlockingCollection<object?> Queue { get; } = new();
+
+            public void Close()
+            {
+                if (!Queue.IsAddingCompleted)
+                {
+                    Queue.CompleteAdding();
+                }
+            }
         }
 
         private sealed class ChannelSender
@@ -1022,9 +1052,9 @@ public sealed class Interpreter
                 this.state = state;
             }
 
-            public object? Receive()
+            public bool TryReceive(out object? value)
             {
-                return state.Queue.Take();
+                return state.Queue.TryTake(out value, Timeout.Infinite);
             }
         }
 
