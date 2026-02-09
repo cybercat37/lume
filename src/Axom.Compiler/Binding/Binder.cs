@@ -18,6 +18,8 @@ public sealed class Binder
     private List<TypeSymbol>? returnTypes;
     private Dictionary<string, TypeSymbol>? genericTypeParameters;
     private int scopeStatementDepth;
+    private int currentScopeDepth;
+    private readonly Stack<int> returnBoundaryDepths = new();
     private readonly Dictionary<string, TypeSymbol> recordTypes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, BoundRecordTypeDeclaration> recordDefinitions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TypeSymbol> sumTypes = new(StringComparer.Ordinal);
@@ -45,6 +47,8 @@ public sealed class Binder
         sumDefinitions.Clear();
         variantDefinitions.Clear();
         scopeStatementDepth = 0;
+        currentScopeDepth = 0;
+        returnBoundaryDepths.Clear();
         DeclareBuiltins();
 
         var statements = new List<BoundStatement>();
@@ -360,6 +364,7 @@ public sealed class Binder
     {
         var previousScope = scope;
         scope = new BoundScope(previousScope);
+        currentScopeDepth++;
         var statements = new List<BoundStatement>();
 
         foreach (var statement in block.Statements)
@@ -368,6 +373,7 @@ public sealed class Binder
         }
 
         scope = previousScope;
+        currentScopeDepth--;
         return new BoundBlockStatement(statements, isScopeBlock);
     }
 
@@ -412,13 +418,15 @@ public sealed class Binder
         var previousFunction = currentFunction;
         var previousReturnTypes = returnTypes;
         scope = new BoundScope(previousScope);
+        currentScopeDepth++;
         currentFunction = functionSymbol;
         returnTypes = new List<TypeSymbol>();
+        returnBoundaryDepths.Push(currentScopeDepth);
 
         var parameterSymbols = new List<VariableSymbol>();
         foreach (var parameter in functionSymbol.Parameters)
         {
-            var symbol = new VariableSymbol(parameter.Name, false, parameter.Type);
+            var symbol = new VariableSymbol(parameter.Name, false, parameter.Type, currentScopeDepth);
             parameterSymbols.Add(symbol);
             var declared = scope.TryDeclare(symbol);
             if (declared is null)
@@ -454,6 +462,8 @@ public sealed class Binder
         currentFunction = previousFunction;
         returnTypes = previousReturnTypes;
         scope = previousScope;
+        currentScopeDepth--;
+        returnBoundaryDepths.Pop();
         genericTypeParameters = previousGenericParameters;
         return new BoundFunctionDeclaration(functionSymbol, parameterSymbols, body);
     }
@@ -470,7 +480,7 @@ public sealed class Binder
             VariableSymbol? declaredSymbol = null;
             if (!string.IsNullOrEmpty(name))
             {
-                var symbol = new VariableSymbol(name, isMutable, type);
+                var symbol = new VariableSymbol(name, isMutable, type, currentScopeDepth);
                 declaredSymbol = scope.TryDeclare(symbol);
                 if (declaredSymbol is null)
                 {
@@ -481,7 +491,7 @@ public sealed class Binder
                 }
             }
 
-            declaredSymbol ??= new VariableSymbol(name, isMutable, type);
+            declaredSymbol ??= new VariableSymbol(name, isMutable, type, currentScopeDepth);
             return new BoundVariableDeclaration(declaredSymbol, initializer);
         }
 
@@ -958,7 +968,7 @@ public sealed class Binder
             }
         }
 
-        var symbol = new VariableSymbol(name, false, targetType);
+        var symbol = new VariableSymbol(name, false, targetType, currentScopeDepth);
         var declared = scope.TryDeclare(symbol);
         if (declared is null)
         {
@@ -1465,6 +1475,15 @@ public sealed class Binder
         }
 
         var boundExpression = BindExpression(assignment.Expression);
+        if (IsChannelEndpointType(symbol.Type))
+        {
+            ReportChannelEndpointEscape(
+                boundExpression,
+                symbol.DeclaredScopeDepth,
+                assignment.IdentifierToken.Span,
+                $"Cannot assign channel endpoint to '{symbol.Name}' because it escapes its owner scope.");
+        }
+
         if (boundExpression.Type != symbol.Type && boundExpression.Type != TypeSymbol.Error && symbol.Type != TypeSymbol.Error)
         {
             diagnostics.Add(Diagnostic.Error(
@@ -1833,6 +1852,14 @@ public sealed class Binder
             ? null
             : BindExpression(returnStatement.Expression);
         var expressionType = expression?.Type ?? TypeSymbol.Unit;
+        if (expression is not null && returnBoundaryDepths.Count > 0)
+        {
+            ReportChannelEndpointEscape(
+                expression,
+                returnBoundaryDepths.Peek(),
+                returnStatement.ReturnKeyword.Span,
+                "Cannot return channel endpoint from a deeper scope.");
+        }
 
         if (currentFunction is null && lambdaStack.Count == 0)
         {
@@ -1853,14 +1880,16 @@ public sealed class Binder
     {
         var previousScope = scope;
         scope = new BoundScope(previousScope);
+        currentScopeDepth++;
         var context = new LambdaBindingContext(scope);
         lambdaStack.Push(context);
+        returnBoundaryDepths.Push(currentScopeDepth);
 
         var parameterSymbols = new List<VariableSymbol>();
         foreach (var parameter in lambda.Parameters)
         {
             var type = BindType(parameter.Type);
-            var symbol = new VariableSymbol(parameter.IdentifierToken.Text, false, type);
+            var symbol = new VariableSymbol(parameter.IdentifierToken.Text, false, type, currentScopeDepth);
             parameterSymbols.Add(symbol);
             var declared = scope.TryDeclare(symbol);
             if (declared is null)
@@ -1902,6 +1931,8 @@ public sealed class Binder
 
         lambdaStack.Pop();
         scope = previousScope;
+        currentScopeDepth--;
+        returnBoundaryDepths.Pop();
 
         var captures = context.Captures.ToList();
         var parameterTypes = parameterSymbols.Select(parameter => parameter.Type).ToList();
@@ -1951,6 +1982,117 @@ public sealed class Binder
         }
 
         return false;
+    }
+
+    private void ReportChannelEndpointEscape(BoundExpression expression, int targetScopeDepth, TextSpan span, string message)
+    {
+        var endpointSymbols = new List<VariableSymbol>();
+        CollectChannelEndpointSymbols(expression, endpointSymbols);
+        if (endpointSymbols.Any(symbol => symbol.DeclaredScopeDepth > targetScopeDepth))
+        {
+            diagnostics.Add(Diagnostic.Error(SourceText, span, message));
+        }
+    }
+
+    private static void CollectChannelEndpointSymbols(BoundExpression expression, List<VariableSymbol> symbols)
+    {
+        switch (expression)
+        {
+            case BoundNameExpression name when IsChannelEndpointType(name.Symbol.Type):
+                symbols.Add(name.Symbol);
+                return;
+            case BoundAssignmentExpression assignment:
+                CollectChannelEndpointSymbols(assignment.Expression, symbols);
+                return;
+            case BoundUnaryExpression unary:
+                CollectChannelEndpointSymbols(unary.Operand, symbols);
+                return;
+            case BoundBinaryExpression binary:
+                CollectChannelEndpointSymbols(binary.Left, symbols);
+                CollectChannelEndpointSymbols(binary.Right, symbols);
+                return;
+            case BoundCallExpression call:
+                CollectChannelEndpointSymbols(call.Callee, symbols);
+                foreach (var argument in call.Arguments)
+                {
+                    CollectChannelEndpointSymbols(argument, symbols);
+                }
+
+                return;
+            case BoundTupleExpression tuple:
+                foreach (var element in tuple.Elements)
+                {
+                    CollectChannelEndpointSymbols(element, symbols);
+                }
+
+                return;
+            case BoundListExpression list:
+                foreach (var element in list.Elements)
+                {
+                    CollectChannelEndpointSymbols(element, symbols);
+                }
+
+                return;
+            case BoundMapExpression map:
+                foreach (var entry in map.Entries)
+                {
+                    CollectChannelEndpointSymbols(entry.Key, symbols);
+                    CollectChannelEndpointSymbols(entry.Value, symbols);
+                }
+
+                return;
+            case BoundIndexExpression index:
+                CollectChannelEndpointSymbols(index.Target, symbols);
+                CollectChannelEndpointSymbols(index.Index, symbols);
+                return;
+            case BoundMatchExpression match:
+                CollectChannelEndpointSymbols(match.Expression, symbols);
+                foreach (var arm in match.Arms)
+                {
+                    if (arm.Guard is not null)
+                    {
+                        CollectChannelEndpointSymbols(arm.Guard, symbols);
+                    }
+
+                    CollectChannelEndpointSymbols(arm.Expression, symbols);
+                }
+
+                return;
+            case BoundRecordLiteralExpression record:
+                foreach (var field in record.Fields)
+                {
+                    CollectChannelEndpointSymbols(field.Expression, symbols);
+                }
+
+                return;
+            case BoundFieldAccessExpression fieldAccess:
+                CollectChannelEndpointSymbols(fieldAccess.Target, symbols);
+                return;
+            case BoundSumConstructorExpression sum when sum.Payload is not null:
+                CollectChannelEndpointSymbols(sum.Payload, symbols);
+                return;
+            case BoundQuestionExpression question:
+                CollectChannelEndpointSymbols(question.Expression, symbols);
+                return;
+            case BoundUnwrapExpression unwrap:
+                CollectChannelEndpointSymbols(unwrap.Expression, symbols);
+                return;
+            case BoundSpawnExpression:
+            case BoundLambdaExpression:
+            case BoundChannelCreateExpression:
+            case BoundChannelSendExpression:
+            case BoundChannelReceiveExpression:
+            case BoundJoinExpression:
+            case BoundLiteralExpression:
+            case BoundInputExpression:
+            case BoundFunctionExpression:
+                return;
+        }
+    }
+
+    private static bool IsChannelEndpointType(TypeSymbol type)
+    {
+        return type.IsChannelSender || type.IsChannelReceiver;
     }
 
     private void InferAndValidateReturnType(

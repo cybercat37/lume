@@ -192,4 +192,48 @@ scope {
         Assert.Contains("send() expects", result.Diagnostics[0].Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Returning_channel_endpoint_from_nested_scope_produces_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+fn leak() {
+  scope {
+    let (tx, rx) = channel<Int>()
+    return tx
+  }
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("deeper scope", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Assigning_inner_channel_endpoint_to_outer_variable_produces_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let (tx, rx) = channel<Int>()
+  let mut sink = tx
+  {
+    let (innerTx, innerRx) = channel<Int>()
+    sink = innerTx
+  }
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("escapes", StringComparison.OrdinalIgnoreCase));
+    }
+
 }
