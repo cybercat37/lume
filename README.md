@@ -126,6 +126,11 @@ Project status, implemented features, and future plans live in the single source
 
 Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 
+Current concurrency status (Partial):
+- Structured concurrency uses `scope` + `spawn { ... }` + `task.join()`.
+- Channel messaging v1 is available with `channel<T>()`, `send`, and blocking `recv`.
+- Endpoint lifetime/escape diagnostics and close/cancellation semantics are follow-up work.
+
 ## Building and Running
 
 ### Prerequisites
@@ -147,6 +152,8 @@ dotnet build
 axom run path/to/file.axom
 # or (from source)
 dotnet run --project src/axom -- run path/to/file.axom
+# runnable repo demo
+make demo-example
 ```
 
 ### Check a Axom Program
