@@ -17,8 +17,8 @@ scope {
   }
 
   let worker = spawn {
-    let a = rx.recv()
-    let b = rx.recv()
+    let a = rx.recv().unwrap()
+    let b = rx.recv().unwrap()
     print a + b
   }
 

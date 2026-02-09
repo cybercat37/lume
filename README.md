@@ -129,7 +129,8 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 Current concurrency status (Partial):
 - Structured concurrency uses `scope` + `spawn { ... }` + `task.join()`.
 - Channel messaging v1 is available with `channel<T>()`, `send`, and blocking `recv`.
-- Endpoint lifetime/escape diagnostics and close/cancellation semantics are follow-up work.
+- Strict channel semantics are available: `recv` returns `Result<T, String>` and must be handled via `?` or `match`.
+- Close/cancellation semantics and backpressure policy are follow-up work.
 
 ## Building and Running
 

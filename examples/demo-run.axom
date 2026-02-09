@@ -19,7 +19,7 @@ scope {
   }
 
   let worker = spawn {
-    println rx.recv()
+    println rx.recv().unwrap()
   }
 
   sender.join()

@@ -193,6 +193,46 @@ scope {
     }
 
     [Fact]
+    public void Recv_result_must_be_handled()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let (tx, rx) = channel<Int>()
+  rx.recv()
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("must be handled", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Recv_result_can_be_handled_with_match()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let (tx, rx) = channel<Int>()
+  let value = match rx.recv() {
+    Ok(x) -> x
+    Error(_) -> 0
+  }
+  print value
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public void Returning_channel_endpoint_from_nested_scope_produces_diagnostic()
     {
         var sourceText = new SourceText(@"

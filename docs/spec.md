@@ -399,17 +399,18 @@ Axom message passing uses typed channels.
 Primitives:
 - `channel<T>() -> (Sender<T>, Receiver<T>)`
 - `tx.send(value)`
-- `rx.recv() -> T`
+- `rx.recv() -> Result<T, String>`
 
 Rules:
 - `recv()` is blocking until a message arrives.
+- `recv()` results must be handled explicitly via `?` or `match`.
 - No explicit `close()` in user code.
 - Channel lifetime is scoped; endpoints cannot escape owner scope.
 - Protocol termination is explicit in message type (for example `Stop`).
 - Current implementation supports `channel<T>()`, `send`, and blocking `recv` for task communication.
+- Channel `recv` results are strict: they must be handled explicitly via `?` or `match`.
 
 Known limitations (current implementation):
-- Escape/lifetime checks for channel endpoints are not fully enforced in the binder yet.
 - Channel close/cancellation semantics are not implemented yet (termination is protocol-driven).
 - Parser support for `channel<T>()` is currently specialized rather than a general generic-call mechanism.
 - Buffer policy is currently minimal runtime behavior; no configurable backpressure strategy.
@@ -431,14 +432,14 @@ fn sender_loop(tx: Sender<Msg>, n: Int) {
   }
 }
 
-fn worker_loop(rx: Receiver<Msg>) {
-  let msg = rx.recv()
+fn worker_loop(rx: Receiver<Msg>) -> Result<Unit, String> {
+  let msg = rx.recv()?
   match msg {
     Value(x) -> {
       println x
       worker_loop(rx)
     }
-    Stop -> println "done"
+    Stop -> Ok(())
   }
 }
 
@@ -447,7 +448,10 @@ scope {
   let sender_task = spawn { sender_loop(tx, 0) }
   let worker_task = spawn { worker_loop(rx) }
   sender_task.join()
-  worker_task.join()
+  match worker_task.join() {
+    Ok(_) -> ()
+    Error(e) -> print e
+  }
 }
 ```
 

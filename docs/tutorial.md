@@ -700,7 +700,7 @@ Channels provide typed communication between spawned tasks.
 - `send` enqueues one message
 - `recv` blocks until one message is available
 
-`recv()` returns `T` in this model, so protocol termination is represented in the message type.
+`recv()` returns `Result<T, String>` and must be handled with `?` or `match`.
 
 ```axom
 type Msg {
@@ -719,14 +719,14 @@ fn sender_loop(tx: Sender<Msg>, n: Int) {
   }
 }
 
-fn worker_loop(rx: Receiver<Msg>) {
-  let msg = rx.recv()
+fn worker_loop(rx: Receiver<Msg>) -> Result<Unit, String> {
+  let msg = rx.recv()?
   match msg {
     Value(x) -> {
       println x
       worker_loop(rx)
     }
-    Stop -> println "done"
+    Stop -> Ok(())
   }
 }
 
@@ -735,7 +735,10 @@ scope {
   let sender_task = spawn { sender_loop(tx, 0) }
   let worker_task = spawn { worker_loop(rx) }
   sender_task.join()
-  worker_task.join()
+  match worker_task.join() {
+    Ok(_) -> ()
+    Error(e) -> print e
+  }
 }
 ```
 

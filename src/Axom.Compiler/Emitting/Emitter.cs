@@ -410,7 +410,7 @@ public sealed class Emitter
         var target = WriteExpression(unwrap.Target);
         var payloadType = TypeToCSharp(unwrap.Type);
         var failureTag = unwrap.FailureVariant.Name.Replace("\"", "\\\"");
-        return $"(() => {{ var __tmp = {target}; if (__tmp.Tag == \"{failureTag}\") throw new InvalidOperationException(\"Unwrap failed.\"); return ({payloadType})__tmp.Value; }})()";
+        return $"((Func<{payloadType}>)(() => {{ var __tmp = {target}; if (__tmp.Tag == \"{failureTag}\") throw new InvalidOperationException(\"Unwrap failed.\"); return ({payloadType})__tmp.Value; }}))()";
     }
 
     private static string WriteSpawnExpression(LoweredSpawnExpression spawn)
@@ -715,6 +715,11 @@ public sealed class Emitter
 
     private static string TypeToCSharp(TypeSymbol type)
     {
+        if (type.ResultValueType is not null && type.ResultErrorType is not null)
+        {
+            return $"AxomResult<{TypeToCSharp(type.ResultValueType)}>";
+        }
+
         if (type.IsChannelSender && type.ChannelElementType is not null)
         {
             return $"AxomSender<{TypeToCSharp(type.ChannelElementType)}>";
@@ -859,6 +864,20 @@ public sealed class Emitter
 
     private static void WriteChannelRuntime(StringBuilder builder)
     {
+        builder.AppendLine("sealed class AxomResult<T>");
+        builder.AppendLine("{");
+        builder.AppendLine("    public string Tag { get; }");
+        builder.AppendLine("    public object? Value { get; }");
+        builder.AppendLine("    private AxomResult(string tag, object? value)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        Tag = tag;");
+        builder.AppendLine("        Value = value;");
+        builder.AppendLine("    }");
+        builder.AppendLine("    public static AxomResult<T> Ok(T value) => new(\"Ok\", value);");
+        builder.AppendLine("    public static AxomResult<T> Error(string message) => new(\"Error\", message);");
+        builder.AppendLine("    public override string ToString() => Tag == \"Ok\" ? $\"Ok({Value})\" : $\"Error({Value})\";");
+        builder.AppendLine("}");
+        builder.AppendLine();
         builder.AppendLine("sealed class AxomChannelState<T>");
         builder.AppendLine("{");
         builder.AppendLine("    public BlockingCollection<T> Queue { get; } = new();");
@@ -884,9 +903,9 @@ public sealed class Emitter
         builder.AppendLine("    {");
         builder.AppendLine("        this.state = state;");
         builder.AppendLine("    }");
-        builder.AppendLine("    public T recv()");
+        builder.AppendLine("    public AxomResult<T> recv()");
         builder.AppendLine("    {");
-        builder.AppendLine("        return state.Queue.Take();");
+        builder.AppendLine("        return AxomResult<T>.Ok(state.Queue.Take());");
         builder.AppendLine("    }");
         builder.AppendLine("}");
         builder.AppendLine();

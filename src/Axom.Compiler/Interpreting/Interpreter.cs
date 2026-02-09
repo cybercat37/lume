@@ -326,7 +326,10 @@ public sealed class Interpreter
             var receiverValue = EvaluateExpression(recv.Receiver);
             if (receiverValue is ChannelReceiver receiver)
             {
-                return receiver.Receive();
+                var elementType = recv.Type.ResultValueType ?? TypeSymbol.Error;
+                var resultType = TypeSymbol.Result(elementType, TypeSymbol.String);
+                var okVariant = new SumVariantSymbol("Ok", resultType, elementType);
+                return new SumValue(okVariant, receiver.Receive());
             }
 
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "recv expects a receiver handle."));

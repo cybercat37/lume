@@ -354,7 +354,16 @@ public sealed class Binder
                     scopeStatementDepth--;
                 }
             case ExpressionStatementSyntax expressionStatement:
-                return new BoundExpressionStatement(BindExpression(expressionStatement.Expression));
+                var expression = BindExpression(expressionStatement.Expression);
+                if (expression.Type.ResultValueType is not null)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        expressionStatement.Span,
+                        "Result value must be handled with '?' or 'match'."));
+                }
+
+                return new BoundExpressionStatement(expression);
             default:
                 throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
         }
@@ -1348,7 +1357,22 @@ public sealed class Binder
 
     private BoundSumTypeDeclaration? TryGetSumDefinition(TypeSymbol type)
     {
-        return sumDefinitions.TryGetValue(type.Name, out var sum) ? sum : null;
+        if (sumDefinitions.TryGetValue(type.Name, out var sum))
+        {
+            return sum;
+        }
+
+        if (type.ResultValueType is not null && type.ResultErrorType is not null)
+        {
+            var variants = new[]
+            {
+                new SumVariantSymbol("Ok", type, type.ResultValueType),
+                new SumVariantSymbol("Error", type, type.ResultErrorType)
+            };
+            return new BoundSumTypeDeclaration(type, variants);
+        }
+
+        return null;
     }
 
     private bool TryGetOptionOrResultShape(
@@ -1361,6 +1385,13 @@ public sealed class Binder
         var sum = TryGetSumDefinition(type);
         if (sum is null)
         {
+            if (type.ResultValueType is not null && type.ResultErrorType is not null)
+            {
+                successVariant = new SumVariantSymbol("Ok", type, type.ResultValueType);
+                failureVariant = new SumVariantSymbol("Error", type, type.ResultErrorType);
+                return true;
+            }
+
             return false;
         }
 
@@ -1374,7 +1405,9 @@ public sealed class Binder
         }
 
         var ok = sum.Variants.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
-        var err = sum.Variants.FirstOrDefault(variant => string.Equals(variant.Name, "Err", StringComparison.Ordinal));
+        var err = sum.Variants.FirstOrDefault(variant =>
+            string.Equals(variant.Name, "Err", StringComparison.Ordinal)
+            || string.Equals(variant.Name, "Error", StringComparison.Ordinal));
         if (ok is not null && err is not null)
         {
             successVariant = ok;
@@ -1611,7 +1644,7 @@ public sealed class Binder
                 return new BoundChannelReceiveExpression(receiver, TypeSymbol.Error);
             }
 
-            return new BoundChannelReceiveExpression(receiver, receiver.Type.ChannelElementType);
+            return new BoundChannelReceiveExpression(receiver, TypeSymbol.Result(receiver.Type.ChannelElementType, TypeSymbol.String));
         }
 
         if (call.Callee is FieldAccessExpressionSyntax unwrapFieldAccess &&
@@ -1835,6 +1868,13 @@ public sealed class Binder
             {
                 return TypeSymbol.Receiver(element);
             }
+        }
+
+        if (type.ResultValueType is not null && type.ResultErrorType is not null)
+        {
+            var value = SubstituteGenericTypes(type.ResultValueType, substitutions);
+            var error = SubstituteGenericTypes(type.ResultErrorType, substitutions);
+            return TypeSymbol.Result(value, error);
         }
 
         if (type.TupleElementTypes is not null)

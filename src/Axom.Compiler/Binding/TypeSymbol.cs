@@ -12,6 +12,8 @@ public sealed class TypeSymbol
     public TypeSymbol? MapValueType { get; }
     public TypeSymbol? TaskResultType { get; }
     public TypeSymbol? ChannelElementType { get; }
+    public TypeSymbol? ResultValueType { get; }
+    public TypeSymbol? ResultErrorType { get; }
     public bool IsChannelSender { get; }
     public bool IsChannelReceiver { get; }
     public IReadOnlyList<SumVariantSymbol>? SumVariants { get; }
@@ -26,6 +28,8 @@ public sealed class TypeSymbol
         TypeSymbol? mapValueType = null,
         TypeSymbol? taskResultType = null,
         TypeSymbol? channelElementType = null,
+        TypeSymbol? resultValueType = null,
+        TypeSymbol? resultErrorType = null,
         bool isChannelSender = false,
         bool isChannelReceiver = false,
         IReadOnlyList<SumVariantSymbol>? sumVariants = null,
@@ -39,6 +43,8 @@ public sealed class TypeSymbol
         MapValueType = mapValueType;
         TaskResultType = taskResultType;
         ChannelElementType = channelElementType;
+        ResultValueType = resultValueType;
+        ResultErrorType = resultErrorType;
         IsChannelSender = isChannelSender;
         IsChannelReceiver = isChannelReceiver;
         SumVariants = sumVariants;
@@ -94,6 +100,12 @@ public sealed class TypeSymbol
     {
         var name = $"Receiver<{elementType.Name}>";
         return new TypeSymbol(name, channelElementType: elementType, isChannelReceiver: true);
+    }
+
+    public static TypeSymbol Result(TypeSymbol valueType, TypeSymbol errorType)
+    {
+        var name = $"Result<{valueType.Name}, {errorType.Name}>";
+        return new TypeSymbol(name, resultValueType: valueType, resultErrorType: errorType);
     }
 
     public static TypeSymbol Record(string name)
