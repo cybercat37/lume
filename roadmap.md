@@ -166,7 +166,7 @@ Key tasks:
 - Decide effect taxonomy and warning codes.
 - Snapshot tests for warnings.
 
-### M9: Concurrency + Parallelism
+### M9: Concurrency + Parallelism (Mostly Complete)
 Objective: structured concurrency and explicit parallel execution.
 
 DoD:
@@ -177,7 +177,7 @@ DoD:
 - Strict channel error handling (`recv -> Result<T, String>`, explicit handling via `?`/`match`).
 - Bounded channel capacity (`channel<T>(N)`, default capacity).
 
-Key tasks:
+Remaining follow-up tasks:
 - Runtime primitives and scheduler model.
 - Effect tagging for suspensive functions.
 - Concurrency syntax stubs (scope/spawn/join) in parser/binder.
