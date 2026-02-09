@@ -71,4 +71,14 @@ fn id(x: Int) {
         Assert.Empty(syntaxTree.Diagnostics);
     }
 
+    [Fact]
+    public void Channel_expression_with_capacity_parses()
+    {
+        var sourceText = new SourceText("let pair = channel<Int>(8)", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
 }

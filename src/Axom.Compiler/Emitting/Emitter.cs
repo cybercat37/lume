@@ -439,7 +439,7 @@ public sealed class Emitter
 
     private static string WriteChannelCreateExpression(LoweredChannelCreateExpression channelCreate)
     {
-        return $"AxomChannels.channel<{TypeToCSharp(channelCreate.ElementType)}>()";
+        return $"AxomChannels.channel<{TypeToCSharp(channelCreate.ElementType)}>({channelCreate.Capacity})";
     }
 
     private static string WriteChannelSendExpression(LoweredChannelSendExpression send)
@@ -880,7 +880,11 @@ public sealed class Emitter
         builder.AppendLine();
         builder.AppendLine("sealed class AxomChannelState<T>");
         builder.AppendLine("{");
-        builder.AppendLine("    public BlockingCollection<T> Queue { get; } = new();");
+        builder.AppendLine("    public BlockingCollection<T> Queue { get; }");
+        builder.AppendLine("    public AxomChannelState(int capacity)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        Queue = new BlockingCollection<T>(new ConcurrentQueue<T>(), capacity);");
+        builder.AppendLine("    }");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine("sealed class AxomSender<T>");
@@ -911,9 +915,9 @@ public sealed class Emitter
         builder.AppendLine();
         builder.AppendLine("static class AxomChannels");
         builder.AppendLine("{");
-        builder.AppendLine("    public static (AxomSender<T>, AxomReceiver<T>) channel<T>()");
+        builder.AppendLine("    public static (AxomSender<T>, AxomReceiver<T>) channel<T>(int capacity = 64)");
         builder.AppendLine("    {");
-        builder.AppendLine("        var state = new AxomChannelState<T>();");
+        builder.AppendLine("        var state = new AxomChannelState<T>(capacity);");
         builder.AppendLine("        return (new AxomSender<T>(state), new AxomReceiver<T>(state));");
         builder.AppendLine("    }");
         builder.AppendLine("}");

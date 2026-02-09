@@ -697,6 +697,7 @@ CPU parallelism uses `scope` + `spawn { ... }` + `task.join()`.
 Channels provide typed communication between spawned tasks.
 
 - `channel<T>()` returns `(Sender<T>, Receiver<T>)`
+- `channel<T>(N)` creates a bounded channel with capacity `N`
 - `send` enqueues one message
 - `recv` blocks until one message is available
 
@@ -745,11 +746,13 @@ scope {
 Endpoints are scoped values: they can be passed to child scopes/tasks, but they do not escape the owner scope.
 
 Current implementation supports channel creation, send, and blocking recv in scope/spawn workflows.
+Scope teardown closes owned channels and unblocks `recv` with `Error("channel closed")`.
+Default channel capacity is `64`; use `channel<T>(N)` for bounded backpressure.
 
 Current limitations to keep in mind:
-- Endpoint lifetime/escape diagnostics are still being hardened.
-- There is no explicit close API yet; use a message protocol (for example `Stop`) to end workers.
-- Channel buffering/backpressure is not configurable in v1.
+- There is no explicit close API; channel close is lifecycle-driven by scope ownership.
+- Cancellation propagation semantics are not implemented yet.
+- Channel buffering currently supports bounded FIFO capacity only.
 
 
 ---

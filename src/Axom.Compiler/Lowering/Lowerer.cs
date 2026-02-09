@@ -154,7 +154,7 @@ public sealed class Lowerer
                     LowerExpression(entry.Key),
                     LowerExpression(entry.Value))).ToList(),
                 map.Type),
-            BoundChannelCreateExpression channel => new LoweredChannelCreateExpression(channel.ElementType),
+            BoundChannelCreateExpression channel => new LoweredChannelCreateExpression(channel.ElementType, channel.Capacity),
             BoundQuestionExpression question => LowerQuestionExpression(question),
             BoundUnwrapExpression unwrap => new LoweredUnwrapExpression(
                 LowerExpression(unwrap.Expression),

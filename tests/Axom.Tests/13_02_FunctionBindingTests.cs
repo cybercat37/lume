@@ -233,6 +233,43 @@ scope {
     }
 
     [Fact]
+    public void Channel_capacity_must_be_positive_integer_literal()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let (tx, rx) = channel<Int>(0)
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("greater than zero", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Channel_capacity_non_literal_produces_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let size = 4
+  let (tx, rx) = channel<Int>(size)
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("integer literal", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Returning_channel_endpoint_from_nested_scope_produces_diagnostic()
     {
         var sourceText = new SourceText(@"

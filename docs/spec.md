@@ -398,6 +398,7 @@ Axom message passing uses typed channels.
 
 Primitives:
 - `channel<T>() -> (Sender<T>, Receiver<T>)`
+- `channel<T>(capacity: Int)` for bounded buffers
 - `tx.send(value)`
 - `rx.recv() -> Result<T, String>`
 
@@ -409,11 +410,13 @@ Rules:
 - Protocol termination is explicit in message type (for example `Stop`).
 - Current implementation supports `channel<T>()`, `send`, and blocking `recv` for task communication.
 - Channel `recv` results are strict: they must be handled explicitly via `?` or `match`.
+- Scope teardown closes owned channels; blocked `recv()` returns `Error("channel closed")`.
+- Default channel capacity is `64`; custom bounded capacity is available with `channel<T>(N)`.
 
 Known limitations (current implementation):
-- Channel close/cancellation semantics are not implemented yet (termination is protocol-driven).
+- Cancellation propagation semantics are not implemented yet.
 - Parser support for `channel<T>()` is currently specialized rather than a general generic-call mechanism.
-- Buffer policy is currently minimal runtime behavior; no configurable backpressure strategy.
+- Buffer policy is currently bounded FIFO only; advanced backpressure strategies are not implemented yet.
 
 ```axom
 type Msg {

@@ -529,8 +529,14 @@ public sealed class Parser
         var elementType = ParseTypeSyntax();
         var greaterToken = MatchToken(TokenKind.Greater, ">");
         var openParenToken = MatchToken(TokenKind.OpenParen, "(");
+        ExpressionSyntax? capacityExpression = null;
+        if (Current().Kind != TokenKind.CloseParen)
+        {
+            capacityExpression = ParseExpression();
+        }
+
         var closeParenToken = MatchToken(TokenKind.CloseParen, ")");
-        return new ChannelExpressionSyntax(channelIdentifier, lessToken, elementType, greaterToken, openParenToken, closeParenToken);
+        return new ChannelExpressionSyntax(channelIdentifier, lessToken, elementType, greaterToken, openParenToken, capacityExpression, closeParenToken);
     }
 
     private ExpressionSyntax ParseListOrMapExpression()

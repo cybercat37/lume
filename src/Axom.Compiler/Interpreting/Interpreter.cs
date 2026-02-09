@@ -303,7 +303,7 @@ public sealed class Interpreter
 
         private object? EvaluateChannelCreateExpression(LoweredChannelCreateExpression channelCreate)
         {
-            var state = new ChannelState();
+            var state = new ChannelState(channelCreate.Capacity);
             if (scopeFrames.Count > 0)
             {
                 scopeFrames.Peek().Channels.Add(state);
@@ -1017,7 +1017,12 @@ public sealed class Interpreter
 
         private sealed class ChannelState
         {
-            public BlockingCollection<object?> Queue { get; } = new();
+            public BlockingCollection<object?> Queue { get; }
+
+            public ChannelState(int capacity)
+            {
+                Queue = new BlockingCollection<object?>(new ConcurrentQueue<object?>(), capacity);
+            }
 
             public void Close()
             {

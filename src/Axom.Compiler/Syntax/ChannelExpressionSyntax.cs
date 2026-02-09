@@ -10,6 +10,7 @@ public sealed class ChannelExpressionSyntax : ExpressionSyntax
     public TypeSyntax ElementType { get; }
     public SyntaxToken GreaterToken { get; }
     public SyntaxToken OpenParenToken { get; }
+    public ExpressionSyntax? CapacityExpression { get; }
     public SyntaxToken CloseParenToken { get; }
 
     public ChannelExpressionSyntax(
@@ -18,6 +19,7 @@ public sealed class ChannelExpressionSyntax : ExpressionSyntax
         TypeSyntax elementType,
         SyntaxToken greaterToken,
         SyntaxToken openParenToken,
+        ExpressionSyntax? capacityExpression,
         SyntaxToken closeParenToken)
     {
         ChannelIdentifier = channelIdentifier;
@@ -25,6 +27,7 @@ public sealed class ChannelExpressionSyntax : ExpressionSyntax
         ElementType = elementType;
         GreaterToken = greaterToken;
         OpenParenToken = openParenToken;
+        CapacityExpression = capacityExpression;
         CloseParenToken = closeParenToken;
     }
 

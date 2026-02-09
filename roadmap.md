@@ -57,7 +57,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Modules/imports | One-file modules + import | Planned | Spec planned |
 | String interpolation | f"...{expr}..." | Planned | Spec planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
-| Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv and strict `recv -> Result` handling are implemented |
+| Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity are implemented |
 | .NET interop | Direct calls + NuGet | Planned | Spec planned |
 | Pipeline operator + combinators | \|> and combinators | Planned | Proposal only |
 
@@ -175,14 +175,14 @@ DoD:
 - CPU parallelism via structured `scope` + `spawn` patterns.
 - Typed channel messaging (`channel<T>`, `send`, blocking `recv`).
 - Strict channel error handling (`recv -> Result<T, String>`, explicit handling via `?`/`match`).
+- Bounded channel capacity (`channel<T>(N)`, default capacity).
 
 Key tasks:
 - Runtime primitives and scheduler model.
 - Effect tagging for suspensive functions.
 - Concurrency syntax stubs (scope/spawn/join) in parser/binder.
-- Harden channel endpoint lifetime/escape diagnostics in binder.
-- Define channel close/cancellation behavior for structured shutdown.
-- Add configurable buffering/backpressure policy for channels.
+- Define cancellation propagation behavior for structured shutdown.
+- Add advanced buffering/backpressure strategies beyond bounded FIFO capacity.
 
 ### M10: .NET Interop Surface
 Objective: controlled access to .NET APIs and NuGet packages.

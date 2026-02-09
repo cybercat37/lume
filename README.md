@@ -130,7 +130,9 @@ Current concurrency status (Partial):
 - Structured concurrency uses `scope` + `spawn { ... }` + `task.join()`.
 - Channel messaging v1 is available with `channel<T>()`, `send`, and blocking `recv`.
 - Strict channel semantics are available: `recv` returns `Result<T, String>` and must be handled via `?` or `match`.
-- Close/cancellation semantics and backpressure policy are follow-up work.
+- Scope-owned channel close is implemented; blocked `recv` unblocks with `Error("channel closed")`.
+- Bounded channel capacity is available (`channel<T>(N)`, default `64`).
+- Cancellation propagation semantics and advanced backpressure policies are follow-up work.
 
 ## Building and Running
 

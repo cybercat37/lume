@@ -713,7 +713,34 @@ public sealed class Binder
     private BoundExpression BindChannelExpression(ChannelExpressionSyntax channel)
     {
         var elementType = BindType(channel.ElementType);
-        return new BoundChannelCreateExpression(elementType);
+        var capacity = 64;
+        if (channel.CapacityExpression is not null)
+        {
+            var boundCapacity = BindExpression(channel.CapacityExpression);
+            if (boundCapacity is BoundLiteralExpression literal && literal.Value is int intCapacity)
+            {
+                if (intCapacity <= 0)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        channel.CapacityExpression.Span,
+                        "channel capacity must be greater than zero."));
+                }
+                else
+                {
+                    capacity = intCapacity;
+                }
+            }
+            else
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    channel.CapacityExpression.Span,
+                    "channel capacity must be an integer literal."));
+            }
+        }
+
+        return new BoundChannelCreateExpression(elementType, capacity);
     }
 
     private BoundExpression BindFieldAccessExpression(FieldAccessExpressionSyntax fieldAccess)

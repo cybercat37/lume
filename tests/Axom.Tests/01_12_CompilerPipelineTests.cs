@@ -173,9 +173,19 @@ public class CompilerPipelineTests
         var result = compiler.Compile("scope { let (tx, rx) = channel<Int>()\ntx.send(1)\nprint rx.recv() }", "test.axom");
 
         Assert.True(result.Success);
-        Assert.Contains("AxomChannels.channel<int>()", result.GeneratedCode);
+        Assert.Contains("AxomChannels.channel<int>(64)", result.GeneratedCode);
         Assert.Contains(".send(1)", result.GeneratedCode);
         Assert.Contains(".recv()", result.GeneratedCode);
+    }
+
+    [Fact]
+    public void Compile_channel_with_capacity_generates_bounded_channel()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("scope { let (tx, rx) = channel<Int>(8) }", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("AxomChannels.channel<int>(8)", result.GeneratedCode);
     }
 
     [Fact]
