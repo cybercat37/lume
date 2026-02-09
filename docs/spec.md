@@ -412,6 +412,9 @@ Rules:
 - Channel `recv` results are strict: they must be handled explicitly via `?` or `match`.
 - Scope teardown closes owned channels; blocked `recv()` returns `Error("channel closed")`.
 - Default channel capacity is `64`; custom bounded capacity is available with `channel<T>(N)`.
+- `send` is blocking when the bounded buffer is full.
+- Channel message ordering is FIFO.
+- Fairness across producer/consumer tasks is best-effort (runtime scheduling dependent).
 
 Known limitations (current implementation):
 - Cancellation semantics are baseline-only (`cancelled` propagation); richer cancellation policies are not implemented yet.

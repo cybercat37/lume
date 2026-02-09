@@ -748,6 +748,8 @@ Endpoints are scoped values: they can be passed to child scopes/tasks, but they 
 Current implementation supports channel creation, send, and blocking recv in scope/spawn workflows.
 Scope teardown closes owned channels and unblocks `recv` with `Error("channel closed")`.
 Default channel capacity is `64`; use `channel<T>(N)` for bounded backpressure.
+When the channel buffer is full, `send` blocks until capacity becomes available.
+Message ordering is FIFO; fairness between tasks is best-effort.
 
 Current limitations to keep in mind:
 - There is no explicit close API; channel close is lifecycle-driven by scope ownership.

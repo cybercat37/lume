@@ -124,4 +124,42 @@ scope {
         Assert.Equal("-2", result.Output.Trim());
         Assert.NotEmpty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Channel_preserves_fifo_order()
+    {
+        var sourceText = new SourceText(@"
+scope {
+  let (tx, rx) = channel<Int>(2)
+
+  let sender = spawn {
+    tx.send(1)
+    tx.send(2)
+    tx.send(3)
+  }
+
+  let worker = spawn {
+    let a = rx.recv().unwrap()
+    let b = rx.recv().unwrap()
+    let c = rx.recv().unwrap()
+    print a
+    print b
+    print c
+  }
+
+  sender.join()
+  worker.join()
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var lines = result.Output.Split('\n');
+        Assert.Equal("1", lines[0].Trim());
+        Assert.Equal("2", lines[1].Trim());
+        Assert.Equal("3", lines[2].Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }
