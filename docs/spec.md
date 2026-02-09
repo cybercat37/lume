@@ -414,7 +414,7 @@ Rules:
 - Default channel capacity is `64`; custom bounded capacity is available with `channel<T>(N)`.
 
 Known limitations (current implementation):
-- Cancellation propagation semantics are not implemented yet.
+- Cancellation semantics are baseline-only (`cancelled` propagation); richer cancellation policies are not implemented yet.
 - Parser support for `channel<T>()` is currently specialized rather than a general generic-call mechanism.
 - Buffer policy is currently bounded FIFO only; advanced backpressure strategies are not implemented yet.
 

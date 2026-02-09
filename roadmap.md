@@ -57,7 +57,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Modules/imports | One-file modules + import | Planned | Spec planned |
 | String interpolation | f"...{expr}..." | Planned | Spec planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
-| Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity are implemented |
+| Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
 | .NET interop | Direct calls + NuGet | Planned | Spec planned |
 | Pipeline operator + combinators | \|> and combinators | Planned | Proposal only |
 
@@ -181,7 +181,7 @@ Key tasks:
 - Runtime primitives and scheduler model.
 - Effect tagging for suspensive functions.
 - Concurrency syntax stubs (scope/spawn/join) in parser/binder.
-- Define cancellation propagation behavior for structured shutdown.
+- Extend cancellation propagation behavior beyond baseline semantics.
 - Add advanced buffering/backpressure strategies beyond bounded FIFO capacity.
 
 ### M10: .NET Interop Surface

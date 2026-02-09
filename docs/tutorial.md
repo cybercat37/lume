@@ -751,7 +751,7 @@ Default channel capacity is `64`; use `channel<T>(N)` for bounded backpressure.
 
 Current limitations to keep in mind:
 - There is no explicit close API; channel close is lifecycle-driven by scope ownership.
-- Cancellation propagation semantics are not implemented yet.
+- Cancellation propagation is implemented as a baseline (`Error("cancelled")`), but advanced cancellation policies are not implemented yet.
 - Channel buffering currently supports bounded FIFO capacity only.
 
 

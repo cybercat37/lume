@@ -132,7 +132,8 @@ Current concurrency status (Partial):
 - Strict channel semantics are available: `recv` returns `Result<T, String>` and must be handled via `?` or `match`.
 - Scope-owned channel close is implemented; blocked `recv` unblocks with `Error("channel closed")`.
 - Bounded channel capacity is available (`channel<T>(N)`, default `64`).
-- Cancellation propagation semantics and advanced backpressure policies are follow-up work.
+- Scope cancellation propagation is implemented (`Error("cancelled")` on interrupted channel ops).
+- Advanced backpressure policies are follow-up work.
 
 ## Building and Running
 

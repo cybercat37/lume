@@ -410,7 +410,7 @@ public sealed class Emitter
         var target = WriteExpression(unwrap.Target);
         var payloadType = TypeToCSharp(unwrap.Type);
         var failureTag = unwrap.FailureVariant.Name.Replace("\"", "\\\"");
-        return $"((Func<{payloadType}>)(() => {{ var __tmp = {target}; if (__tmp.Tag == \"{failureTag}\") throw new InvalidOperationException(\"Unwrap failed.\"); return ({payloadType})__tmp.Value; }}))()";
+        return $"((Func<{payloadType}>)(() => {{ var __tmp = {target}; if (__tmp.Tag == \"{failureTag}\") throw new InvalidOperationException(\"Unwrap failed.\"); if (__tmp.Value is {payloadType} __payload) return __payload; throw new InvalidOperationException(\"Unwrap failed.\"); }}))()";
     }
 
     private static string WriteSpawnExpression(LoweredSpawnExpression spawn)
