@@ -50,13 +50,15 @@ public sealed class Interpreter
         private readonly Queue<string> inputBuffer;
         private readonly object inputLock;
         private readonly Stack<ScopeFrame> scopeFrames;
+        private readonly CancellationToken cancellationToken;
         private FunctionSymbol? currentFunction;
 
         public Evaluator(
             LoweredProgram program,
             Queue<string> inputBuffer,
             Dictionary<VariableSymbol, object?>? initialValues = null,
-            object? sharedInputLock = null)
+            object? sharedInputLock = null,
+            CancellationToken cancellationToken = default)
         {
             this.program = program;
             values = initialValues is null
@@ -68,6 +70,7 @@ public sealed class Interpreter
             this.inputBuffer = inputBuffer;
             inputLock = sharedInputLock ?? new object();
             scopeFrames = new Stack<ScopeFrame>();
+            this.cancellationToken = cancellationToken;
         }
 
         public InterpreterResult Evaluate()
@@ -105,6 +108,7 @@ public sealed class Interpreter
                             scopeFrames.Pop();
                             CloseScopeChannels(frame);
                             AutoJoinScope(frame);
+                            frame.Dispose();
                         }
 
                         return;
@@ -303,7 +307,10 @@ public sealed class Interpreter
 
         private object? EvaluateChannelCreateExpression(LoweredChannelCreateExpression channelCreate)
         {
-            var state = new ChannelState(channelCreate.Capacity);
+            var token = scopeFrames.Count > 0
+                ? scopeFrames.Peek().CancellationToken
+                : cancellationToken;
+            var state = new ChannelState(channelCreate.Capacity, token);
             if (scopeFrames.Count > 0)
             {
                 scopeFrames.Peek().Channels.Add(state);
@@ -320,7 +327,11 @@ public sealed class Interpreter
             var value = EvaluateExpression(send.Value);
             if (senderValue is ChannelSender sender)
             {
-                sender.Send(value);
+                if (!sender.TrySend(value, out var error))
+                {
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, error ?? "send failed."));
+                }
+
                 return null;
             }
 
@@ -335,14 +346,16 @@ public sealed class Interpreter
             {
                 var elementType = recv.Type.ResultValueType ?? TypeSymbol.Error;
                 var resultType = TypeSymbol.Result(elementType, TypeSymbol.String);
-                if (receiver.TryReceive(out var value))
+                var status = receiver.TryReceive(out var value);
+                if (status == ChannelReceiveStatus.Success)
                 {
                     var okVariant = new SumVariantSymbol("Ok", resultType, elementType);
                     return new SumValue(okVariant, value);
                 }
 
                 var errorVariant = new SumVariantSymbol("Error", resultType, TypeSymbol.String);
-                return new SumValue(errorVariant, "channel closed");
+                var message = status == ChannelReceiveStatus.Cancelled ? "cancelled" : "channel closed";
+                return new SumValue(errorVariant, message);
             }
 
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "recv expects a receiver handle."));
@@ -370,13 +383,15 @@ public sealed class Interpreter
         private object? EvaluateSpawnExpression(LoweredSpawnExpression spawn)
         {
             var snapshot = new Dictionary<VariableSymbol, object?>(values);
+            var ownerScope = scopeFrames.Count > 0 ? scopeFrames.Peek() : null;
+            var token = ownerScope?.CancellationToken ?? cancellationToken;
             var task = Task.Run(() =>
             {
-                var evaluator = new Evaluator(program, inputBuffer, snapshot, inputLock);
+                var evaluator = new Evaluator(program, inputBuffer, snapshot, inputLock, token);
                 return evaluator.EvaluateSpawnBody(spawn.Body);
-            });
+            }, token);
 
-            var handle = new SpawnHandle(task);
+            var handle = new SpawnHandle(task, ownerScope);
             if (scopeFrames.Count > 0)
             {
                 scopeFrames.Peek().Handles.Add(handle);
@@ -431,6 +446,11 @@ public sealed class Interpreter
         private SpawnOutcome MergeSpawnOutcome(SpawnHandle handle)
         {
             var outcome = handle.GetOrWait();
+            if (outcome.Diagnostics.Count > 0)
+            {
+                handle.OwnerScope?.Cancel();
+            }
+
             if (!handle.HasMergedOutcome)
             {
                 if (outcome.Diagnostics.Count > 0)
@@ -991,10 +1011,12 @@ public sealed class Interpreter
             private SpawnOutcome? outcome;
 
             public bool HasMergedOutcome { get; private set; }
+            public ScopeFrame? OwnerScope { get; }
 
-            public SpawnHandle(Task<SpawnOutcome> task)
+            public SpawnHandle(Task<SpawnOutcome> task, ScopeFrame? ownerScope)
             {
                 this.task = task;
+                OwnerScope = ownerScope;
             }
 
             public SpawnOutcome GetOrWait()
@@ -1013,15 +1035,32 @@ public sealed class Interpreter
         {
             public List<SpawnHandle> Handles { get; } = new();
             public List<ChannelState> Channels { get; } = new();
+            private readonly CancellationTokenSource cancellation = new();
+            public CancellationToken CancellationToken => cancellation.Token;
+
+            public void Cancel()
+            {
+                if (!cancellation.IsCancellationRequested)
+                {
+                    cancellation.Cancel();
+                }
+            }
+
+            public void Dispose()
+            {
+                cancellation.Dispose();
+            }
         }
 
         private sealed class ChannelState
         {
             public BlockingCollection<object?> Queue { get; }
+            private readonly CancellationToken cancellationToken;
 
-            public ChannelState(int capacity)
+            public ChannelState(int capacity, CancellationToken cancellationToken)
             {
                 Queue = new BlockingCollection<object?>(new ConcurrentQueue<object?>(), capacity);
+                this.cancellationToken = cancellationToken;
             }
 
             public void Close()
@@ -1029,6 +1068,44 @@ public sealed class Interpreter
                 if (!Queue.IsAddingCompleted)
                 {
                     Queue.CompleteAdding();
+                }
+            }
+
+            public bool TrySend(object? value, out string? error)
+            {
+                try
+                {
+                    Queue.Add(value, cancellationToken);
+                    error = null;
+                    return true;
+                }
+                catch (OperationCanceledException)
+                {
+                    error = "cancelled";
+                    return false;
+                }
+                catch (InvalidOperationException)
+                {
+                    error = "channel closed";
+                    return false;
+                }
+            }
+
+            public ChannelReceiveStatus TryReceive(out object? value)
+            {
+                try
+                {
+                    if (Queue.TryTake(out value, Timeout.Infinite, cancellationToken))
+                    {
+                        return ChannelReceiveStatus.Success;
+                    }
+
+                    return ChannelReceiveStatus.Closed;
+                }
+                catch (OperationCanceledException)
+                {
+                    value = null;
+                    return ChannelReceiveStatus.Cancelled;
                 }
             }
         }
@@ -1042,9 +1119,9 @@ public sealed class Interpreter
                 this.state = state;
             }
 
-            public void Send(object? value)
+            public bool TrySend(object? value, out string? error)
             {
-                state.Queue.Add(value);
+                return state.TrySend(value, out error);
             }
         }
 
@@ -1057,10 +1134,17 @@ public sealed class Interpreter
                 this.state = state;
             }
 
-            public bool TryReceive(out object? value)
+            public ChannelReceiveStatus TryReceive(out object? value)
             {
-                return state.Queue.TryTake(out value, Timeout.Infinite);
+                return state.TryReceive(out value);
             }
+        }
+
+        private enum ChannelReceiveStatus
+        {
+            Success,
+            Closed,
+            Cancelled
         }
 
         private sealed record SpawnOutcome(object? Value, string Output, List<Diagnostic> Diagnostics);
