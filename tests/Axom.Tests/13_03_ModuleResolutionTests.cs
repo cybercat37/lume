@@ -184,6 +184,61 @@ public class ModuleResolutionTests
         }
     }
 
+    [Fact]
+    public void Duplicate_from_import_name_produces_conflict_diagnostic()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var aDir = Path.Combine(tempDir, "a");
+            var bDir = Path.Combine(tempDir, "b");
+            Directory.CreateDirectory(aDir);
+            Directory.CreateDirectory(bDir);
+            File.WriteAllText(Path.Combine(aDir, "mod.axom"), "pub fn foo() -> Int => 1\n");
+            File.WriteAllText(Path.Combine(bDir, "mod.axom"), "pub fn foo() -> Int => 2\n");
+
+            var mainPath = Path.Combine(tempDir, "main.axom");
+            File.WriteAllText(mainPath, "from a.mod import foo\nfrom b.mod import foo\nprint foo()\n");
+
+            var compiler = new CompilerDriver();
+            var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Message.Contains("conflicts with an existing name", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void Import_alias_conflict_with_local_name_produces_diagnostic()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var libDir = Path.Combine(tempDir, "lib");
+            Directory.CreateDirectory(libDir);
+            File.WriteAllText(Path.Combine(libDir, "tools.axom"), "pub fn forty_two() -> Int => 42\n");
+
+            var mainPath = Path.Combine(tempDir, "main.axom");
+            File.WriteAllText(mainPath, "fn tools() -> Int => 0\nimport lib.tools as tools\nprint 1\n");
+
+            var compiler = new CompilerDriver();
+            var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Message.Contains("Imported alias 'tools' conflicts", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_modules_{Guid.NewGuid():N}");

@@ -19,6 +19,7 @@ public sealed class ModuleResolver
         VisitModule(fullEntryPath, entrySource, diagnostics, modules, ordered, stack);
 
         ValidateFromImports(diagnostics, modules);
+        ValidateImportConflicts(diagnostics, modules);
         if (diagnostics.Count > 0)
         {
             var entryTree = modules.TryGetValue(fullEntryPath, out var info)
@@ -89,13 +90,23 @@ public sealed class ModuleResolver
             {
                 var moduleName = string.Join('.', importStatement.ModuleParts.Select(part => part.Text));
                 var dependencyPath = VisitDependency(modulePath, moduleName, diagnostics, modules, ordered, stack);
-                module.Imports.Add(new ModuleImport(moduleName, dependencyPath, isFromImport: false, Array.Empty<ImportSpecifierSyntax>()));
+                module.Imports.Add(new ModuleImport(
+                    moduleName,
+                    dependencyPath,
+                    isFromImport: false,
+                    Array.Empty<ImportSpecifierSyntax>(),
+                    importStatement.Alias?.Text));
             }
             else if (statement is FromImportStatementSyntax fromImportStatement)
             {
                 var moduleName = string.Join('.', fromImportStatement.ModuleParts.Select(part => part.Text));
                 var dependencyPath = VisitDependency(modulePath, moduleName, diagnostics, modules, ordered, stack);
-                module.Imports.Add(new ModuleImport(moduleName, dependencyPath, isFromImport: true, fromImportStatement.Specifiers));
+                module.Imports.Add(new ModuleImport(
+                    moduleName,
+                    dependencyPath,
+                    isFromImport: true,
+                    fromImportStatement.Specifiers,
+                    aliasName: null));
             }
         }
 
@@ -178,6 +189,59 @@ public sealed class ModuleResolver
         }
     }
 
+    private static void ValidateImportConflicts(List<Diagnostic> diagnostics, Dictionary<string, ModuleInfo> modules)
+    {
+        foreach (var module in modules.Values)
+        {
+            var namesInScope = CollectLocalDeclarationNames(module.SyntaxTree.Root.Statements);
+            foreach (var import in module.Imports)
+            {
+                if (import.ResolvedPath is null || !modules.TryGetValue(import.ResolvedPath, out var dependency))
+                {
+                    continue;
+                }
+
+                if (!import.IsFromImport)
+                {
+                    if (!string.IsNullOrEmpty(import.AliasName))
+                    {
+                        if (!namesInScope.Add(import.AliasName))
+                        {
+                            diagnostics.Add(Diagnostic.Error(module.Path, 1, 1, $"Imported alias '{import.AliasName}' conflicts with an existing name."));
+                        }
+                    }
+                    else
+                    {
+                        var exports = CollectExports(dependency.SyntaxTree.Root.Statements);
+                        foreach (var export in exports)
+                        {
+                            if (!namesInScope.Add(export))
+                            {
+                                diagnostics.Add(Diagnostic.Error(module.Path, 1, 1, $"Imported name '{export}' conflicts with an existing name."));
+                            }
+                        }
+                    }
+
+                    continue;
+                }
+
+                foreach (var specifier in import.Specifiers)
+                {
+                    if (specifier.IsWildcard)
+                    {
+                        continue;
+                    }
+
+                    var introducedName = specifier.AliasToken?.Text ?? specifier.NameToken.Text;
+                    if (!namesInScope.Add(introducedName))
+                    {
+                        diagnostics.Add(Diagnostic.Error(module.Path, 1, 1, $"Imported name '{introducedName}' conflicts with an existing name."));
+                    }
+                }
+            }
+        }
+    }
+
     private static HashSet<string> CollectExports(IReadOnlyList<StatementSyntax> statements)
     {
         var exports = new HashSet<string>(StringComparer.Ordinal);
@@ -196,6 +260,27 @@ public sealed class ModuleResolver
         }
 
         return exports;
+    }
+
+    private static HashSet<string> CollectLocalDeclarationNames(IReadOnlyList<StatementSyntax> statements)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var statement in statements)
+        {
+            if (statement is ImportStatementSyntax or FromImportStatementSyntax)
+            {
+                continue;
+            }
+
+            var declaration = statement is PubStatementSyntax pub ? pub.Declaration : statement;
+            var name = GetDeclarationName(declaration);
+            if (!string.IsNullOrEmpty(name))
+            {
+                names.Add(name);
+            }
+        }
+
+        return names;
     }
 
     private static string? GetDeclarationName(StatementSyntax declaration)
@@ -333,13 +418,15 @@ public sealed class ModuleResolver
         public string? ResolvedPath { get; }
         public bool IsFromImport { get; }
         public IReadOnlyList<ImportSpecifierSyntax> Specifiers { get; }
+        public string? AliasName { get; }
 
-        public ModuleImport(string moduleName, string? resolvedPath, bool isFromImport, IReadOnlyList<ImportSpecifierSyntax> specifiers)
+        public ModuleImport(string moduleName, string? resolvedPath, bool isFromImport, IReadOnlyList<ImportSpecifierSyntax> specifiers, string? aliasName)
         {
             ModuleName = moduleName;
             ResolvedPath = resolvedPath;
             IsFromImport = isFromImport;
             Specifiers = specifiers;
+            AliasName = aliasName;
         }
     }
 
