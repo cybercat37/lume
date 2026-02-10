@@ -88,14 +88,14 @@ public sealed class ModuleResolver
             if (statement is ImportStatementSyntax importStatement)
             {
                 var moduleName = string.Join('.', importStatement.ModuleParts.Select(part => part.Text));
-                module.Imports.Add(new ModuleImport(moduleName, isFromImport: false, Array.Empty<ImportSpecifierSyntax>()));
-                VisitDependency(modulePath, moduleName, diagnostics, modules, ordered, stack);
+                var dependencyPath = VisitDependency(modulePath, moduleName, diagnostics, modules, ordered, stack);
+                module.Imports.Add(new ModuleImport(moduleName, dependencyPath, isFromImport: false, Array.Empty<ImportSpecifierSyntax>()));
             }
             else if (statement is FromImportStatementSyntax fromImportStatement)
             {
                 var moduleName = string.Join('.', fromImportStatement.ModuleParts.Select(part => part.Text));
-                module.Imports.Add(new ModuleImport(moduleName, isFromImport: true, fromImportStatement.Specifiers));
-                VisitDependency(modulePath, moduleName, diagnostics, modules, ordered, stack);
+                var dependencyPath = VisitDependency(modulePath, moduleName, diagnostics, modules, ordered, stack);
+                module.Imports.Add(new ModuleImport(moduleName, dependencyPath, isFromImport: true, fromImportStatement.Specifiers));
             }
         }
 
@@ -104,7 +104,7 @@ public sealed class ModuleResolver
         ordered.Add(module);
     }
 
-    private static void VisitDependency(
+    private static string? VisitDependency(
         string fromModulePath,
         string moduleName,
         List<Diagnostic> diagnostics,
@@ -116,10 +116,11 @@ public sealed class ModuleResolver
         if (dependencyPath is null)
         {
             diagnostics.Add(Diagnostic.Error(fromModulePath, 1, 1, $"Module not found: {moduleName}"));
-            return;
+            return null;
         }
 
         VisitModule(dependencyPath, sourceOverride: null, diagnostics, modules, ordered, stack);
+        return dependencyPath;
     }
 
     private static string? ResolveModulePath(string fromModulePath, string moduleName)
@@ -211,6 +212,7 @@ public sealed class ModuleResolver
 
     private static string BuildCombinedSource(IReadOnlyList<ModuleInfo> orderedModules, string entryPath)
     {
+        var importDemand = BuildImportDemand(orderedModules);
         var builder = new StringBuilder();
         foreach (var module in orderedModules)
         {
@@ -224,6 +226,11 @@ public sealed class ModuleResolver
 
                 if (statement is PubStatementSyntax pub)
                 {
+                    if (!isEntry && !ShouldIncludeExport(module.Path, pub.Declaration, importDemand))
+                    {
+                        continue;
+                    }
+
                     AppendStatement(builder, module.Source, pub.Declaration.Span);
                     continue;
                 }
@@ -236,6 +243,59 @@ public sealed class ModuleResolver
         }
 
         return builder.ToString();
+    }
+
+    private static Dictionary<string, ImportDemand> BuildImportDemand(IReadOnlyList<ModuleInfo> orderedModules)
+    {
+        var demand = new Dictionary<string, ImportDemand>(StringComparer.Ordinal);
+        foreach (var module in orderedModules)
+        {
+            foreach (var import in module.Imports)
+            {
+                if (import.ResolvedPath is null)
+                {
+                    continue;
+                }
+
+                if (!demand.TryGetValue(import.ResolvedPath, out var moduleDemand))
+                {
+                    moduleDemand = new ImportDemand();
+                    demand[import.ResolvedPath] = moduleDemand;
+                }
+
+                if (!import.IsFromImport)
+                {
+                    moduleDemand.IncludeAll = true;
+                    continue;
+                }
+
+                foreach (var specifier in import.Specifiers)
+                {
+                    if (!specifier.IsWildcard)
+                    {
+                        moduleDemand.Names.Add(specifier.NameToken.Text);
+                    }
+                }
+            }
+        }
+
+        return demand;
+    }
+
+    private static bool ShouldIncludeExport(string modulePath, StatementSyntax declaration, Dictionary<string, ImportDemand> importDemand)
+    {
+        if (!importDemand.TryGetValue(modulePath, out var demand))
+        {
+            return false;
+        }
+
+        if (demand.IncludeAll)
+        {
+            return true;
+        }
+
+        var name = GetDeclarationName(declaration);
+        return !string.IsNullOrEmpty(name) && demand.Names.Contains(name);
     }
 
     private static void AppendStatement(StringBuilder builder, string source, TextSpan span)
@@ -270,15 +330,23 @@ public sealed class ModuleResolver
     private sealed class ModuleImport
     {
         public string ModuleName { get; }
+        public string? ResolvedPath { get; }
         public bool IsFromImport { get; }
         public IReadOnlyList<ImportSpecifierSyntax> Specifiers { get; }
 
-        public ModuleImport(string moduleName, bool isFromImport, IReadOnlyList<ImportSpecifierSyntax> specifiers)
+        public ModuleImport(string moduleName, string? resolvedPath, bool isFromImport, IReadOnlyList<ImportSpecifierSyntax> specifiers)
         {
             ModuleName = moduleName;
+            ResolvedPath = resolvedPath;
             IsFromImport = isFromImport;
             Specifiers = specifiers;
         }
+    }
+
+    private sealed class ImportDemand
+    {
+        public bool IncludeAll { get; set; }
+        public HashSet<string> Names { get; } = new(StringComparer.Ordinal);
     }
 
     private enum ModuleVisitState

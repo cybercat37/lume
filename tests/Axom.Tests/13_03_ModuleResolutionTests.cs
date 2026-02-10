@@ -29,6 +29,37 @@ public class ModuleResolutionTests
     }
 
     [Fact]
+    public void From_import_limits_symbols_to_selected_exports()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var mathDir = Path.Combine(tempDir, "math");
+            var appDir = Path.Combine(tempDir, "app");
+            Directory.CreateDirectory(mathDir);
+            Directory.CreateDirectory(appDir);
+
+            File.WriteAllText(Path.Combine(mathDir, "utils.axom"),
+                "pub fn add(a: Int, b: Int) -> Int => a + b\n" +
+                "pub fn sub(a: Int, b: Int) -> Int => a - b\n");
+
+            var mainPath = Path.Combine(appDir, "main.axom");
+            File.WriteAllText(mainPath, "from math.utils import add\nprint sub(3, 1)\n");
+
+            var compiler = new CompilerDriver();
+            var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Message.Contains("Undefined variable", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
     public void Import_loads_module_exports_into_compilation()
     {
         var tempDir = CreateTempDirectory();
