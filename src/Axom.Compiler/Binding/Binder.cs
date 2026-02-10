@@ -53,21 +53,15 @@ public sealed class Binder
 
         var statements = new List<BoundStatement>();
         var functions = new List<BoundFunctionDeclaration>();
-        var recordDeclarations = syntaxTree.Root.Statements
-            .OfType<RecordTypeDeclarationSyntax>()
-            .ToList();
+        var recordDeclarations = GetTopLevelRecordDeclarations(syntaxTree.Root.Statements).ToList();
         DeclareRecordTypeSymbols(recordDeclarations);
         var records = BindRecordTypeDeclarations(recordDeclarations);
 
-        var sumDeclarations = syntaxTree.Root.Statements
-            .OfType<SumTypeDeclarationSyntax>()
-            .ToList();
+        var sumDeclarations = GetTopLevelSumDeclarations(syntaxTree.Root.Statements).ToList();
         DeclareSumTypeSymbols(sumDeclarations);
         var sums = BindSumTypeDeclarations(sumDeclarations);
 
-        var functionDeclarations = syntaxTree.Root.Statements
-            .OfType<FunctionDeclarationSyntax>()
-            .ToList();
+        var functionDeclarations = GetTopLevelFunctionDeclarations(syntaxTree.Root.Statements).ToList();
         DeclareFunctionSymbols(functionDeclarations);
 
         foreach (var statement in syntaxTree.Root.Statements)
@@ -77,7 +71,17 @@ public sealed class Binder
                 continue;
             }
 
+            if (statement is PubStatementSyntax { Declaration: RecordTypeDeclarationSyntax })
+            {
+                continue;
+            }
+
             if (statement is SumTypeDeclarationSyntax)
+            {
+                continue;
+            }
+
+            if (statement is PubStatementSyntax { Declaration: SumTypeDeclarationSyntax })
             {
                 continue;
             }
@@ -85,6 +89,23 @@ public sealed class Binder
             if (statement is FunctionDeclarationSyntax functionDeclaration)
             {
                 functions.Add(BindFunctionDeclaration(functionDeclaration));
+                continue;
+            }
+
+            if (statement is PubStatementSyntax { Declaration: FunctionDeclarationSyntax pubFunction })
+            {
+                functions.Add(BindFunctionDeclaration(pubFunction));
+                continue;
+            }
+
+            if (statement is ImportStatementSyntax or FromImportStatementSyntax)
+            {
+                continue;
+            }
+
+            if (statement is PubStatementSyntax pubStatement)
+            {
+                statements.Add(BindStatement(pubStatement.Declaration));
                 continue;
             }
 
@@ -364,8 +385,66 @@ public sealed class Binder
                 }
 
                 return new BoundExpressionStatement(expression);
+            case ImportStatementSyntax:
+            case FromImportStatementSyntax:
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    statement.Span,
+                    "Import statements are only allowed at module top level."));
+                return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Unit));
+            case PubStatementSyntax pubStatement:
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    pubStatement.PubKeyword.Span,
+                    "pub is only allowed for top-level declarations."));
+                return BindStatement(pubStatement.Declaration);
             default:
                 throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
+        }
+    }
+
+    private static IEnumerable<RecordTypeDeclarationSyntax> GetTopLevelRecordDeclarations(IReadOnlyList<StatementSyntax> statements)
+    {
+        foreach (var statement in statements)
+        {
+            if (statement is RecordTypeDeclarationSyntax record)
+            {
+                yield return record;
+            }
+            else if (statement is PubStatementSyntax { Declaration: RecordTypeDeclarationSyntax pubRecord })
+            {
+                yield return pubRecord;
+            }
+        }
+    }
+
+    private static IEnumerable<SumTypeDeclarationSyntax> GetTopLevelSumDeclarations(IReadOnlyList<StatementSyntax> statements)
+    {
+        foreach (var statement in statements)
+        {
+            if (statement is SumTypeDeclarationSyntax sum)
+            {
+                yield return sum;
+            }
+            else if (statement is PubStatementSyntax { Declaration: SumTypeDeclarationSyntax pubSum })
+            {
+                yield return pubSum;
+            }
+        }
+    }
+
+    private static IEnumerable<FunctionDeclarationSyntax> GetTopLevelFunctionDeclarations(IReadOnlyList<StatementSyntax> statements)
+    {
+        foreach (var statement in statements)
+        {
+            if (statement is FunctionDeclarationSyntax function)
+            {
+                yield return function;
+            }
+            else if (statement is PubStatementSyntax { Declaration: FunctionDeclarationSyntax pubFunction })
+            {
+                yield return pubFunction;
+            }
         }
     }
 

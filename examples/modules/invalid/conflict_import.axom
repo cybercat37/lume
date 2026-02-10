@@ -1,0 +1,4 @@
+from invalid.conflict_a import add
+from invalid.conflict_b import add
+
+print add(1, 2)

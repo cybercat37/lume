@@ -1,0 +1,3 @@
+from math.utils import *
+
+print add(1, 2)

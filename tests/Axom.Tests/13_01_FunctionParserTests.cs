@@ -81,4 +81,54 @@ fn id(x: Int) {
         Assert.Empty(syntaxTree.Diagnostics);
     }
 
+    [Fact]
+    public void Import_statement_parses()
+    {
+        var sourceText = new SourceText("import math.utils", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
+    [Fact]
+    public void Import_alias_statement_parses()
+    {
+        var sourceText = new SourceText("import math.utils as u", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
+    [Fact]
+    public void From_import_statement_parses()
+    {
+        var sourceText = new SourceText("from math.utils import add, sub", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
+    [Fact]
+    public void From_import_alias_statement_parses()
+    {
+        var sourceText = new SourceText("from math.utils import add as plus", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
+    [Fact]
+    public void Pub_function_declaration_parses()
+    {
+        var sourceText = new SourceText("pub fn add(x: Int, y: Int) -> Int => x + y", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
 }

@@ -1,0 +1,3 @@
+from math.utils import internal_mul
+
+print internal_mul(2, 3)

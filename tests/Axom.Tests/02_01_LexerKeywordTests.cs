@@ -40,4 +40,25 @@ public class LexerKeywordTests
         Assert.Equal(TokenKind.EndOfFile, tokens[^1].Kind);
     }
 
+    [Fact]
+    public void Module_keywords_are_tokenized()
+    {
+        var sourceText = new SourceText("pub import from as", "test.axom");
+        var lexer = new Lexer(sourceText);
+
+        var tokens = new List<SyntaxToken>();
+        SyntaxToken token;
+        do
+        {
+            token = lexer.Lex();
+            tokens.Add(token);
+        } while (token.Kind != TokenKind.EndOfFile);
+
+        Assert.Equal(TokenKind.PubKeyword, tokens[0].Kind);
+        Assert.Equal(TokenKind.ImportKeyword, tokens[1].Kind);
+        Assert.Equal(TokenKind.FromKeyword, tokens[2].Kind);
+        Assert.Equal(TokenKind.AsKeyword, tokens[3].Kind);
+        Assert.Equal(TokenKind.EndOfFile, tokens[^1].Kind);
+    }
+
 }

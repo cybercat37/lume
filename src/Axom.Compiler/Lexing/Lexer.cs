@@ -350,6 +350,10 @@ public sealed class Lexer
             "scope" => TokenKind.ScopeKeyword,
             "spawn" => TokenKind.SpawnKeyword,
             "join" => TokenKind.JoinKeyword,
+            "pub" => TokenKind.PubKeyword,
+            "import" => TokenKind.ImportKeyword,
+            "from" => TokenKind.FromKeyword,
+            "as" => TokenKind.AsKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,
             _ => TokenKind.Identifier

@@ -2,6 +2,7 @@ using Axom.Compiler.Binding;
 using Axom.Compiler.Diagnostics;
 using Axom.Compiler.Emitting;
 using Axom.Compiler.Lowering;
+using Axom.Compiler.Modules;
 using Axom.Compiler.Parsing;
 using Axom.Compiler.Text;
 
@@ -20,6 +21,14 @@ public sealed class CompilerDriver
             return CompilationResult.Fail(new List<Diagnostic> { diagnostic }, emptyTree);
         }
 
+        var resolved = ResolveModulesIfNeeded(source, fileName);
+        if (!resolved.Success)
+        {
+            var entrySyntaxTree = resolved.EntrySyntaxTree ?? SyntaxTree.Parse(new SourceText(source, fileName));
+            return CompilationResult.Fail(resolved.Diagnostics, entrySyntaxTree);
+        }
+
+        source = resolved.CombinedSource;
         var sourceText = new SourceText(source, fileName);
         var syntaxTree = SyntaxTree.Parse(sourceText);
         var binder = new Binder();
@@ -49,6 +58,14 @@ public sealed class CompilerDriver
             return CompilationResult.Fail(new List<Diagnostic> { diagnostic }, emptyTree);
         }
 
+        var resolved = ResolveModulesIfNeeded(source, fileName);
+        if (!resolved.Success)
+        {
+            var entrySyntaxTree = resolved.EntrySyntaxTree ?? SyntaxTree.Parse(new SourceText(source, fileName));
+            return CompilationResult.Fail(resolved.Diagnostics, entrySyntaxTree);
+        }
+
+        source = resolved.CombinedSource;
         var sourceText = new SourceText(source, fileName);
         var syntaxTree = SyntaxTree.ParseCached(sourceText, cache.SyntaxTrees);
         var binder = new Binder();
@@ -67,5 +84,23 @@ public sealed class CompilerDriver
         var emitter = new Emitter();
         var generatedCode = emitter.EmitCached(loweredProgram, cache.Emitted);
         return CompilationResult.CreateSuccess(generatedCode, syntaxTree);
+    }
+
+    private static ModuleResolutionResult ResolveModulesIfNeeded(string source, string fileName)
+    {
+        if (!source.Contains("import", StringComparison.Ordinal)
+            && !source.Contains("from", StringComparison.Ordinal)
+            && !source.Contains("pub", StringComparison.Ordinal))
+        {
+            return ModuleResolutionResult.CreateSuccess(source);
+        }
+
+        if (!File.Exists(fileName))
+        {
+            return ModuleResolutionResult.CreateSuccess(source);
+        }
+
+        var resolver = new ModuleResolver();
+        return resolver.Resolve(fileName, source);
     }
 }

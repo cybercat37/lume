@@ -20,6 +20,9 @@ public sealed class Parser
         TokenKind.FnKeyword,
         TokenKind.ReturnKeyword,
         TokenKind.TypeKeyword,
+        TokenKind.PubKeyword,
+        TokenKind.ImportKeyword,
+        TokenKind.FromKeyword,
         TokenKind.ScopeKeyword,
         TokenKind.MatchKeyword,
         TokenKind.Identifier,
@@ -99,9 +102,102 @@ public sealed class Parser
             TokenKind.PrintlnKeyword => ParsePrintStatement(),
             TokenKind.ReturnKeyword => ParseReturnStatement(),
             TokenKind.TypeKeyword => ParseTypeDeclaration(),
+            TokenKind.PubKeyword => ParsePubStatement(),
+            TokenKind.ImportKeyword => ParseImportStatement(),
+            TokenKind.FromKeyword => ParseFromImportStatement(),
             TokenKind.FnKeyword when Peek(1).Kind == TokenKind.Identifier => ParseFunctionDeclaration(),
             _ => ParseExpressionStatement()
         };
+    }
+
+    private StatementSyntax ParsePubStatement()
+    {
+        var pubKeyword = MatchToken(TokenKind.PubKeyword, "pub");
+        StatementSyntax declaration = Current().Kind switch
+        {
+            TokenKind.FnKeyword => ParseFunctionDeclaration(),
+            TokenKind.TypeKeyword => ParseTypeDeclaration(),
+            TokenKind.LetKeyword => ParseVariableDeclaration(),
+            _ => ParseInvalidPubTarget(pubKeyword)
+        };
+
+        return new PubStatementSyntax(pubKeyword, declaration);
+    }
+
+    private StatementSyntax ParseInvalidPubTarget(SyntaxToken pubKeyword)
+    {
+        diagnostics.Add(Diagnostic.Error(
+            sourceText,
+            pubKeyword.Span,
+            "pub can only be applied to top-level fn/type/let declarations."));
+        return ParseExpressionStatement();
+    }
+
+    private StatementSyntax ParseImportStatement()
+    {
+        var importKeyword = MatchToken(TokenKind.ImportKeyword, "import");
+        var moduleParts = ParseModulePath();
+        SyntaxToken? asKeyword = null;
+        SyntaxToken? alias = null;
+        if (Current().Kind == TokenKind.AsKeyword)
+        {
+            asKeyword = MatchToken(TokenKind.AsKeyword, "as");
+            alias = MatchToken(TokenKind.Identifier, "alias");
+        }
+
+        return new ImportStatementSyntax(importKeyword, moduleParts, asKeyword, alias);
+    }
+
+    private StatementSyntax ParseFromImportStatement()
+    {
+        var fromKeyword = MatchToken(TokenKind.FromKeyword, "from");
+        var moduleParts = ParseModulePath();
+        var importKeyword = MatchToken(TokenKind.ImportKeyword, "import");
+        var specifiers = new List<ImportSpecifierSyntax>();
+
+        if (Current().Kind == TokenKind.Star)
+        {
+            var star = MatchToken(TokenKind.Star, "*");
+            specifiers.Add(new ImportSpecifierSyntax(star, null, null));
+        }
+        else
+        {
+            while (Current().Kind != TokenKind.EndOfFile && Current().Kind != TokenKind.NewLine && Current().Kind != TokenKind.Semicolon)
+            {
+                var name = MatchToken(TokenKind.Identifier, "symbol name");
+                SyntaxToken? asKeyword = null;
+                SyntaxToken? alias = null;
+                if (Current().Kind == TokenKind.AsKeyword)
+                {
+                    asKeyword = MatchToken(TokenKind.AsKeyword, "as");
+                    alias = MatchToken(TokenKind.Identifier, "alias");
+                }
+
+                specifiers.Add(new ImportSpecifierSyntax(name, asKeyword, alias));
+                if (Current().Kind == TokenKind.Comma)
+                {
+                    NextToken();
+                    continue;
+                }
+
+                break;
+            }
+        }
+
+        return new FromImportStatementSyntax(fromKeyword, moduleParts, importKeyword, specifiers);
+    }
+
+    private IReadOnlyList<SyntaxToken> ParseModulePath()
+    {
+        var parts = new List<SyntaxToken>();
+        parts.Add(MatchToken(TokenKind.Identifier, "module name"));
+        while (Current().Kind == TokenKind.Dot)
+        {
+            NextToken();
+            parts.Add(MatchToken(TokenKind.Identifier, "module name"));
+        }
+
+        return parts;
     }
 
     private StatementSyntax ParseScopeStatement()

@@ -1,0 +1,3 @@
+import invalid.cycle.a
+
+pub fn id_b(x: Int) -> Int => x

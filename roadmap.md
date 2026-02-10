@@ -138,13 +138,25 @@ Status:
 Objective: establish module boundary and namespacing model.
 
 DoD:
-- One file = module, import syntax, aliasing.
-- pub/private visibility enforcement.
-- CLI supports multi-file compilation.
+- One file = one module with path-based names (`a/b/c.axom` -> `a.b.c`).
+- Import forms implemented: `import mod`, `import mod as alias`, `from mod import name[, ...]`, `from mod import name as alias`.
+- `pub` visibility enforced across module boundaries (default private).
+- Wildcard imports are rejected in v1.
+- Import cycles produce deterministic diagnostics with cycle path.
+- CLI supports multi-file compilation from an entrypoint.
 
 Key tasks:
-- Module resolution rules.
-- File system layout conventions.
+- Parser additions for import statements and alias forms.
+- Module resolver mapping module names to filesystem paths.
+- Dependency graph loader (DFS/toposort) and cycle detection diagnostics.
+- Global export table for `pub` symbols and cross-module binder lookup.
+- Name conflict rules for imported symbols/aliases with explicit diagnostics.
+- Integrate resolver into `check`/`build`/`run` entrypoints.
+
+Implementation notes (v1 scope):
+- Top-level declarations only (`fn`, `type`, `let`) participate in exports.
+- No explicit export list syntax; `pub` is the only export mechanism.
+- Runtime/codegen emits a single combined program after module resolution.
 
 ### M7: String Interpolation + Formatting
 Objective: f-strings with expressions and predictable escaping.

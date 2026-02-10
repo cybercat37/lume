@@ -1,0 +1,4 @@
+from math.utils import add, sub
+
+print add(10, 4)
+print sub(10, 4)

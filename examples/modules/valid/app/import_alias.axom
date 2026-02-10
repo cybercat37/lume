@@ -1,0 +1,3 @@
+import math.utils as u
+
+print u.add(2, 3)
