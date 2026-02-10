@@ -530,13 +530,15 @@ Prefer pattern matching so failures are explicit.
 
 ---
 
-### 6.5 .NET Exception Interop (Planned)
+### 6.5 .NET Exception Interop (Partial)
 
 Axom does not expose try/catch in the core language. Interop with .NET exceptions is explicit:
 
 ```axom
-let x = DotNet.try(() => SomeApi.Call())?
+let x = dotnet.try_call<Int>("System.Math", "Max", 3, 7)?
 ```
+
+Current support is limited to `dotnet.call<T>` and `dotnet.try_call<T>` with a `System.Math` whitelist.
 
 
 ---
@@ -808,13 +810,13 @@ Builders must be "frozen" to produce immutable values.
 
 ---
 
-## 11. .NET Interoperability (Planned)
+## 11. .NET Interoperability (Partial)
 
 ### 11.1 Direct Calls
 
 ```axom
-let result = System.Console.ReadLine()
-let number = Int32.Parse("42")
+let result = dotnet.call<Int>("System.Math", "Max", 3, 7)
+let safe = dotnet.try_call<Float>("System.Math", "Sqrt", -1.0)
 ```
 
 

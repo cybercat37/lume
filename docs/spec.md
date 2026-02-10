@@ -17,7 +17,7 @@ code.
 - Explicit error handling
 - Structured concurrency by default
 - Immutability by default
-- Full .NET interoperability
+- Progressive .NET interoperability
 - Small, understandable language surface
 
 ---
@@ -222,8 +222,10 @@ Axom does not expose try/catch in the core language.
 Interop with .NET exceptions is explicit via runtime helpers:
 
 ```axom
-let x = DotNet.try(() => SomeApi.Call())?
+let x = dotnet.try_call<Int>("System.Math", "Max", 3, 7)?
 ```
+
+Current interop support is partial: `dotnet.call<T>` and `dotnet.try_call<T>` with a whitelist (currently `System.Math`).
 
 ---
 

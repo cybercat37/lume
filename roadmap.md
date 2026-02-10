@@ -58,7 +58,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | String interpolation | f"...{expr}..." | Planned | Spec planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
-| .NET interop | Direct calls + NuGet | Planned | Spec planned |
+| .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with `System.Math` whitelist |
 | Pipeline operator + combinators | \|> and combinators | Planned | Proposal only |
 
 ## Milestones (Priority Ordered)
@@ -198,15 +198,16 @@ Remaining follow-up tasks:
 - Extend cancellation propagation behavior beyond baseline semantics.
 - Add advanced buffering/backpressure strategies beyond bounded FIFO capacity.
 
-### M10: .NET Interop Surface
+### M10: .NET Interop Surface (Partial)
 Objective: controlled access to .NET APIs and NuGet packages.
 
 DoD:
-- Direct .NET call syntax.
+- Direct .NET call syntax (`dotnet.call<T>`, `dotnet.try_call<T>`).
 - NuGet reference flow documented and tested.
-- DotNet.try interop for exception capture.
+- Exception capture mapped to `Result` via `dotnet.try_call<T>`.
 
 Key tasks:
+- Expand interop whitelist beyond `System.Math`.
 - Interop safety rules + diagnostics.
 
 ### M11: Tooling + Developer Experience

@@ -14,7 +14,7 @@ Axom is a minimal, opinionated language for .NET focused on clarity over clevern
 - **Explicit error handling** — errors are values, not exceptions
 - **Structured concurrency by default** — safe, predictable concurrent code
 - **Immutability by default** — prevent accidental mutations
-- **Full .NET interoperability** — seamless integration with existing .NET ecosystems
+- **Progressive .NET interoperability** — controlled interop surface, expanded by milestone
 - **Small, understandable language surface** — easy to learn and maintain
 
 ## Why Axom over C#
@@ -25,7 +25,7 @@ If you like the .NET ecosystem but want a smaller, more deliberate language, Axo
 - **Explicit errors** — errors are values (`Result`/`Option`), making failure paths visible instead of hidden in exceptions.
 - **Immutable by default** — safer state handling with mutation opt-in (`let mut`).
 - **Match-first control flow** — `match` is the primary branching tool, keeping logic explicit and centralized.
-- **.NET interop without losing Axom’s shape** — you can call into existing C# libraries while writing Axom code.
+- **.NET interop without losing Axom’s shape** — v1 supports controlled calls through `dotnet.call<T>` / `dotnet.try_call<T>`.
 - **Predictable output** — the compiler emits C#, so integration and debugging can stay familiar when needed.
 
 ## Quick Start
