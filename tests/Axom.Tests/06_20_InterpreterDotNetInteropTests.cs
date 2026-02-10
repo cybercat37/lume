@@ -34,4 +34,22 @@ print match dotnet.try_call<Int>(""System.IO.File"", ""Exists"", ""x"") {
         Assert.Equal("-1", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Dotnet_try_call_returns_error_for_disallowed_method()
+    {
+        var sourceText = new SourceText(@"
+print match dotnet.try_call<Int>(""System.Math"", ""Sin"", 1) {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("-1", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

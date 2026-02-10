@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Linq;
 using Axom.Compiler.Binding;
+using Axom.Compiler.Interop;
 using Axom.Compiler.Lowering;
 using Axom.Compiler.Lexing;
 
@@ -1014,6 +1015,9 @@ public sealed class Emitter
 
     private static void WriteDotNetInteropRuntime(StringBuilder builder)
     {
+        var whitelist = DotNetInteropWhitelist.GetAllowedMethods();
+        var allowedTypes = whitelist.Keys.ToList();
+
         builder.AppendLine("static class DotNetInterop");
         builder.AppendLine("{");
         builder.AppendLine("    public static T Call<T>(string typeName, string methodName, params object?[] args)");
@@ -1028,12 +1032,25 @@ public sealed class Emitter
         builder.AppendLine();
         builder.AppendLine("    public static AxomResult<T> TryCall<T>(string typeName, string methodName, params object?[] args)");
         builder.AppendLine("    {");
-        builder.AppendLine("        if (!string.Equals(typeName, \"System.Math\", StringComparison.Ordinal))");
+        builder.AppendLine($"        if ({BuildAllowedTypeCondition("typeName", allowedTypes)} == false)");
         builder.AppendLine("        {");
         builder.AppendLine("            return AxomResult<T>.Error($\"dotnet type '{typeName}' is not allowed.\");");
         builder.AppendLine("        }");
+        builder.AppendLine($"        if ({BuildAllowedMethodCondition("typeName", "methodName", whitelist)} == false)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomResult<T>.Error($\"dotnet method '{typeName}.{methodName}' is not allowed.\");");
+        builder.AppendLine("        }");
         builder.AppendLine();
-        builder.AppendLine("        var methods = typeof(Math).GetMethods(BindingFlags.Public | BindingFlags.Static)");
+        builder.AppendLine("        var targetType = typeName switch");
+        builder.AppendLine("        {");
+        foreach (var typeName in allowedTypes)
+        {
+            builder.AppendLine($"            \"{EscapeString(typeName)}\" => Type.GetType(\"{EscapeString(typeName)}\", throwOnError: true)!,");
+        }
+
+        builder.AppendLine("            _ => throw new InvalidOperationException(\"dotnet type is not allowed.\")");
+        builder.AppendLine("        };");
+        builder.AppendLine("        var methods = targetType.GetMethods(BindingFlags.Public | BindingFlags.Static)");
         builder.AppendLine("            .Where(m => string.Equals(m.Name, methodName, StringComparison.Ordinal) && m.GetParameters().Length == args.Length)");
         builder.AppendLine("            .ToList();");
         builder.AppendLine("        foreach (var method in methods)");
@@ -1082,7 +1099,12 @@ public sealed class Emitter
         builder.AppendLine("    private static bool TryConvertArg(object? value, Type targetType, out object? converted)");
         builder.AppendLine("    {");
         builder.AppendLine("        converted = null;");
-        builder.AppendLine("        if (targetType == typeof(long) && value is long l) { converted = l; return true; }");
+        builder.AppendLine("        if (targetType == typeof(long))");
+        builder.AppendLine("        {");
+        builder.AppendLine("            if (value is long l) { converted = l; return true; }");
+        builder.AppendLine("            if (value is int i) { converted = (long)i; return true; }");
+        builder.AppendLine("            return false;");
+        builder.AppendLine("        }");
         builder.AppendLine("        if (targetType == typeof(double))");
         builder.AppendLine("        {");
         builder.AppendLine("            if (value is double d) { converted = d; return true; }");
@@ -1094,6 +1116,42 @@ public sealed class Emitter
         builder.AppendLine("        return false;");
         builder.AppendLine("    }");
         builder.AppendLine("}");
+    }
+
+    private static string BuildAllowedTypeCondition(string typeVar, IReadOnlyList<string> types)
+    {
+        if (types.Count == 0)
+        {
+            return "false";
+        }
+
+        return string.Join(" || ", types.Select(type => $"string.Equals({typeVar}, \"{EscapeString(type)}\", StringComparison.Ordinal)"));
+    }
+
+    private static string BuildAllowedMethodCondition(
+        string typeVar,
+        string methodVar,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> whitelist)
+    {
+        var groups = new List<string>();
+        foreach (var (type, methods) in whitelist)
+        {
+            if (methods.Count == 0)
+            {
+                continue;
+            }
+
+            var methodCondition = string.Join(" || ", methods.Select(method =>
+                $"string.Equals({methodVar}, \"{EscapeString(method)}\", StringComparison.Ordinal)"));
+            groups.Add($"(string.Equals({typeVar}, \"{EscapeString(type)}\", StringComparison.Ordinal) && ({methodCondition}))");
+        }
+
+        if (groups.Count == 0)
+        {
+            return "false";
+        }
+
+        return string.Join(" || ", groups);
     }
 
     private static string EscapeString(string value)

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Axom.Compiler.Binding;
 using Axom.Compiler.Diagnostics;
+using Axom.Compiler.Interop;
 using Axom.Compiler.Lowering;
 using Axom.Compiler.Parsing;
 
@@ -436,13 +437,24 @@ public sealed class Interpreter
             value = null;
             error = null;
 
-            if (!string.Equals(typeName, "System.Math", StringComparison.Ordinal))
+            if (!DotNetInteropWhitelist.IsTypeAllowed(typeName))
             {
                 error = $"dotnet type '{typeName}' is not allowed.";
                 return false;
             }
 
-            var type = typeof(Math);
+            if (!DotNetInteropWhitelist.IsMethodAllowed(typeName, methodName))
+            {
+                error = $"dotnet method '{typeName}.{methodName}' is not allowed.";
+                return false;
+            }
+
+            if (!DotNetInteropWhitelist.TryResolveType(typeName, out var type))
+            {
+                error = $"dotnet type '{typeName}' is not allowed.";
+                return false;
+            }
+
             var methods = type
                 .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
                 .Where(method => string.Equals(method.Name, methodName, StringComparison.Ordinal)
