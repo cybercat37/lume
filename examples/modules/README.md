@@ -1,6 +1,6 @@
 # Module Examples
 
-This directory contains module/import examples for the planned M6 implementation.
+This directory contains module/import examples for the M6 implementation (partial, resolver/parser v1).
 
 ## Valid
 

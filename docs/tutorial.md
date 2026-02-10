@@ -608,7 +608,7 @@ Each `.axom` file is a module. No nested modules for now.
 ```axom
 import std.io
 import std.collections as coll
-import std.math.{max, min}
+from std.math import max, min
 ```
 
 

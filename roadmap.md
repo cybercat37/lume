@@ -54,7 +54,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Collections + iterators | List/Map + combinators | Partial | List/Map literals implemented; iterator combinators remain planned |
 | Tuples (general) | Tuple literals + destructuring | Partial | Match tuples exist; general tuples planned |
 | Generics | Minimal generics | Partial | Function generics are implemented; type generics remain planned |
-| Modules/imports | One-file modules + import | Planned | Spec planned |
+| Modules/imports | One-file modules + import | Partial | Parser/import forms + resolver v1 implemented; visibility/conflict hardening pending |
 | String interpolation | f"...{expr}..." | Planned | Spec planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
