@@ -131,4 +131,14 @@ fn id(x: Int) {
         Assert.Empty(syntaxTree.Diagnostics);
     }
 
+    [Fact]
+    public void Dotnet_generic_call_parses()
+    {
+        var sourceText = new SourceText("let x = dotnet.call<Int>(\"System.Math\", \"Max\", 3, 7)", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
 }

@@ -172,6 +172,12 @@ public sealed class Lowerer
             BoundChannelReceiveExpression recv => new LoweredChannelReceiveExpression(
                 LowerExpression(recv.Receiver),
                 recv.Type),
+            BoundDotNetCallExpression dotNet => new LoweredDotNetCallExpression(
+                dotNet.IsTryCall,
+                dotNet.ReturnType,
+                LowerExpression(dotNet.TypeNameExpression),
+                LowerExpression(dotNet.MethodNameExpression),
+                dotNet.Arguments.Select(LowerExpression).ToList()),
             BoundRecordLiteralExpression record => new LoweredRecordLiteralExpression(
                 record.RecordType,
                 record.Fields.Select(field => new LoweredRecordFieldAssignment(

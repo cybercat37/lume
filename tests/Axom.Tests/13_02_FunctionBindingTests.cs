@@ -313,4 +313,30 @@ scope {
             diagnostic.Message.Contains("escapes", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void Dotnet_call_binds_without_diagnostic()
+    {
+        var sourceText = new SourceText("let x = dotnet.call<Int>(\"System.Math\", \"Max\", 3, 7)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Dotnet_call_with_unsupported_argument_type_produces_diagnostic()
+    {
+        var sourceText = new SourceText("let x = dotnet.call<Int>(\"System.Math\", \"Max\", [1], 7)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("arguments must be Int, Float, Bool, or String", StringComparison.OrdinalIgnoreCase));
+    }
+
 }

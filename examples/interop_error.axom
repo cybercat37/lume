@@ -1,0 +1,4 @@
+print match dotnet.try_call<Int>("System.IO.File", "Exists", "foo") {
+  Ok(v) -> v
+  Error(_) -> -1
+}

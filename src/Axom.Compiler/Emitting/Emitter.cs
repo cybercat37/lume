@@ -23,6 +23,12 @@ public sealed class Emitter
             builder.AppendLine("using System.Collections.Concurrent;");
         }
 
+        if (RequiresDotNetInterop(program))
+        {
+            builder.AppendLine("using System.Reflection;");
+            builder.AppendLine("using System.Globalization;");
+        }
+
         if (RequiresTasks(program))
         {
             builder.AppendLine("using System.Threading.Tasks;");
@@ -39,9 +45,21 @@ public sealed class Emitter
             builder.AppendLine();
         }
 
+        if (RequiresChannels(program) || RequiresDotNetInterop(program))
+        {
+            WriteAxomResultRuntime(builder);
+            builder.AppendLine();
+        }
+
         if (RequiresChannels(program))
         {
             WriteChannelRuntime(builder);
+            builder.AppendLine();
+        }
+
+        if (RequiresDotNetInterop(program))
+        {
+            WriteDotNetInteropRuntime(builder);
             builder.AppendLine();
         }
         builder.AppendLine("class Program");
@@ -77,6 +95,11 @@ public sealed class Emitter
     private static bool RequiresChannels(LoweredProgram program)
     {
         return program.Statements.Any(UsesChannels) || program.Functions.Any(function => UsesChannels(function.Body));
+    }
+
+    private static bool RequiresDotNetInterop(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesDotNetInterop) || program.Functions.Any(function => UsesDotNetInterop(function.Body));
     }
 
     private static bool UsesCollections(LoweredStatement statement)
@@ -117,6 +140,20 @@ public sealed class Emitter
             LoweredExpressionStatement expressionStatement => UsesChannels(expressionStatement.Expression),
             LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesChannels(returnStatement.Expression),
             LoweredIfStatement ifStatement => UsesChannels(ifStatement.Condition) || UsesChannels(ifStatement.Then) || (ifStatement.Else is not null && UsesChannels(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesDotNetInterop(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesDotNetInterop),
+            LoweredVariableDeclaration declaration => UsesDotNetInterop(declaration.Initializer),
+            LoweredPrintStatement print => UsesDotNetInterop(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesDotNetInterop(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesDotNetInterop(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesDotNetInterop(ifStatement.Condition) || UsesDotNetInterop(ifStatement.Then) || (ifStatement.Else is not null && UsesDotNetInterop(ifStatement.Else)),
             _ => false
         };
     }
@@ -207,6 +244,39 @@ public sealed class Emitter
             LoweredMapExpression map => map.Entries.Any(entry => UsesChannels(entry.Key) || UsesChannels(entry.Value)),
             LoweredSpawnExpression spawn => UsesChannels(spawn.Body),
             LoweredJoinExpression join => UsesChannels(join.Expression),
+            _ => false
+        };
+    }
+
+    private static bool UsesDotNetInterop(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredDotNetCallExpression => true,
+            LoweredCallExpression call => UsesDotNetInterop(call.Callee) || call.Arguments.Any(UsesDotNetInterop),
+            LoweredUnaryExpression unary => UsesDotNetInterop(unary.Operand),
+            LoweredBinaryExpression binary => UsesDotNetInterop(binary.Left) || UsesDotNetInterop(binary.Right),
+            LoweredAssignmentExpression assignment => UsesDotNetInterop(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesDotNetInterop) || UsesDotNetInterop(block.Result),
+            LoweredLambdaExpression lambda => UsesDotNetInterop(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesDotNetInterop(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesDotNetInterop(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesDotNetInterop(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesDotNetInterop(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesDotNetInterop(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesDotNetInterop(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesDotNetInterop(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesDotNetInterop(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesDotNetInterop(unwrap.Target),
+            LoweredIndexExpression index => UsesDotNetInterop(index.Target) || UsesDotNetInterop(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesDotNetInterop),
+            LoweredListExpression list => list.Elements.Any(UsesDotNetInterop),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesDotNetInterop(entry.Key) || UsesDotNetInterop(entry.Value)),
+            LoweredSpawnExpression spawn => UsesDotNetInterop(spawn.Body),
+            LoweredJoinExpression join => UsesDotNetInterop(join.Expression),
+            LoweredChannelCreateExpression => false,
+            LoweredChannelSendExpression send => UsesDotNetInterop(send.Sender) || UsesDotNetInterop(send.Value),
+            LoweredChannelReceiveExpression recv => UsesDotNetInterop(recv.Receiver),
             _ => false
         };
     }
@@ -330,6 +400,7 @@ public sealed class Emitter
             LoweredJoinExpression join => WriteJoinExpression(join),
             LoweredChannelSendExpression send => WriteChannelSendExpression(send),
             LoweredChannelReceiveExpression recv => WriteChannelReceiveExpression(recv),
+            LoweredDotNetCallExpression dotNet => WriteDotNetCallExpression(dotNet),
             LoweredTupleAccessExpression tupleAccess => WriteTupleAccessExpression(tupleAccess),
             LoweredRecordLiteralExpression record => WriteRecordLiteralExpression(record),
             LoweredFieldAccessExpression fieldAccess => WriteFieldAccessExpression(fieldAccess),
@@ -453,6 +524,21 @@ public sealed class Emitter
     {
         var receiver = WriteExpression(recv.Receiver);
         return $"{receiver}.recv()";
+    }
+
+    private static string WriteDotNetCallExpression(LoweredDotNetCallExpression dotNet)
+    {
+        var typeName = WriteExpression(dotNet.TypeNameExpression);
+        var methodName = WriteExpression(dotNet.MethodNameExpression);
+        var args = string.Join(", ", dotNet.Arguments.Select(WriteExpression));
+        var resultType = TypeToCSharp(dotNet.ReturnType);
+        var method = dotNet.IsTryCall ? "TryCall" : "Call";
+        if (args.Length == 0)
+        {
+            return $"DotNetInterop.{method}<{resultType}>({typeName}, {methodName})";
+        }
+
+        return $"DotNetInterop.{method}<{resultType}>({typeName}, {methodName}, {args})";
     }
 
     private static string WriteTupleAccessExpression(LoweredTupleAccessExpression tupleAccess)
@@ -864,20 +950,6 @@ public sealed class Emitter
 
     private static void WriteChannelRuntime(StringBuilder builder)
     {
-        builder.AppendLine("sealed class AxomResult<T>");
-        builder.AppendLine("{");
-        builder.AppendLine("    public string Tag { get; }");
-        builder.AppendLine("    public object? Value { get; }");
-        builder.AppendLine("    private AxomResult(string tag, object? value)");
-        builder.AppendLine("    {");
-        builder.AppendLine("        Tag = tag;");
-        builder.AppendLine("        Value = value;");
-        builder.AppendLine("    }");
-        builder.AppendLine("    public static AxomResult<T> Ok(T value) => new(\"Ok\", value);");
-        builder.AppendLine("    public static AxomResult<T> Error(string message) => new(\"Error\", message);");
-        builder.AppendLine("    public override string ToString() => Tag == \"Ok\" ? $\"Ok({Value})\" : $\"Error({Value})\";");
-        builder.AppendLine("}");
-        builder.AppendLine();
         builder.AppendLine("sealed class AxomChannelState<T>");
         builder.AppendLine("{");
         builder.AppendLine("    public BlockingCollection<T> Queue { get; }");
@@ -919,6 +991,107 @@ public sealed class Emitter
         builder.AppendLine("    {");
         builder.AppendLine("        var state = new AxomChannelState<T>(capacity);");
         builder.AppendLine("        return (new AxomSender<T>(state), new AxomReceiver<T>(state));");
+        builder.AppendLine("    }");
+        builder.AppendLine("}");
+    }
+
+    private static void WriteAxomResultRuntime(StringBuilder builder)
+    {
+        builder.AppendLine("sealed class AxomResult<T>");
+        builder.AppendLine("{");
+        builder.AppendLine("    public string Tag { get; }");
+        builder.AppendLine("    public object? Value { get; }");
+        builder.AppendLine("    private AxomResult(string tag, object? value)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        Tag = tag;");
+        builder.AppendLine("        Value = value;");
+        builder.AppendLine("    }");
+        builder.AppendLine("    public static AxomResult<T> Ok(T value) => new(\"Ok\", value);");
+        builder.AppendLine("    public static AxomResult<T> Error(string message) => new(\"Error\", message);");
+        builder.AppendLine("    public override string ToString() => Tag == \"Ok\" ? $\"Ok({Value})\" : $\"Error({Value})\";");
+        builder.AppendLine("}");
+    }
+
+    private static void WriteDotNetInteropRuntime(StringBuilder builder)
+    {
+        builder.AppendLine("static class DotNetInterop");
+        builder.AppendLine("{");
+        builder.AppendLine("    public static T Call<T>(string typeName, string methodName, params object?[] args)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var result = TryCall<T>(typeName, methodName, args);");
+        builder.AppendLine("        if (result.Tag == \"Error\")");
+        builder.AppendLine("        {");
+        builder.AppendLine("            throw new InvalidOperationException(result.Value?.ToString() ?? \"dotnet call failed.\");");
+        builder.AppendLine("        }");
+        builder.AppendLine("        return (T)result.Value!;");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    public static AxomResult<T> TryCall<T>(string typeName, string methodName, params object?[] args)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        if (!string.Equals(typeName, \"System.Math\", StringComparison.Ordinal))");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomResult<T>.Error($\"dotnet type '{typeName}' is not allowed.\");");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        var methods = typeof(Math).GetMethods(BindingFlags.Public | BindingFlags.Static)");
+        builder.AppendLine("            .Where(m => string.Equals(m.Name, methodName, StringComparison.Ordinal) && m.GetParameters().Length == args.Length)");
+        builder.AppendLine("            .ToList();");
+        builder.AppendLine("        foreach (var method in methods)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            if (!TryConvertArgs(args, method.GetParameters(), out var converted))");
+        builder.AppendLine("            {");
+        builder.AppendLine("                continue;");
+        builder.AppendLine("            }");
+        builder.AppendLine();
+        builder.AppendLine("            try");
+        builder.AppendLine("            {");
+        builder.AppendLine("                var raw = method.Invoke(null, converted);");
+        builder.AppendLine("                if (raw is T typed)");
+        builder.AppendLine("                {");
+        builder.AppendLine("                    return AxomResult<T>.Ok(typed);");
+        builder.AppendLine("                }");
+        builder.AppendLine("                if (typeof(T) == typeof(double) && raw is long l)");
+        builder.AppendLine("                {");
+        builder.AppendLine("                    return AxomResult<T>.Ok((T)(object)(double)l);");
+        builder.AppendLine("                }");
+        builder.AppendLine("                return AxomResult<T>.Error(\"dotnet return type mismatch.\");");
+        builder.AppendLine("            }");
+        builder.AppendLine("            catch (Exception ex)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                return AxomResult<T>.Error(ex.InnerException?.Message ?? ex.Message);");
+        builder.AppendLine("            }");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        return AxomResult<T>.Error($\"dotnet method '{typeName}.{methodName}' not found for provided arguments.\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    private static bool TryConvertArgs(object?[] args, ParameterInfo[] parameters, out object?[] converted)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        converted = new object?[args.Length];");
+        builder.AppendLine("        for (var i = 0; i < args.Length; i++)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            if (!TryConvertArg(args[i], parameters[i].ParameterType, out var value))");
+        builder.AppendLine("            {");
+        builder.AppendLine("                return false;");
+        builder.AppendLine("            }");
+        builder.AppendLine("            converted[i] = value;");
+        builder.AppendLine("        }");
+        builder.AppendLine("        return true;");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    private static bool TryConvertArg(object? value, Type targetType, out object? converted)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        converted = null;");
+        builder.AppendLine("        if (targetType == typeof(long) && value is long l) { converted = l; return true; }");
+        builder.AppendLine("        if (targetType == typeof(double))");
+        builder.AppendLine("        {");
+        builder.AppendLine("            if (value is double d) { converted = d; return true; }");
+        builder.AppendLine("            if (value is long li) { converted = (double)li; return true; }");
+        builder.AppendLine("            return false;");
+        builder.AppendLine("        }");
+        builder.AppendLine("        if (targetType == typeof(bool) && value is bool b) { converted = b; return true; }");
+        builder.AppendLine("        if (targetType == typeof(string) && value is string s) { converted = s; return true; }");
+        builder.AppendLine("        return false;");
         builder.AppendLine("    }");
         builder.AppendLine("}");
     }

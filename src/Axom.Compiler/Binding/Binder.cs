@@ -635,6 +635,8 @@ public sealed class Binder
                 return BindInputExpression();
             case CallExpressionSyntax call:
                 return BindCallExpression(call);
+            case GenericCallExpressionSyntax genericCall:
+                return BindGenericCallExpression(genericCall);
             case LambdaExpressionSyntax lambda:
                 return BindLambdaExpression(lambda);
             default:
@@ -1843,6 +1845,102 @@ public sealed class Binder
 
         var fallbackReturnType = callee.Type.ReturnType ?? TypeSymbol.Error;
         return new BoundCallExpression(callee, boundArguments, fallbackReturnType);
+    }
+
+    private BoundExpression BindGenericCallExpression(GenericCallExpressionSyntax call)
+    {
+        if (call.Callee is not FieldAccessExpressionSyntax fieldAccess
+            || fieldAccess.Target is not NameExpressionSyntax targetName
+            || !string.Equals(targetName.IdentifierToken.Text, "dotnet", StringComparison.Ordinal))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                "Generic calls are only supported for dotnet.call and dotnet.try_call."));
+            return new BoundLiteralExpression(null, TypeSymbol.Error);
+        }
+
+        var methodName = fieldAccess.IdentifierToken.Text;
+        var isTryCall = string.Equals(methodName, "try_call", StringComparison.Ordinal);
+        if (!isTryCall && !string.Equals(methodName, "call", StringComparison.Ordinal))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                fieldAccess.IdentifierToken.Span,
+                "Only dotnet.call and dotnet.try_call are supported."));
+            return new BoundLiteralExpression(null, TypeSymbol.Error);
+        }
+
+        if (call.TypeArguments.Count != 1)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                "dotnet interop expects exactly one return type argument."));
+            return new BoundLiteralExpression(null, TypeSymbol.Error);
+        }
+
+        if (call.Arguments.Count < 2)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                "dotnet interop expects at least type and method string arguments."));
+            return new BoundLiteralExpression(null, TypeSymbol.Error);
+        }
+
+        var returnType = BindType(call.TypeArguments[0]);
+        var typeNameExpression = BindExpression(call.Arguments[0]);
+        var methodNameExpression = BindExpression(call.Arguments[1]);
+
+        if (typeNameExpression.Type != TypeSymbol.String)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Arguments[0].Span,
+                "dotnet type name must be a String."));
+        }
+
+        if (methodNameExpression.Type != TypeSymbol.String)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Arguments[1].Span,
+                "dotnet method name must be a String."));
+        }
+
+        var supportsReturnType = returnType == TypeSymbol.Int
+            || returnType == TypeSymbol.Float
+            || returnType == TypeSymbol.Bool
+            || returnType == TypeSymbol.String;
+        if (!supportsReturnType && returnType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.TypeArguments[0].Span,
+                "dotnet interop supports Int, Float, Bool, and String return types."));
+        }
+
+        var arguments = new List<BoundExpression>();
+        foreach (var argument in call.Arguments.Skip(2))
+        {
+            var bound = BindExpression(argument);
+            var supportsType = bound.Type == TypeSymbol.Int
+                || bound.Type == TypeSymbol.Float
+                || bound.Type == TypeSymbol.Bool
+                || bound.Type == TypeSymbol.String;
+            if (!supportsType && bound.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    argument.Span,
+                    "dotnet interop arguments must be Int, Float, Bool, or String."));
+            }
+
+            arguments.Add(bound);
+        }
+
+        return new BoundDotNetCallExpression(isTryCall, returnType, typeNameExpression, methodNameExpression, arguments);
     }
 
     private BoundExpression? BindBuiltinCall(

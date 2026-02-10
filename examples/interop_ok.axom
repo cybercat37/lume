@@ -1,0 +1,1 @@
+print dotnet.call<Int>("System.Math", "Max", 3, 7)

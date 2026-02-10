@@ -510,11 +510,21 @@ public sealed class Parser
     private ExpressionSyntax ParsePostfixExpression(bool allowRecordLiteral)
     {
         var expression = ParsePrimaryExpression(allowRecordLiteral);
-        while (Current().Kind == TokenKind.OpenParen || Current().Kind == TokenKind.Dot || Current().Kind == TokenKind.OpenBracket || Current().Kind == TokenKind.QuestionToken)
+        while (Current().Kind == TokenKind.OpenParen
+            || Current().Kind == TokenKind.Dot
+            || Current().Kind == TokenKind.OpenBracket
+            || Current().Kind == TokenKind.QuestionToken
+            || IsGenericCallStart())
         {
             if (Current().Kind == TokenKind.OpenParen)
             {
                 expression = ParseCallExpression(expression);
+                continue;
+            }
+
+            if (IsGenericCallStart())
+            {
+                expression = ParseGenericCallExpression(expression);
                 continue;
             }
 
@@ -897,6 +907,74 @@ public sealed class Parser
 
         var closeParen = MatchToken(TokenKind.CloseParen, ")");
         return new CallExpressionSyntax(callee, openParen, arguments, closeParen);
+    }
+
+    private ExpressionSyntax ParseGenericCallExpression(ExpressionSyntax callee)
+    {
+        var lessToken = MatchToken(TokenKind.Less, "<");
+        var typeArguments = new List<TypeSyntax> { ParseTypeSyntax() };
+        while (Current().Kind == TokenKind.Comma)
+        {
+            NextToken();
+            typeArguments.Add(ParseTypeSyntax());
+        }
+
+        var greaterToken = MatchToken(TokenKind.Greater, ">");
+        var openParen = MatchToken(TokenKind.OpenParen, "(");
+        var arguments = new List<ExpressionSyntax>();
+        if (Current().Kind != TokenKind.CloseParen)
+        {
+            do
+            {
+                var expression = ParseExpression();
+                arguments.Add(expression);
+                if (Current().Kind != TokenKind.Comma)
+                {
+                    break;
+                }
+
+                NextToken();
+            } while (Current().Kind != TokenKind.CloseParen && Current().Kind != TokenKind.EndOfFile);
+        }
+
+        var closeParen = MatchToken(TokenKind.CloseParen, ")");
+        return new GenericCallExpressionSyntax(callee, lessToken, typeArguments, greaterToken, openParen, arguments, closeParen);
+    }
+
+    private bool IsGenericCallStart()
+    {
+        if (Current().Kind != TokenKind.Less)
+        {
+            return false;
+        }
+
+        var index = 1;
+        var sawType = false;
+        while (Peek(index).Kind != TokenKind.EndOfFile)
+        {
+            var kind = Peek(index).Kind;
+            if (kind == TokenKind.Identifier)
+            {
+                sawType = true;
+                index++;
+                continue;
+            }
+
+            if (kind == TokenKind.Comma)
+            {
+                index++;
+                continue;
+            }
+
+            if (kind == TokenKind.Greater)
+            {
+                return sawType && Peek(index + 1).Kind == TokenKind.OpenParen;
+            }
+
+            return false;
+        }
+
+        return false;
     }
 
     private ExpressionSyntax ParseLambdaExpression()

@@ -189,6 +189,17 @@ public class CompilerPipelineTests
     }
 
     [Fact]
+    public void Compile_dotnet_call_generates_interop_runtime_usage()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print dotnet.call<Int>(\"System.Math\", \"Max\", 3, 7)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("DotNetInterop.Call<int>", result.GeneratedCode);
+        Assert.Contains("static class DotNetInterop", result.GeneratedCode);
+    }
+
+    [Fact]
     public void Compile_arithmetic_generates_expression()
     {
         var compiler = new CompilerDriver();

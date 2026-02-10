@@ -210,6 +210,8 @@ public sealed class Interpreter
                     return EvaluateChannelSendExpression(send);
                 case LoweredChannelReceiveExpression recv:
                     return EvaluateChannelReceiveExpression(recv);
+                case LoweredDotNetCallExpression dotNet:
+                    return EvaluateDotNetCallExpression(dotNet);
                 case LoweredTupleAccessExpression tupleAccess:
                     return EvaluateTupleAccessExpression(tupleAccess);
                 case LoweredRecordLiteralExpression record:
@@ -378,6 +380,228 @@ public sealed class Interpreter
 
             diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "Unwrap failed."));
             return null;
+        }
+
+        private object? EvaluateDotNetCallExpression(LoweredDotNetCallExpression dotNet)
+        {
+            var typeName = EvaluateExpression(dotNet.TypeNameExpression) as string;
+            var methodName = EvaluateExpression(dotNet.MethodNameExpression) as string;
+            var args = dotNet.Arguments.Select(EvaluateExpression).ToArray();
+
+            if (string.IsNullOrEmpty(typeName) || string.IsNullOrEmpty(methodName))
+            {
+                return BuildDotNetResult(dotNet, isSuccess: false, null, "dotnet type and method names must be strings.");
+            }
+
+            if (!TryInvokeDotNet(typeName, methodName, args, dotNet.ReturnType, out var value, out var error))
+            {
+                return BuildDotNetResult(dotNet, isSuccess: false, null, error ?? "dotnet call failed.");
+            }
+
+            return BuildDotNetResult(dotNet, isSuccess: true, value, null);
+        }
+
+        private object? BuildDotNetResult(LoweredDotNetCallExpression dotNet, bool isSuccess, object? value, string? error)
+        {
+            if (!dotNet.IsTryCall)
+            {
+                if (!isSuccess)
+                {
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, error ?? "dotnet call failed."));
+                    return null;
+                }
+
+                return value;
+            }
+
+            var resultType = TypeSymbol.Result(dotNet.ReturnType, TypeSymbol.String);
+            if (isSuccess)
+            {
+                var okVariant = new SumVariantSymbol("Ok", resultType, dotNet.ReturnType);
+                return new SumValue(okVariant, value);
+            }
+
+            var errorVariant = new SumVariantSymbol("Error", resultType, TypeSymbol.String);
+            return new SumValue(errorVariant, error ?? "dotnet call failed.");
+        }
+
+        private static bool TryInvokeDotNet(
+            string typeName,
+            string methodName,
+            object?[] args,
+            TypeSymbol returnType,
+            out object? value,
+            out string? error)
+        {
+            value = null;
+            error = null;
+
+            if (!string.Equals(typeName, "System.Math", StringComparison.Ordinal))
+            {
+                error = $"dotnet type '{typeName}' is not allowed.";
+                return false;
+            }
+
+            var type = typeof(Math);
+            var methods = type
+                .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                .Where(method => string.Equals(method.Name, methodName, StringComparison.Ordinal)
+                    && method.GetParameters().Length == args.Length)
+                .ToList();
+
+            foreach (var method in methods)
+            {
+                if (!TryConvertArguments(args, method.GetParameters(), out var convertedArgs))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var raw = method.Invoke(null, convertedArgs);
+                    if (!TryConvertReturnValue(raw, returnType, out value))
+                    {
+                        error = $"dotnet return type mismatch for '{typeName}.{methodName}'.";
+                        return false;
+                    }
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    error = ex.InnerException?.Message ?? ex.Message;
+                    return false;
+                }
+            }
+
+            error = $"dotnet method '{typeName}.{methodName}' not found for provided arguments.";
+            return false;
+        }
+
+        private static bool TryConvertArguments(object?[] args, System.Reflection.ParameterInfo[] parameters, out object?[] converted)
+        {
+            converted = new object?[args.Length];
+            for (var i = 0; i < args.Length; i++)
+            {
+                if (!TryConvertArgument(args[i], parameters[i].ParameterType, out var value))
+                {
+                    return false;
+                }
+
+                converted[i] = value;
+            }
+
+            return true;
+        }
+
+        private static bool TryConvertArgument(object? argument, Type targetType, out object? converted)
+        {
+            converted = null;
+            if (targetType == typeof(long))
+            {
+                if (argument is long l)
+                {
+                    converted = l;
+                    return true;
+                }
+
+                if (argument is int i)
+                {
+                    converted = (long)i;
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (targetType == typeof(double))
+            {
+                if (argument is double d)
+                {
+                    converted = d;
+                    return true;
+                }
+
+                if (argument is long l)
+                {
+                    converted = (double)l;
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (targetType == typeof(bool) && argument is bool b)
+            {
+                converted = b;
+                return true;
+            }
+
+            if (targetType == typeof(string) && argument is string s)
+            {
+                converted = s;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryConvertReturnValue(object? raw, TypeSymbol returnType, out object? value)
+        {
+            value = null;
+            if (returnType == TypeSymbol.Int)
+            {
+                if (raw is long l)
+                {
+                    value = l;
+                    return true;
+                }
+
+                if (raw is int i)
+                {
+                    value = (long)i;
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (returnType == TypeSymbol.Float)
+            {
+                if (raw is double d)
+                {
+                    value = d;
+                    return true;
+                }
+
+                if (raw is float f)
+                {
+                    value = (double)f;
+                    return true;
+                }
+
+                if (raw is long l)
+                {
+                    value = (double)l;
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (returnType == TypeSymbol.Bool && raw is bool b)
+            {
+                value = b;
+                return true;
+            }
+
+            if (returnType == TypeSymbol.String && raw is string s)
+            {
+                value = s;
+                return true;
+            }
+
+            return false;
         }
 
         private object? EvaluateSpawnExpression(LoweredSpawnExpression spawn)
