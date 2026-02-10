@@ -89,24 +89,51 @@ public sealed class ModuleResolver
             if (statement is ImportStatementSyntax importStatement)
             {
                 var moduleName = string.Join('.', importStatement.ModuleParts.Select(part => part.Text));
-                var dependencyPath = VisitDependency(modulePath, moduleName, diagnostics, modules, ordered, stack);
+                var dependencyPath = VisitDependency(module, moduleName, importStatement.ModuleParts.Last().Span, diagnostics, modules, ordered, stack);
                 module.Imports.Add(new ModuleImport(
                     moduleName,
                     dependencyPath,
                     isFromImport: false,
                     Array.Empty<ImportSpecifierSyntax>(),
-                    importStatement.Alias?.Text));
+                    importStatement.Alias?.Text,
+                    importStatement.Span,
+                    importStatement.Alias?.Span,
+                    importStatement.ModuleParts.Last().Span,
+                    null,
+                    new Dictionary<string, TextSpan>(StringComparer.Ordinal)));
             }
             else if (statement is FromImportStatementSyntax fromImportStatement)
             {
                 var moduleName = string.Join('.', fromImportStatement.ModuleParts.Select(part => part.Text));
-                var dependencyPath = VisitDependency(modulePath, moduleName, diagnostics, modules, ordered, stack);
+                var dependencyPath = VisitDependency(module, moduleName, fromImportStatement.ModuleParts.Last().Span, diagnostics, modules, ordered, stack);
+                var introducedNameSpans = new Dictionary<string, TextSpan>(StringComparer.Ordinal);
+                var requestedNameSpans = new Dictionary<string, TextSpan>(StringComparer.Ordinal);
+                TextSpan? wildcardSpan = null;
+                foreach (var specifier in fromImportStatement.Specifiers)
+                {
+                    if (specifier.IsWildcard)
+                    {
+                        wildcardSpan = specifier.Span;
+                        continue;
+                    }
+
+                    requestedNameSpans[specifier.NameToken.Text] = specifier.NameToken.Span;
+                    var introducedName = specifier.AliasToken?.Text ?? specifier.NameToken.Text;
+                    introducedNameSpans[introducedName] = (specifier.AliasToken ?? specifier.NameToken).Span;
+                }
+
                 module.Imports.Add(new ModuleImport(
                     moduleName,
                     dependencyPath,
                     isFromImport: true,
                     fromImportStatement.Specifiers,
-                    aliasName: null));
+                    aliasName: null,
+                    fromImportStatement.Span,
+                    aliasSpan: null,
+                    moduleNameSpan: fromImportStatement.ModuleParts.Last().Span,
+                    wildcardSpan,
+                    introducedNameSpans,
+                    requestedNameSpans));
             }
         }
 
@@ -116,17 +143,18 @@ public sealed class ModuleResolver
     }
 
     private static string? VisitDependency(
-        string fromModulePath,
+        ModuleInfo fromModule,
         string moduleName,
+        TextSpan moduleNameSpan,
         List<Diagnostic> diagnostics,
         Dictionary<string, ModuleInfo> modules,
         List<ModuleInfo> ordered,
         List<string> stack)
     {
-        var dependencyPath = ResolveModulePath(fromModulePath, moduleName);
+        var dependencyPath = ResolveModulePath(fromModule.Path, moduleName);
         if (dependencyPath is null)
         {
-            diagnostics.Add(Diagnostic.Error(fromModulePath, 1, 1, $"Module not found: {moduleName}"));
+            diagnostics.Add(CreateModuleDiagnostic(fromModule, moduleNameSpan, $"Module not found: {moduleName}"));
             return null;
         }
 
@@ -164,8 +192,7 @@ public sealed class ModuleResolver
         {
             foreach (var import in module.Imports.Where(item => item.IsFromImport))
             {
-                var dependencyPath = ResolveModulePath(module.Path, import.ModuleName);
-                if (dependencyPath is null || !modules.TryGetValue(dependencyPath, out var dependency))
+                if (import.ResolvedPath is null || !modules.TryGetValue(import.ResolvedPath, out var dependency))
                 {
                     continue;
                 }
@@ -175,14 +202,20 @@ public sealed class ModuleResolver
                 {
                     if (specifier.IsWildcard)
                     {
-                        diagnostics.Add(Diagnostic.Error(module.Path, 1, 1, "Wildcard imports are not supported."));
+                        diagnostics.Add(CreateModuleDiagnostic(module, import.WildcardSpan ?? specifier.Span, "Wildcard imports are not supported."));
                         continue;
+                    }
+
+                    if (specifier.AliasToken is not null)
+                    {
+                        diagnostics.Add(CreateModuleDiagnostic(module, specifier.AliasToken.Span, "from-import alias is not supported yet."));
                     }
 
                     var importedName = specifier.NameToken.Text;
                     if (!exports.Contains(importedName))
                     {
-                        diagnostics.Add(Diagnostic.Error(module.Path, 1, 1, $"Module '{import.ModuleName}' does not export '{importedName}'."));
+                        var span = import.GetRequestedNameSpan(importedName) ?? specifier.NameToken.Span;
+                        diagnostics.Add(CreateModuleDiagnostic(module, span, $"Module '{import.ModuleName}' does not export '{importedName}'."));
                     }
                 }
             }
@@ -205,9 +238,11 @@ public sealed class ModuleResolver
                 {
                     if (!string.IsNullOrEmpty(import.AliasName))
                     {
+                        diagnostics.Add(CreateModuleDiagnostic(module, import.AliasSpan ?? import.StatementSpan, "import alias is not supported yet."));
+
                         if (!namesInScope.Add(import.AliasName))
                         {
-                            diagnostics.Add(Diagnostic.Error(module.Path, 1, 1, $"Imported alias '{import.AliasName}' conflicts with an existing name."));
+                            diagnostics.Add(CreateModuleDiagnostic(module, import.AliasSpan ?? import.StatementSpan, $"Imported alias '{import.AliasName}' conflicts with an existing name."));
                         }
                     }
                     else
@@ -217,7 +252,8 @@ public sealed class ModuleResolver
                         {
                             if (!namesInScope.Add(export))
                             {
-                                diagnostics.Add(Diagnostic.Error(module.Path, 1, 1, $"Imported name '{export}' conflicts with an existing name."));
+                                var span = import.GetIntroducedNameSpan(export) ?? import.StatementSpan;
+                                diagnostics.Add(CreateModuleDiagnostic(module, span, $"Imported name '{export}' conflicts with an existing name."));
                             }
                         }
                     }
@@ -235,11 +271,17 @@ public sealed class ModuleResolver
                     var introducedName = specifier.AliasToken?.Text ?? specifier.NameToken.Text;
                     if (!namesInScope.Add(introducedName))
                     {
-                        diagnostics.Add(Diagnostic.Error(module.Path, 1, 1, $"Imported name '{introducedName}' conflicts with an existing name."));
+                        var span = import.GetIntroducedNameSpan(introducedName) ?? specifier.Span;
+                        diagnostics.Add(CreateModuleDiagnostic(module, span, $"Imported name '{introducedName}' conflicts with an existing name."));
                     }
                 }
             }
         }
+    }
+
+    private static Diagnostic CreateModuleDiagnostic(ModuleInfo module, TextSpan span, string message)
+    {
+        return Diagnostic.Error(module.SyntaxTree.SourceText, span, message);
     }
 
     private static HashSet<string> CollectExports(IReadOnlyList<StatementSyntax> statements)
@@ -419,14 +461,47 @@ public sealed class ModuleResolver
         public bool IsFromImport { get; }
         public IReadOnlyList<ImportSpecifierSyntax> Specifiers { get; }
         public string? AliasName { get; }
+        public TextSpan StatementSpan { get; }
+        public TextSpan? AliasSpan { get; }
+        public TextSpan ModuleNameSpan { get; }
+        public TextSpan? WildcardSpan { get; }
+        private readonly IReadOnlyDictionary<string, TextSpan> introducedNameSpans;
+        private readonly IReadOnlyDictionary<string, TextSpan> requestedNameSpans;
 
-        public ModuleImport(string moduleName, string? resolvedPath, bool isFromImport, IReadOnlyList<ImportSpecifierSyntax> specifiers, string? aliasName)
+        public ModuleImport(
+            string moduleName,
+            string? resolvedPath,
+            bool isFromImport,
+            IReadOnlyList<ImportSpecifierSyntax> specifiers,
+            string? aliasName,
+            TextSpan statementSpan,
+            TextSpan? aliasSpan,
+            TextSpan moduleNameSpan,
+            TextSpan? wildcardSpan,
+            IReadOnlyDictionary<string, TextSpan> introducedNameSpans,
+            IReadOnlyDictionary<string, TextSpan>? requestedNameSpans = null)
         {
             ModuleName = moduleName;
             ResolvedPath = resolvedPath;
             IsFromImport = isFromImport;
             Specifiers = specifiers;
             AliasName = aliasName;
+            StatementSpan = statementSpan;
+            AliasSpan = aliasSpan;
+            ModuleNameSpan = moduleNameSpan;
+            WildcardSpan = wildcardSpan;
+            this.introducedNameSpans = introducedNameSpans;
+            this.requestedNameSpans = requestedNameSpans ?? introducedNameSpans;
+        }
+
+        public TextSpan? GetIntroducedNameSpan(string name)
+        {
+            return introducedNameSpans.TryGetValue(name, out var span) ? span : null;
+        }
+
+        public TextSpan? GetRequestedNameSpan(string name)
+        {
+            return requestedNameSpans.TryGetValue(name, out var span) ? span : null;
         }
     }
 

@@ -64,8 +64,9 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 
 ### Modules & Visibility
 - One file = one module; no nested modules for now.
-- `import` with aliasing and selective imports is planned.
-- Visibility (`pub`/private) is planned with modules.
+- Implemented v1 forms: `import mod`, `from mod import name[, ...]`.
+- Alias forms are parsed but not yet supported by resolver semantics.
+- Visibility (`pub`/private) is enforced across module boundaries.
 
 ### Pattern Matching
 - Current implementation supports literal, `_`, identifier, tuple, and record patterns.

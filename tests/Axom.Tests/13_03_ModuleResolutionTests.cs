@@ -120,14 +120,16 @@ public class ModuleResolutionTests
         try
         {
             var mainPath = Path.Combine(tempDir, "main.axom");
-            File.WriteAllText(mainPath, "import does.not.exist\nprint 1\n");
+            File.WriteAllText(mainPath, "\nimport does.not.exist\nprint 1\n");
 
             var compiler = new CompilerDriver();
             var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
 
             Assert.False(result.Success);
-            Assert.Contains(result.Diagnostics, diagnostic =>
-                diagnostic.Message.Contains("Module not found", StringComparison.OrdinalIgnoreCase));
+            var diagnostic = Assert.Single(result.Diagnostics.Where(d =>
+                d.Message.Contains("Module not found", StringComparison.OrdinalIgnoreCase)));
+            Assert.Equal(2, diagnostic.Line);
+            Assert.True(diagnostic.Column > 1);
         }
         finally
         {
@@ -230,8 +232,62 @@ public class ModuleResolutionTests
             var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
 
             Assert.False(result.Success);
+            var diagnostic = Assert.Single(result.Diagnostics.Where(d =>
+                d.Message.Contains("Imported alias 'tools' conflicts", StringComparison.OrdinalIgnoreCase)));
+            Assert.Equal(2, diagnostic.Line);
+            Assert.True(diagnostic.Column > 1);
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void Import_alias_is_reported_as_not_supported()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var libDir = Path.Combine(tempDir, "lib");
+            Directory.CreateDirectory(libDir);
+            File.WriteAllText(Path.Combine(libDir, "tools.axom"), "pub fn forty_two() -> Int => 42\n");
+
+            var mainPath = Path.Combine(tempDir, "main.axom");
+            File.WriteAllText(mainPath, "import lib.tools as t\nprint forty_two()\n");
+
+            var compiler = new CompilerDriver();
+            var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
+
+            Assert.False(result.Success);
             Assert.Contains(result.Diagnostics, diagnostic =>
-                diagnostic.Message.Contains("Imported alias 'tools' conflicts", StringComparison.OrdinalIgnoreCase));
+                diagnostic.Message.Contains("import alias is not supported", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void From_import_alias_is_reported_as_not_supported()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var libDir = Path.Combine(tempDir, "lib");
+            Directory.CreateDirectory(libDir);
+            File.WriteAllText(Path.Combine(libDir, "tools.axom"), "pub fn forty_two() -> Int => 42\n");
+
+            var mainPath = Path.Combine(tempDir, "main.axom");
+            File.WriteAllText(mainPath, "from lib.tools import forty_two as ft\nprint 1\n");
+
+            var compiler = new CompilerDriver();
+            var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Message.Contains("from-import alias is not supported", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {

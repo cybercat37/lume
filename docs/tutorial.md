@@ -594,7 +594,7 @@ range(1, 10).each(fn(i) { println i })
 
 ---
 
-## 8. Modules and Visibility (Planned)
+## 8. Modules and Visibility (Partial)
 
 ### 8.1 One File = One Module
 
@@ -607,9 +607,11 @@ Each `.axom` file is a module. No nested modules for now.
 
 ```axom
 import std.io
-import std.collections as coll
 from std.math import max, min
 ```
+
+Supported resolver forms in v1 are `import mod` and `from mod import name[, ...]`.
+Alias forms (`import ... as ...`, `from ... import ... as ...`) are parsed but currently produce resolver diagnostics.
 
 
 ---

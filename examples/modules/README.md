@@ -5,10 +5,13 @@ This directory contains module/import examples for the M6 implementation (partia
 ## Valid
 
 - `valid/app/import_simple.axom`
-- `valid/app/import_alias.axom`
 - `valid/app/from_import.axom`
-- `valid/app/from_import_alias.axom`
 - `valid/math/utils.axom`
+
+## Parsed-only (alias forms; resolver diagnostics expected)
+
+- `valid/app/import_alias.axom`
+- `valid/app/from_import_alias.axom`
 
 ## Invalid (expected diagnostics)
 

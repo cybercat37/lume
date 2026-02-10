@@ -134,12 +134,13 @@ Status:
 - Guards for variants/records are implemented.
 - List/rest patterns and related exhaustiveness work remain pending.
 
-### M6: Modules, Imports, Visibility
+### M6: Modules, Imports, Visibility (Mostly Complete)
 Objective: establish module boundary and namespacing model.
 
 DoD:
 - One file = one module with path-based names (`a/b/c.axom` -> `a.b.c`).
-- Import forms implemented: `import mod`, `import mod as alias`, `from mod import name[, ...]`, `from mod import name as alias`.
+- Import forms implemented for v1: `import mod`, `from mod import name[, ...]`.
+- Alias forms are parsed but not yet supported by resolver semantics (`import ... as`, `from ... import ... as ...`).
 - `pub` visibility enforced across module boundaries (default private).
 - Wildcard imports are rejected in v1.
 - Import cycles produce deterministic diagnostics with cycle path.
@@ -157,6 +158,7 @@ Implementation notes (v1 scope):
 - Top-level declarations only (`fn`, `type`, `let`) participate in exports.
 - No explicit export list syntax; `pub` is the only export mechanism.
 - Runtime/codegen emits a single combined program after module resolution.
+- Resolver semantics for module alias forms.
 
 ### M7: String Interpolation + Formatting
 Objective: f-strings with expressions and predictable escaping.
