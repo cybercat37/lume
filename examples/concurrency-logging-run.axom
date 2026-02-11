@@ -1,0 +1,12 @@
+@logging fn worker(id: Int, x: Int) -> Int {
+  return id * 100 + x * x
+}
+
+scope {
+  let a = spawn { worker(1, 3) }
+  let b = spawn { worker(2, 4) }
+  let c = spawn { worker(3, 5) }
+
+  let total = a.join() + b.join() + c.join()
+  println total
+}

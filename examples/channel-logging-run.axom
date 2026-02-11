@@ -1,0 +1,18 @@
+@logging fn process(value: Int) -> Int {
+  return value * 2
+}
+
+scope {
+  let (tx, rx) = channel<Int>()
+  let sender = spawn {
+    tx.send(10)
+    tx.send(20)
+    tx.send(30)
+  }
+  let a = spawn { process(rx.recv().unwrap()) }
+  let b = spawn { process(rx.recv().unwrap()) }
+  let c = spawn { process(rx.recv().unwrap()) }
+
+  println a.join() + b.join() + c.join()
+  sender.join()
+}
