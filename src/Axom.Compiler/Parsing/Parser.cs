@@ -827,6 +827,15 @@ public sealed class Parser
     {
         switch (Current().Kind)
         {
+            case TokenKind.Less:
+            case TokenKind.LessOrEqual:
+            case TokenKind.Greater:
+            case TokenKind.GreaterOrEqual:
+            case TokenKind.EqualEqual:
+            case TokenKind.BangEqual:
+                var relationalOperator = NextToken();
+                var relationalRight = ParseExpression(allowRecordLiteral: false);
+                return new RelationalPatternSyntax(relationalOperator, relationalRight);
             case TokenKind.TrueKeyword:
             case TokenKind.FalseKeyword:
             case TokenKind.NumberLiteral:

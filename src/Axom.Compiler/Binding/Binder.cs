@@ -1084,12 +1084,34 @@ public sealed class Binder
         foreach (var arm in match.Arms)
         {
             scope = new BoundScope(previousScope);
-            var boundPattern = BindPattern(arm.Pattern, valueExpression.Type);
             BoundExpression? boundGuard = null;
+            BoundPattern boundPattern;
+            if (arm.Pattern is RelationalPatternSyntax relationalPattern)
+            {
+                boundPattern = new BoundWildcardPattern(valueExpression.Type);
+                boundGuard = BindRelationalPatternGuard(valueExpression, relationalPattern);
+            }
+            else
+            {
+                boundPattern = BindPattern(arm.Pattern, valueExpression.Type);
+            }
+
             if (arm.Guard is not null)
             {
-                boundGuard = BindExpression(arm.Guard);
-                if (boundGuard.Type != TypeSymbol.Bool && boundGuard.Type != TypeSymbol.Error)
+                var explicitGuard = BindExpression(arm.Guard);
+                if (boundGuard is null)
+                {
+                    boundGuard = explicitGuard;
+                }
+                else
+                {
+                    var combinedType = boundGuard.Type == TypeSymbol.Bool && explicitGuard.Type == TypeSymbol.Bool
+                        ? TypeSymbol.Bool
+                        : TypeSymbol.Error;
+                    boundGuard = new BoundBinaryExpression(boundGuard, TokenKind.AmpersandAmpersand, explicitGuard, combinedType);
+                }
+
+                if (explicitGuard.Type != TypeSymbol.Bool && explicitGuard.Type != TypeSymbol.Error)
                 {
                     diagnostics.Add(Diagnostic.Error(
                         SourceText,
@@ -1120,6 +1142,40 @@ public sealed class Binder
         return new BoundMatchExpression(valueExpression, arms, matchType);
     }
 
+    private BoundExpression BindRelationalPatternGuard(BoundExpression left, RelationalPatternSyntax relationalPattern)
+    {
+        var right = BindExpression(relationalPattern.RightExpression);
+        var op = relationalPattern.OperatorToken.Kind;
+
+        if (left.Type == TypeSymbol.Int && right.Type == TypeSymbol.Int)
+        {
+            return new BoundBinaryExpression(left, op, right, TypeSymbol.Bool);
+        }
+
+        if (left.Type == TypeSymbol.Float && right.Type == TypeSymbol.Float)
+        {
+            return new BoundBinaryExpression(left, op, right, TypeSymbol.Bool);
+        }
+
+        if (op is TokenKind.EqualEqual or TokenKind.BangEqual)
+        {
+            if (left.Type == right.Type && (left.Type == TypeSymbol.Bool || left.Type == TypeSymbol.String))
+            {
+                return new BoundBinaryExpression(left, op, right, TypeSymbol.Bool);
+            }
+        }
+
+        if (left.Type != TypeSymbol.Error && right.Type != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                relationalPattern.OperatorToken.Span,
+                $"Operator '{relationalPattern.OperatorToken.Text}' is not defined for types '{left.Type}' and '{right.Type}'."));
+        }
+
+        return new BoundBinaryExpression(left, op, right, TypeSymbol.Error);
+    }
+
     private BoundPattern BindPattern(PatternSyntax pattern, TypeSymbol targetType)
     {
         switch (pattern)
@@ -1145,6 +1201,12 @@ public sealed class Binder
                 return BindVariantPattern(variant, targetType);
             case RecordPatternSyntax record:
                 return BindRecordPattern(record, targetType);
+            case RelationalPatternSyntax relational:
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    relational.OperatorToken.Span,
+                    "Relational patterns are only valid in match arms."));
+                return new BoundWildcardPattern(targetType);
             default:
                 return new BoundWildcardPattern(TypeSymbol.Error);
         }
@@ -1470,7 +1532,7 @@ public sealed class Binder
                 continue;
             }
 
-            if (arm.Guard is not null)
+            if (arm.Guard is not null || pattern is RelationalPatternSyntax)
             {
                 continue;
             }

@@ -69,7 +69,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - Visibility (`pub`/private) is enforced across module boundaries.
 
 ### Pattern Matching
-- Current implementation supports literal, `_`, identifier, tuple, and record patterns.
+- Current implementation supports literal, relational, `_`, identifier, tuple, and record patterns.
 - Non-exhaustive match is an error; `_` is optional but recommended.
 - Guards for record/variant matches are implemented; list/rest patterns are planned.
 
@@ -203,8 +203,12 @@ pub fn load(id: Int) -> Result<User, Err> {
 
 - `match` expressions must be exhaustive
 - Non-exhaustive matches are compile-time errors
-- Current implementation supports literals, `_`, identifiers, tuples, and record patterns
+- Current implementation supports literals, relational patterns, `_`, identifiers, tuples, and record patterns
 - Guards are available for record/variant patterns
+
+Relational patterns use the match expression as the implicit left operand:
+- `<= 1` desugars to `x if x <= 1`
+- `> limit` desugars to `x if x > limit`
 
 ```axom
 let message = match count {

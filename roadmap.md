@@ -21,7 +21,7 @@ Language core:
 - Functions and lambdas (first-class, captures)
 - Tuple destructuring in let declarations
 - Tuple type syntax in function signatures
-- Pattern match v1 (literals, wildcard, identifiers, tuples)
+- Pattern match v1 (literals, relational, wildcard, identifiers, tuples)
 - Pattern match v1 (record patterns)
 - Pattern match v2 (guards for variants/records)
 - List literals (non-empty, uniform type)

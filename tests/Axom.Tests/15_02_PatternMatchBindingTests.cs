@@ -73,4 +73,39 @@ let result = match 2 {
 
         Assert.NotEmpty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Match_relational_pattern_binds()
+    {
+        var sourceText = new SourceText(@"
+let result = match 2 {
+  <= 1 -> ""small""
+  > 1 -> ""big""
+  _ -> ""other""
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Match_relational_pattern_type_mismatch_produces_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+let result = match ""x"" {
+  <= 1 -> ""small""
+  _ -> ""other""
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+    }
 }

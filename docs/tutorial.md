@@ -277,7 +277,7 @@ let message = match count {
 }
 ```
 
-Supported patterns (v1): literals, `_`, identifiers, and tuples:
+Supported patterns (v1): literals, relational patterns, `_`, identifiers, and tuples:
 
 ```axom
 print match (1, 2) {
@@ -285,6 +285,17 @@ print match (1, 2) {
   _ -> 0
 }
 ```
+
+Relational patterns use the match value as the implicit left operand:
+
+```axom
+print match score {
+  <= 1 -> "low"
+  > 1 -> "high"
+}
+```
+
+`<= 1` behaves like `x if x <= 1` where `x` is the match expression.
 
 Pattern matching must be exhaustive (use `_` when needed).
 

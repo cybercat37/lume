@@ -63,4 +63,19 @@ let result = match 2 {
 
         Assert.Empty(syntaxTree.Diagnostics);
     }
+
+    [Fact]
+    public void Match_relational_pattern_parses()
+    {
+        var sourceText = new SourceText(@"
+let result = match 2 {
+  <= 1 -> ""small""
+  > 1 -> ""big""
+}
+", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
 }

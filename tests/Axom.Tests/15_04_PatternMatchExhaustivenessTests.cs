@@ -72,4 +72,20 @@ let result = match 1 {
 
         Assert.NotEmpty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Match_relational_pattern_alone_is_non_exhaustive()
+    {
+        var sourceText = new SourceText(@"
+let result = match 1 {
+  <= 1 -> 1
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+    }
 }

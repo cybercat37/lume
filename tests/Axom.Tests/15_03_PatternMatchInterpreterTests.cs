@@ -62,4 +62,23 @@ print match user {
         Assert.Equal("Ada", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Match_relational_pattern_selects_branch()
+    {
+        var sourceText = new SourceText(@"
+print match 2 {
+  <= 1 -> ""small""
+  == 2 -> ""two""
+  _ -> ""many""
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("two", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }
