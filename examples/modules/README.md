@@ -1,17 +1,16 @@
 # Module Examples
 
-This directory contains module/import examples for the M6 implementation (partial, resolver/parser v1).
+This directory contains module/import examples for the M6 implementation.
 
 ## Valid
 
 - `valid/app/import_simple.axom`
 - `valid/app/from_import.axom`
-- `valid/math/utils.axom`
-
-## Parsed-only (alias forms; resolver diagnostics expected)
-
 - `valid/app/import_alias.axom`
 - `valid/app/from_import_alias.axom`
+- `valid/app/from_import_type_alias.axom`
+- `valid/math/utils.axom`
+- `valid/math/models.axom`
 
 ## Invalid (expected diagnostics)
 
