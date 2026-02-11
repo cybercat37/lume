@@ -653,8 +653,9 @@ import std.io
 from std.math import max, min
 ```
 
-Supported resolver forms in v1 are `import mod` and `from mod import name[, ...]`.
-Alias forms (`import ... as ...`, `from ... import ... as ...`) are parsed but currently produce resolver diagnostics.
+Supported resolver forms in v1 are `import mod`, `import mod as alias`, and `from mod import name[, ...]`.
+`from ... import name as alias` is supported for value exports (`fn`, `let`).
+Aliasing type exports in from-import currently produces a resolver diagnostic.
 
 
 ---

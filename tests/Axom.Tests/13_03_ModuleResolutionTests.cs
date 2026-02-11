@@ -244,7 +244,7 @@ public class ModuleResolutionTests
     }
 
     [Fact]
-    public void Import_alias_is_reported_as_not_supported()
+    public void Import_alias_is_accepted()
     {
         var tempDir = CreateTempDirectory();
         try
@@ -259,9 +259,7 @@ public class ModuleResolutionTests
             var compiler = new CompilerDriver();
             var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
 
-            Assert.False(result.Success);
-            Assert.Contains(result.Diagnostics, diagnostic =>
-                diagnostic.Message.Contains("import alias is not supported", StringComparison.OrdinalIgnoreCase));
+            Assert.True(result.Success);
         }
         finally
         {
@@ -270,7 +268,7 @@ public class ModuleResolutionTests
     }
 
     [Fact]
-    public void From_import_alias_is_reported_as_not_supported()
+    public void From_import_alias_introduces_alias_binding()
     {
         var tempDir = CreateTempDirectory();
         try
@@ -280,14 +278,12 @@ public class ModuleResolutionTests
             File.WriteAllText(Path.Combine(libDir, "tools.axom"), "pub fn forty_two() -> Int => 42\n");
 
             var mainPath = Path.Combine(tempDir, "main.axom");
-            File.WriteAllText(mainPath, "from lib.tools import forty_two as ft\nprint 1\n");
+            File.WriteAllText(mainPath, "from lib.tools import forty_two as ft\nprint ft()\n");
 
             var compiler = new CompilerDriver();
             var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
 
-            Assert.False(result.Success);
-            Assert.Contains(result.Diagnostics, diagnostic =>
-                diagnostic.Message.Contains("from-import alias is not supported", StringComparison.OrdinalIgnoreCase));
+            Assert.True(result.Success);
         }
         finally
         {

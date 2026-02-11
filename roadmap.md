@@ -55,7 +55,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Tuples (general) | Tuple literals + destructuring | Partial | Match tuples exist; general tuples planned |
 | Generics | Minimal generics | Partial | Function generics are implemented; type generics remain planned |
 | Records update syntax | One obvious update form | Implemented | `target with { ... }` is the only update syntax; spread literals are copy-only |
-| Modules/imports | One-file modules + import | Partial | Resolver v1 is implemented (imports, pub visibility, wildcard rejection, cycle/conflict diagnostics); alias resolver semantics remain pending |
+| Modules/imports | One-file modules + import | Partial | Resolver v1 is implemented (imports, pub visibility, wildcard rejection, cycle/conflict diagnostics); alias support is implemented for `import ... as ...` and value `from ... import ... as ...`, while type aliasing in from-import remains pending |
 | String interpolation | f"...{expr}..." | Planned | Spec planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
@@ -142,21 +142,21 @@ Objective: establish module boundary and namespacing model.
 DoD:
 - One file = one module with path-based names (`a/b/c.axom` -> `a.b.c`).
 - Import forms implemented for v1: `import mod`, `from mod import name[, ...]`.
-- Alias forms are parsed but not yet supported by resolver semantics (`import ... as`, `from ... import ... as ...`).
+- Alias forms are supported for `import ... as ...` and value `from ... import ... as ...`.
 - `pub` visibility enforced across module boundaries (default private).
 - Wildcard imports are rejected in v1.
 - Import cycles produce deterministic diagnostics with cycle path.
 - CLI supports multi-file compilation from an entrypoint.
 
 Key tasks:
-- Complete resolver semantics for module alias forms.
+- Extend from-import aliasing to type exports.
 - Continue diagnostics hardening for multi-module edge cases.
 
 Implementation notes (v1 scope):
 - Top-level declarations only (`fn`, `type`, `let`) participate in exports.
 - No explicit export list syntax; `pub` is the only export mechanism.
 - Runtime/codegen emits a single combined program after module resolution.
-- Resolver semantics for module alias forms.
+- `from ... import ... as ...` currently aliases value exports (`fn`, `let`) and rejects type exports.
 
 ### M7: String Interpolation + Formatting
 Objective: f-strings with expressions and predictable escaping.

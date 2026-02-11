@@ -28,7 +28,7 @@ public sealed class ModuleResolver
             return ModuleResolutionResult.CreateFailure(diagnostics, entryTree);
         }
 
-        var combinedSource = BuildCombinedSource(ordered, fullEntryPath);
+        var combinedSource = BuildCombinedSource(ordered, fullEntryPath, modules);
         return ModuleResolutionResult.CreateSuccess(combinedSource);
     }
 
@@ -197,7 +197,7 @@ public sealed class ModuleResolver
                     continue;
                 }
 
-                var exports = CollectExports(dependency.SyntaxTree.Root.Statements);
+                var exports = CollectExportDeclarations(dependency.SyntaxTree.Root.Statements);
                 foreach (var specifier in import.Specifiers)
                 {
                     if (specifier.IsWildcard)
@@ -206,16 +206,17 @@ public sealed class ModuleResolver
                         continue;
                     }
 
-                    if (specifier.AliasToken is not null)
-                    {
-                        diagnostics.Add(CreateModuleDiagnostic(module, specifier.AliasToken.Span, "from-import alias is not supported yet."));
-                    }
-
                     var importedName = specifier.NameToken.Text;
-                    if (!exports.Contains(importedName))
+                    if (!exports.TryGetValue(importedName, out var exportedDeclaration))
                     {
                         var span = import.GetRequestedNameSpan(importedName) ?? specifier.NameToken.Span;
                         diagnostics.Add(CreateModuleDiagnostic(module, span, $"Module '{import.ModuleName}' does not export '{importedName}'."));
+                        continue;
+                    }
+
+                    if (specifier.AliasToken is not null && !CanAliasAsValue(exportedDeclaration))
+                    {
+                        diagnostics.Add(CreateModuleDiagnostic(module, specifier.AliasToken.Span, $"Cannot alias type export '{importedName}' in from-import."));
                     }
                 }
             }
@@ -238,8 +239,6 @@ public sealed class ModuleResolver
                 {
                     if (!string.IsNullOrEmpty(import.AliasName))
                     {
-                        diagnostics.Add(CreateModuleDiagnostic(module, import.AliasSpan ?? import.StatementSpan, "import alias is not supported yet."));
-
                         if (!namesInScope.Add(import.AliasName))
                         {
                             diagnostics.Add(CreateModuleDiagnostic(module, import.AliasSpan ?? import.StatementSpan, $"Imported alias '{import.AliasName}' conflicts with an existing name."));
@@ -247,8 +246,8 @@ public sealed class ModuleResolver
                     }
                     else
                     {
-                        var exports = CollectExports(dependency.SyntaxTree.Root.Statements);
-                        foreach (var export in exports)
+                        var exports = CollectExportDeclarations(dependency.SyntaxTree.Root.Statements);
+                        foreach (var export in exports.Keys)
                         {
                             if (!namesInScope.Add(export))
                             {
@@ -284,9 +283,9 @@ public sealed class ModuleResolver
         return Diagnostic.Error(module.SyntaxTree.SourceText, span, message);
     }
 
-    private static HashSet<string> CollectExports(IReadOnlyList<StatementSyntax> statements)
+    private static Dictionary<string, StatementSyntax> CollectExportDeclarations(IReadOnlyList<StatementSyntax> statements)
     {
-        var exports = new HashSet<string>(StringComparer.Ordinal);
+        var exports = new Dictionary<string, StatementSyntax>(StringComparer.Ordinal);
         foreach (var statement in statements)
         {
             if (statement is not PubStatementSyntax pub)
@@ -297,7 +296,7 @@ public sealed class ModuleResolver
             var name = GetDeclarationName(pub.Declaration);
             if (!string.IsNullOrEmpty(name))
             {
-                exports.Add(name);
+                exports[name] = pub.Declaration;
             }
         }
 
@@ -337,13 +336,18 @@ public sealed class ModuleResolver
         };
     }
 
-    private static string BuildCombinedSource(IReadOnlyList<ModuleInfo> orderedModules, string entryPath)
+    private static string BuildCombinedSource(
+        IReadOnlyList<ModuleInfo> orderedModules,
+        string entryPath,
+        IReadOnlyDictionary<string, ModuleInfo> modules)
     {
         var importDemand = BuildImportDemand(orderedModules);
         var builder = new StringBuilder();
         foreach (var module in orderedModules)
         {
             var isEntry = string.Equals(module.Path, entryPath, StringComparison.Ordinal);
+            AppendFromImportAliasBridges(builder, module, modules);
+
             foreach (var statement in module.SyntaxTree.Root.Statements)
             {
                 if (statement is ImportStatementSyntax or FromImportStatementSyntax)
@@ -370,6 +374,43 @@ public sealed class ModuleResolver
         }
 
         return builder.ToString();
+    }
+
+    private static void AppendFromImportAliasBridges(
+        StringBuilder builder,
+        ModuleInfo module,
+        IReadOnlyDictionary<string, ModuleInfo> modules)
+    {
+        foreach (var import in module.Imports)
+        {
+            if (!import.IsFromImport || import.ResolvedPath is null || !modules.TryGetValue(import.ResolvedPath, out var dependency))
+            {
+                continue;
+            }
+
+            var exports = CollectExportDeclarations(dependency.SyntaxTree.Root.Statements);
+            foreach (var specifier in import.Specifiers)
+            {
+                if (specifier.IsWildcard || specifier.AliasToken is null)
+                {
+                    continue;
+                }
+
+                var requestedName = specifier.NameToken.Text;
+                if (!exports.TryGetValue(requestedName, out var declaration) || !CanAliasAsValue(declaration))
+                {
+                    continue;
+                }
+
+                builder.AppendLine($"let {specifier.AliasToken.Text} = {requestedName}");
+                builder.AppendLine();
+            }
+        }
+    }
+
+    private static bool CanAliasAsValue(StatementSyntax declaration)
+    {
+        return declaration is FunctionDeclarationSyntax or VariableDeclarationSyntax;
     }
 
     private static Dictionary<string, ImportDemand> BuildImportDemand(IReadOnlyList<ModuleInfo> orderedModules)
