@@ -61,4 +61,15 @@ public class LexerKeywordTests
         Assert.Equal(TokenKind.EndOfFile, tokens[^1].Kind);
     }
 
+    [Fact]
+    public void With_keyword_is_tokenized()
+    {
+        var sourceText = new SourceText("with", "test.axom");
+        var lexer = new Lexer(sourceText);
+
+        var token = lexer.Lex();
+
+        Assert.Equal(TokenKind.WithKeyword, token.Kind);
+    }
+
 }

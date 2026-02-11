@@ -25,6 +25,7 @@ public enum TokenKind
     AsKeyword,
     TrueKeyword,
     FalseKeyword,
+    WithKeyword,
     NumberLiteral,
     StringLiteral,
     EqualsToken,
@@ -53,5 +54,6 @@ public enum TokenKind
     OpenBrace,
     CloseBrace,
     Semicolon,
-    QuestionToken
+    QuestionToken,
+    Ellipsis
 }

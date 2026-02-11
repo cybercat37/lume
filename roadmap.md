@@ -26,7 +26,7 @@ Language core:
 - Pattern match v2 (guards for variants/records)
 - List literals (non-empty, uniform type)
 - Map literals (string keys, uniform value type)
-- Records v1 and sum types v1
+- Records v1.1 (`with` update + spread copy) and sum types v1
 - Option/Result patterns with ? and unwrap()
 - Generics v1 (functions only)
 - Builtins: print, println, input, len, abs, min, max
@@ -54,6 +54,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Collections + iterators | List/Map + combinators | Partial | List/Map literals implemented; iterator combinators remain planned |
 | Tuples (general) | Tuple literals + destructuring | Partial | Match tuples exist; general tuples planned |
 | Generics | Minimal generics | Partial | Function generics are implemented; type generics remain planned |
+| Records update syntax | One obvious update form | Implemented | `target with { ... }` is the only update syntax; spread literals are copy-only |
 | Modules/imports | One-file modules + import | Partial | Parser/import forms + resolver v1 implemented; visibility/conflict hardening pending |
 | String interpolation | f"...{expr}..." | Planned | Spec planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |

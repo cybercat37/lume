@@ -96,8 +96,15 @@ print match (1, 2) {
 type User { name: String, age: Int }
 
 let user = User { name: "Ada", age: 36 }
+let updated = user with { age: 37 }
+let copy = User { ...user }
 print user.name
+print updated.age
 ```
+
+Record rule of thumb:
+- use `with` for updates (`user with { age: 37 }`)
+- use spread only for copy literals (`User { ...user }`)
 
 **Sum types**
 

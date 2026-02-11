@@ -514,6 +514,7 @@ public sealed class Parser
             || Current().Kind == TokenKind.Dot
             || Current().Kind == TokenKind.OpenBracket
             || Current().Kind == TokenKind.QuestionToken
+            || Current().Kind == TokenKind.WithKeyword
             || IsGenericCallStart())
         {
             if (Current().Kind == TokenKind.OpenParen)
@@ -544,6 +545,12 @@ public sealed class Parser
                 continue;
             }
 
+            if (Current().Kind == TokenKind.WithKeyword)
+            {
+                expression = ParseRecordUpdateExpression(expression);
+                continue;
+            }
+
             var dotToken = MatchToken(TokenKind.Dot, ".");
             SyntaxToken identifierToken;
             if (Current().Kind == TokenKind.JoinKeyword)
@@ -558,6 +565,37 @@ public sealed class Parser
         }
 
         return expression;
+    }
+
+    private ExpressionSyntax ParseRecordUpdateExpression(ExpressionSyntax target)
+    {
+        var withKeyword = MatchToken(TokenKind.WithKeyword, "with");
+        var openBrace = MatchToken(TokenKind.OpenBrace, "{");
+        var fields = new List<RecordFieldAssignmentSyntax>();
+
+        ConsumeSeparators();
+        while (Current().Kind != TokenKind.CloseBrace && Current().Kind != TokenKind.EndOfFile)
+        {
+            var start = position;
+            var fieldIdentifier = MatchToken(TokenKind.Identifier, "field name");
+            var colonToken = MatchToken(TokenKind.Colon, ":");
+            var expression = ParseExpression();
+            fields.Add(new RecordFieldAssignmentSyntax(fieldIdentifier, colonToken, expression));
+
+            if (Current().Kind == TokenKind.Comma)
+            {
+                NextToken();
+            }
+
+            ConsumeSeparators();
+            if (position == start)
+            {
+                NextToken();
+            }
+        }
+
+        var closeBrace = MatchToken(TokenKind.CloseBrace, "}");
+        return new RecordUpdateExpressionSyntax(target, withKeyword, openBrace, fields, closeBrace);
     }
 
     private ExpressionSyntax ParsePrimaryExpression(bool allowRecordLiteral)
@@ -749,16 +787,25 @@ public sealed class Parser
     {
         var identifier = MatchToken(TokenKind.Identifier, "type name");
         var openBrace = MatchToken(TokenKind.OpenBrace, "{");
-        var fields = new List<RecordFieldAssignmentSyntax>();
+        var entries = new List<RecordLiteralEntrySyntax>();
 
         ConsumeSeparators();
         while (Current().Kind != TokenKind.CloseBrace && Current().Kind != TokenKind.EndOfFile)
         {
             var start = position;
-            var fieldIdentifier = MatchToken(TokenKind.Identifier, "field name");
-            var colonToken = MatchToken(TokenKind.Colon, ":");
-            var expression = ParseExpression();
-            fields.Add(new RecordFieldAssignmentSyntax(fieldIdentifier, colonToken, expression));
+            if (Current().Kind == TokenKind.Ellipsis)
+            {
+                var ellipsisToken = MatchToken(TokenKind.Ellipsis, "...");
+                var spreadExpression = ParseExpression();
+                entries.Add(new RecordSpreadSyntax(ellipsisToken, spreadExpression));
+            }
+            else
+            {
+                var fieldIdentifier = MatchToken(TokenKind.Identifier, "field name");
+                var colonToken = MatchToken(TokenKind.Colon, ":");
+                var expression = ParseExpression();
+                entries.Add(new RecordFieldAssignmentSyntax(fieldIdentifier, colonToken, expression));
+            }
 
             if (Current().Kind == TokenKind.Comma)
             {
@@ -773,7 +820,7 @@ public sealed class Parser
         }
 
         var closeBrace = MatchToken(TokenKind.CloseBrace, "}");
-        return new RecordLiteralExpressionSyntax(identifier, openBrace, fields, closeBrace);
+        return new RecordLiteralExpressionSyntax(identifier, openBrace, entries, closeBrace);
     }
 
     private PatternSyntax ParsePattern()

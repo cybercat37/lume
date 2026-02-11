@@ -7,18 +7,18 @@ public sealed class RecordLiteralExpressionSyntax : ExpressionSyntax
 {
     public SyntaxToken IdentifierToken { get; }
     public SyntaxToken OpenBraceToken { get; }
-    public IReadOnlyList<RecordFieldAssignmentSyntax> Fields { get; }
+    public IReadOnlyList<RecordLiteralEntrySyntax> Entries { get; }
     public SyntaxToken CloseBraceToken { get; }
 
     public RecordLiteralExpressionSyntax(
         SyntaxToken identifierToken,
         SyntaxToken openBraceToken,
-        IReadOnlyList<RecordFieldAssignmentSyntax> fields,
+        IReadOnlyList<RecordLiteralEntrySyntax> entries,
         SyntaxToken closeBraceToken)
     {
         IdentifierToken = identifierToken;
         OpenBraceToken = openBraceToken;
-        Fields = fields;
+        Entries = entries;
         CloseBraceToken = closeBraceToken;
     }
 

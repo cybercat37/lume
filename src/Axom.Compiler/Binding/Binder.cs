@@ -619,6 +619,8 @@ public sealed class Binder
                 return BindChannelExpression(channel);
             case RecordLiteralExpressionSyntax record:
                 return BindRecordLiteralExpression(record);
+            case RecordUpdateExpressionSyntax recordUpdate:
+                return BindRecordUpdateExpression(recordUpdate);
             case FieldAccessExpressionSyntax fieldAccess:
                 return BindFieldAccessExpression(fieldAccess);
             case IndexExpressionSyntax index:
@@ -656,13 +658,71 @@ public sealed class Binder
             return new BoundRecordLiteralExpression(TypeSymbol.Error, Array.Empty<BoundRecordFieldAssignment>());
         }
 
-        var assignments = new List<BoundRecordFieldAssignment>();
-        var seenFields = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var field in record.Fields)
+        var assignmentsByName = new Dictionary<string, BoundRecordFieldAssignment>(StringComparer.Ordinal);
+        var assignedFromSpread = new HashSet<string>(StringComparer.Ordinal);
+        var explicitFields = new HashSet<string>(StringComparer.Ordinal);
+        var sawSpread = false;
+        foreach (var entry in record.Entries)
         {
+            if (entry is RecordSpreadSyntax spread)
+            {
+                if (sawSpread)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        spread.EllipsisToken.Span,
+                        "Record literals support only one spread expression."));
+                    continue;
+                }
+
+                if (explicitFields.Count > 0)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        spread.EllipsisToken.Span,
+                        "Record spread cannot overwrite explicit fields. Use 'with { ... }' for updates."));
+                }
+
+                var spreadExpression = BindExpression(spread.Expression);
+                if (spreadExpression.Type != definition.Type && spreadExpression.Type != TypeSymbol.Error)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        spread.Expression.Span,
+                        $"Record spread for '{name}' expects '{definition.Type}', found '{spreadExpression.Type}'."));
+                    continue;
+                }
+
+                foreach (var recordField in definition.Fields)
+                {
+                    assignmentsByName[recordField.Name] = new BoundRecordFieldAssignment(
+                        recordField,
+                        new BoundFieldAccessExpression(spreadExpression, recordField));
+                    assignedFromSpread.Add(recordField.Name);
+                }
+
+                sawSpread = true;
+
+                continue;
+            }
+
+            if (entry is not RecordFieldAssignmentSyntax field)
+            {
+                continue;
+            }
+
             var fieldName = field.IdentifierToken.Text;
             var boundExpression = BindExpression(field.Expression);
-            if (!seenFields.Add(fieldName))
+            if (assignedFromSpread.Contains(fieldName))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    field.IdentifierToken.Span,
+                    $"Field '{fieldName}' cannot overwrite a spread value. Use 'with {{ {fieldName}: ... }}' for updates."));
+                continue;
+            }
+
+            if (assignmentsByName.ContainsKey(fieldName) && !assignedFromSpread.Contains(fieldName))
             {
                 diagnostics.Add(Diagnostic.Error(
                     SourceText,
@@ -688,18 +748,87 @@ public sealed class Binder
                     $"Cannot assign expression of type '{boundExpression.Type}' to field '{fieldName}' of type '{match.Type}'."));
             }
 
-            assignments.Add(new BoundRecordFieldAssignment(match, boundExpression));
+            assignmentsByName[fieldName] = new BoundRecordFieldAssignment(match, boundExpression);
+            explicitFields.Add(fieldName);
+            assignedFromSpread.Remove(fieldName);
         }
 
         foreach (var field in definition.Fields)
         {
-            if (!seenFields.Contains(field.Name))
+            if (!assignmentsByName.ContainsKey(field.Name))
             {
                 diagnostics.Add(Diagnostic.Error(
                     SourceText,
                     record.IdentifierToken.Span,
                     $"Record '{name}' is missing required field '{field.Name}'."));
             }
+        }
+
+        var assignments = definition.Fields
+            .Where(field => assignmentsByName.ContainsKey(field.Name))
+            .Select(field => assignmentsByName[field.Name])
+            .ToList();
+
+        return new BoundRecordLiteralExpression(definition.Type, assignments);
+    }
+
+    private BoundExpression BindRecordUpdateExpression(RecordUpdateExpressionSyntax recordUpdate)
+    {
+        var target = BindExpression(recordUpdate.Target);
+        if (!recordDefinitions.TryGetValue(target.Type.Name, out var definition))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                recordUpdate.WithKeyword.Span,
+                "Record update requires a record type target."));
+            return new BoundRecordLiteralExpression(TypeSymbol.Error, Array.Empty<BoundRecordFieldAssignment>());
+        }
+
+        var explicitAssignments = new Dictionary<string, BoundRecordFieldAssignment>(StringComparer.Ordinal);
+        foreach (var field in recordUpdate.Fields)
+        {
+            var fieldName = field.IdentifierToken.Text;
+            var boundExpression = BindExpression(field.Expression);
+            if (explicitAssignments.ContainsKey(fieldName))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    field.IdentifierToken.Span,
+                    $"Field '{fieldName}' is already updated in record '{definition.Type.Name}'."));
+                continue;
+            }
+
+            var match = definition.Fields.FirstOrDefault(f => string.Equals(f.Name, fieldName, StringComparison.Ordinal));
+            if (match is null)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    field.IdentifierToken.Span,
+                    $"Record '{definition.Type.Name}' has no field '{fieldName}'."));
+                continue;
+            }
+
+            if (boundExpression.Type != match.Type && boundExpression.Type != TypeSymbol.Error && match.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    field.Expression.Span,
+                    $"Cannot assign expression of type '{boundExpression.Type}' to field '{fieldName}' of type '{match.Type}'."));
+            }
+
+            explicitAssignments[fieldName] = new BoundRecordFieldAssignment(match, boundExpression);
+        }
+
+        var assignments = new List<BoundRecordFieldAssignment>(definition.Fields.Count);
+        foreach (var field in definition.Fields)
+        {
+            if (explicitAssignments.TryGetValue(field.Name, out var explicitAssignment))
+            {
+                assignments.Add(explicitAssignment);
+                continue;
+            }
+
+            assignments.Add(new BoundRecordFieldAssignment(field, new BoundFieldAccessExpression(target, field)));
         }
 
         return new BoundRecordLiteralExpression(definition.Type, assignments);

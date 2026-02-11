@@ -3,7 +3,7 @@ using Axom.Compiler.Text;
 
 namespace Axom.Compiler.Syntax;
 
-public sealed class RecordFieldAssignmentSyntax : SyntaxNode
+public sealed class RecordFieldAssignmentSyntax : RecordLiteralEntrySyntax
 {
     public SyntaxToken IdentifierToken { get; }
     public SyntaxToken ColonToken { get; }

@@ -173,6 +173,12 @@ public sealed class Lexer
                 Next();
                 return new SyntaxToken(TokenKind.Colon, new TextSpan(start, 1), ":", null);
             case '.':
+                if (Peek(1) == '.' && Peek(2) == '.')
+                {
+                    position += 3;
+                    return new SyntaxToken(TokenKind.Ellipsis, new TextSpan(start, 3), "...", null);
+                }
+
                 Next();
                 return new SyntaxToken(TokenKind.Dot, new TextSpan(start, 1), ".", null);
             case '(':
@@ -356,6 +362,7 @@ public sealed class Lexer
             "as" => TokenKind.AsKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,
+            "with" => TokenKind.WithKeyword,
             _ => TokenKind.Identifier
         };
     }

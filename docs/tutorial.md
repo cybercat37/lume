@@ -108,7 +108,9 @@ print total
 type User { name: String, age: Int }
 
 let user = User { name: "Ada", age: 36 }
+let updated = user with { age: 37 }
 print user.name
+print updated.age
 ```
 
 **Sum types**
@@ -399,8 +401,15 @@ type User {
 }
 
 let user = User { name: "Alice", age: 30 }
+let older = user with { age: 31 }
+let copy = User { ...user }
 let name = user.name
 ```
+
+Rules:
+- Use `target with { field: value }` for record updates.
+- Use `TypeName { ...value }` for copy construction.
+- `TypeName { ...value, field: ... }` is rejected to keep a single update style.
 
 
 ---
@@ -919,6 +928,25 @@ numbers.each(fn(x) { sum = sum + x })
 ```
 
 ❌ **Don't use** `mut` for manual loop counters - use iterators or recursion.
+
+---
+
+### 13.5 Records
+
+✅ **Use** `with` when changing fields:
+```axom
+let updated = user with { age: 37 }
+```
+
+✅ **Use** spread only to copy:
+```axom
+let copy = User { ...user }
+```
+
+❌ **Avoid** mixed spread+override literals:
+```axom
+let invalid = User { ...user, age: 37 }
+```
 
 ---
 

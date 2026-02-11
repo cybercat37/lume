@@ -48,7 +48,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 ### Types & Data
 - `Int` is 64-bit. `Float` is 64-bit (double precision). No `Char`, `Byte`, or `UInt` for now.
 - Numeric conversions are explicit: `float(Int) -> Float` and `int(Float) -> Int`.
-- Records use `type` with literal construction `User { name: "Ada" }`; update syntax and destructuring are planned.
+- Records use `type` with literal construction `User { name: "Ada" }` and update syntax `user with { age: 37 }`.
 - Sum types use `Variant` / `Variant(value)` payload style.
 - Generics use `<T>` with inference; no constraints for now.
 - Type aliases are equivalent to the base type (no newtype yet).
@@ -483,12 +483,15 @@ Records declare named fields and are constructed with record literals.
 type User { name: String, age: Int }
 
 let user = User { name: "Ada", age: 36 }
+let updated = user with { age: 37 }
 print user.name
 ```
 
 Notes:
 - Field order in literals is not significant.
 - Missing, duplicate, or unknown fields are compile-time errors.
+- Record update uses `target with { field: value }`.
+- Spread literals are for copy construction (`User { ...user }`) and cannot override fields.
 - Constructor-style calls `User(...)` are planned but not implemented.
 
 ### 6.2 Sum Types
