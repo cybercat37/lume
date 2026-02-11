@@ -223,6 +223,88 @@ DoD:
 Key tasks:
 - Keep docs/tutorial in sync per release.
 
+### M12: Aspects and Runtime Policies (Proposed)
+Objective: evolve `@...` from passive metadata into concrete, opt-in behavior
+for observability, reliability, and integration boundaries.
+
+DoD (v1):
+- Builtin aspect tags use identifier syntax (e.g. `@logging`) with validation,
+  instead of free-form strings.
+- First runtime-capable aspects are available end-to-end in interpreter + codegen.
+- Aspect target rules are explicit and diagnostics are deterministic.
+- Baseline tests and examples exist for each shipped builtin aspect.
+
+MVP priorities (execution order):
+1. `@logging` (invocation, args, return value, optional duration)
+2. `@retry` + `@timeout` for reliability boundaries
+3. `@webhook` + output serialization for API-facing flows
+4. `@mqtt_publish` / `@mqtt_subscribe` for messaging workflows
+
+Proposal backlog:
+
+### Aspect syntax and model
+- Promote aspect tags to builtin identifiers (e.g. `@logging`, `@metrics`) instead of free-form strings.
+- Keep an extension escape hatch (`@custom("team.policy")`) for project-specific tooling.
+- Allow multiple aspects on the same declaration with deterministic order.
+- Define aspect targets explicitly (`fn`, `block`, `let`, future `type`) and reject invalid placements.
+- Add per-aspect arguments with typed schemas (e.g. `@retry(max: 3, backoff: "exp")`).
+
+### Observability and diagnostics
+- `@logging`: log invocation, args, return value, and optional duration.
+- `@trace`: emit trace spans with nested call structure and correlation ids.
+- `@metrics`: automatic counters/timers/histograms around annotated code paths.
+- `@audit`: append structured audit events for sensitive operations.
+- PII-safe logging policies (masking/redaction for selected params/fields).
+
+### Reliability and control flow
+- `@retry` for transient failures with bounded attempts and backoff strategies.
+- `@timeout` for bounded execution windows on functions/blocks.
+- `@circuit_breaker` wrappers for unstable external integrations.
+- `@fallback` handlers for graceful degradation paths.
+- `@idempotent` hints + diagnostics for risky side effects in retried code.
+
+### Transactions and consistency
+- `@transaction` with begin/commit/rollback semantics over supported backends.
+- `@saga` orchestration with compensating actions for distributed workflows.
+- `@outbox` pattern support for reliable event publishing.
+- `@unit_of_work` boundary management for batched state changes.
+- Conflict/isolation diagnostics (best-effort static checks + runtime hooks).
+
+### Web/API-oriented capabilities
+- `@http` function exposure for lightweight endpoint declaration.
+- Route attributes (`@get`, `@post`, `@put`, `@delete`) with typed params.
+- Request validation aspects (`@validate`) with auto 4xx mapping.
+- `@auth` / `@authorize` policies for role/scope checks.
+- `@rate_limit` and `@cache` for endpoint-level governance/perf.
+
+### Messaging and external integrations
+- `@mqtt_publish` / `@mqtt_subscribe` for topic-driven workflows.
+- Connection/session policies for MQTT (`qos`, retained messages, reconnect strategy).
+- `@mail` / `@email` aspects for templated outbound notifications.
+- Delivery diagnostics (accepted/rejected/deferred) mapped to Result-style outcomes.
+- `@webhook` emit/receive aspects with signature verification and replay protection.
+
+### Lifecycle and extension hooks
+- `@before` / `@after` hooks around function invocation boundaries.
+- `@on_error` hooks for centralized failure handling and alerting.
+- Domain event hooks (`@on_create`, `@on_update`, `@on_delete`) for entity workflows.
+- Build/runtime plugin hooks for custom organization policies.
+- Ordering/composition rules when multiple hooks/aspects are stacked.
+
+### Serialization and contracts
+- Automatic output serialization (`@serialize("json")`, future `yaml/msgpack`).
+- Content negotiation hooks (`Accept`/`Content-Type`) for API contexts.
+- Schema derivation from Axom types for request/response contracts.
+- Versioned contract aspects (`@api_version("v1")`) for compatibility.
+- Stable field naming/renaming directives and backward-compat diagnostics.
+
+### AI-assisted intent validation (non-deterministic lane)
+- `axom intent-check` command that compares natural-language intent vs code behavior.
+- Report classes: `supported`, `partial`, `contradicted` with rationale.
+- Structured prompting based on AST + inferred effects (not raw text only).
+- CI advisory mode first, optional strict mode later.
+- Model/provider abstraction with deterministic fallback checks.
+
 ## Technical Backlog (Cross-Cutting)
 
 - Determinism and caching verification across parse/bind/lower/emit.
