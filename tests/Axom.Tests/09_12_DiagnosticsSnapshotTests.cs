@@ -123,6 +123,32 @@ public class DiagnosticsSnapshotTests
     }
 
     [Fact]
+    public void Match_relational_type_mismatch_diagnostic_matches_snapshot()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("let result = match \"x\" {\n  <= 1 -> \"small\"\n  _ -> \"other\"\n}", "test.axom");
+
+        Assert.False(result.Success);
+
+        var snapshot = Snapshots.Read("MatchRelationalTypeMismatch.snapshot.txt");
+        var actual = Snapshots.Format(result.Diagnostics);
+        Assert.Equal(snapshot, actual);
+    }
+
+    [Fact]
+    public void Match_relational_non_exhaustive_diagnostic_matches_snapshot()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("let result = match 1 { <= 1 -> 1 }", "test.axom");
+
+        Assert.False(result.Success);
+
+        var snapshot = Snapshots.Read("MatchRelationalNonExhaustive.snapshot.txt");
+        var actual = Snapshots.Format(result.Diagnostics);
+        Assert.Equal(snapshot, actual);
+    }
+
+    [Fact]
     public void Record_missing_field_diagnostic_matches_snapshot()
     {
         var compiler = new CompilerDriver();
