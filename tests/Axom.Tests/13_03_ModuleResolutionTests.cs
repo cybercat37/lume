@@ -315,6 +315,38 @@ public class ModuleResolutionTests
         }
     }
 
+    [Fact]
+    public void From_import_type_alias_conflict_reports_targets()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var libDir = Path.Combine(tempDir, "lib");
+            Directory.CreateDirectory(libDir);
+            File.WriteAllText(Path.Combine(libDir, "a.axom"), "pub type User { name: String }\n");
+            File.WriteAllText(Path.Combine(libDir, "b.axom"), "pub type Account { id: Int }\n");
+
+            var mainPath = Path.Combine(tempDir, "main.axom");
+            File.WriteAllText(mainPath,
+                "from lib.a import User as Entity\n" +
+                "from lib.b import Account as Entity\n" +
+                "print 1\n");
+
+            var compiler = new CompilerDriver();
+            var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
+
+            Assert.False(result.Success);
+            var diagnostic = Assert.Single(result.Diagnostics.Where(d =>
+                d.Message.Contains("maps to both 'User' and 'Account'", StringComparison.OrdinalIgnoreCase)));
+            Assert.Equal(2, diagnostic.Line);
+            Assert.True(diagnostic.Column > 1);
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_modules_{Guid.NewGuid():N}");

@@ -446,7 +446,7 @@ public sealed class ModuleResolver
                     var aliasName = specifier.AliasToken.Text;
                     if (aliases.TryGetValue(aliasName, out var existingTarget) && !string.Equals(existingTarget, importedName, StringComparison.Ordinal))
                     {
-                        diagnostics.Add(CreateModuleDiagnostic(module, specifier.AliasToken.Span, $"Imported type alias '{aliasName}' conflicts with an existing type alias."));
+                        diagnostics.Add(CreateModuleDiagnostic(module, specifier.AliasToken.Span, $"Imported type alias '{aliasName}' maps to both '{existingTarget}' and '{importedName}'."));
                         continue;
                     }
 
