@@ -49,6 +49,21 @@ public sealed class Diagnostic
             span);
     }
 
+    public static Diagnostic Warning(
+        SourceText sourceText,
+        TextSpan span,
+        string message)
+    {
+        var (line, column) = sourceText.GetLineAndColumn(span.Start);
+        return new Diagnostic(
+            DiagnosticSeverity.Warning,
+            sourceText.FileName,
+            line,
+            column,
+            message,
+            span);
+    }
+
     public override string ToString() =>
         $"{File}({Line},{Column}): {Severity}: {Message}";
 }

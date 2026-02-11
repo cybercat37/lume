@@ -48,4 +48,15 @@ public class IntentAnnotationParserTests
         Assert.Contains(syntaxTree.Diagnostics, d =>
             d.Message.Contains("Only @intent annotations are supported", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void Logging_aspect_keyword_on_function_parses()
+    {
+        var sourceText = new SourceText("@logging fn add(a: Int, b: Int) -> Int => a + b", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var function = Assert.IsType<FunctionDeclarationSyntax>(syntaxTree.Root.Statements.Single());
+        Assert.Equal("logging", Assert.Single(function.Aspects));
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
 }

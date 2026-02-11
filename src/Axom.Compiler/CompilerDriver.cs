@@ -36,8 +36,9 @@ public sealed class CompilerDriver
         var diagnostics = syntaxTree.Diagnostics
             .Concat(bindResult.Diagnostics)
             .ToList();
+        var hasErrors = diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
 
-        if (diagnostics.Count > 0)
+        if (hasErrors)
         {
             return CompilationResult.Fail(diagnostics, syntaxTree);
         }
@@ -46,7 +47,7 @@ public sealed class CompilerDriver
         var loweredProgram = lowerer.Lower(bindResult.Program);
         var emitter = new Emitter();
         var generatedCode = emitter.Emit(loweredProgram);
-        return CompilationResult.CreateSuccess(generatedCode, syntaxTree);
+        return CompilationResult.CreateSuccess(generatedCode, syntaxTree, diagnostics);
     }
 
     public CompilationResult CompileCached(string source, string fileName, CompilerCache cache)
@@ -73,8 +74,9 @@ public sealed class CompilerDriver
         var diagnostics = syntaxTree.Diagnostics
             .Concat(bindResult.Diagnostics)
             .ToList();
+        var hasErrors = diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
 
-        if (diagnostics.Count > 0)
+        if (hasErrors)
         {
             return CompilationResult.Fail(diagnostics, syntaxTree);
         }
@@ -83,7 +85,7 @@ public sealed class CompilerDriver
         var loweredProgram = lowerer.Lower(bindResult.Program);
         var emitter = new Emitter();
         var generatedCode = emitter.EmitCached(loweredProgram, cache.Emitted);
-        return CompilationResult.CreateSuccess(generatedCode, syntaxTree);
+        return CompilationResult.CreateSuccess(generatedCode, syntaxTree, diagnostics);
     }
 
     private static ModuleResolutionResult ResolveModulesIfNeeded(string source, string fileName)

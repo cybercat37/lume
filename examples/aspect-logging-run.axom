@@ -1,0 +1,5 @@
+@logging fn greet(name: String) -> String {
+  return "Hello, " + name
+}
+
+print greet("Axom")

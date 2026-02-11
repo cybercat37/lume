@@ -12,8 +12,9 @@ public sealed class Emitter
 {
     public string Emit(LoweredProgram program)
     {
+        var requiresFunctionLogging = program.Functions.Any(function => function.Symbol.EnableLogging);
         var requiresFormat = RequiresFormat(program);
-        var requiresStringify = RequiresStringify(program) || requiresFormat;
+        var requiresStringify = RequiresStringify(program) || requiresFormat || requiresFunctionLogging;
         var builder = new StringBuilder();
         builder.AppendLine("using System;");
         if (RequiresCollections(program))
@@ -82,6 +83,12 @@ public sealed class Emitter
         if (requiresFormat)
         {
             WriteFormatHelper(builder);
+            builder.AppendLine();
+        }
+
+        if (requiresFunctionLogging)
+        {
+            WriteFunctionLoggingHelpers(builder);
             builder.AppendLine();
         }
 
@@ -421,7 +428,11 @@ public sealed class Emitter
         return code;
     }
 
-    private static void WriteStatement(IndentedWriter writer, LoweredStatement statement)
+    private static void WriteStatement(
+        IndentedWriter writer,
+        LoweredStatement statement,
+        bool logFunctionReturns = false,
+        string? functionName = null)
     {
         switch (statement)
         {
@@ -430,7 +441,7 @@ public sealed class Emitter
                 {
                     foreach (var inner in block.Statements)
                     {
-                        WriteStatement(writer, inner);
+                        WriteStatement(writer, inner, logFunctionReturns, functionName);
                     }
 
                     return;
@@ -440,7 +451,7 @@ public sealed class Emitter
                 writer.Indent();
                 foreach (var inner in block.Statements)
                 {
-                    WriteStatement(writer, inner);
+                    WriteStatement(writer, inner, logFunctionReturns, functionName);
                 }
                 writer.Unindent();
                 writer.WriteLine("}");
@@ -457,7 +468,30 @@ public sealed class Emitter
             case LoweredReturnStatement returnStatement:
                 if (returnStatement.Expression is null)
                 {
+                    if (logFunctionReturns && functionName is not null)
+                    {
+                        writer.WriteLine("{");
+                        writer.Indent();
+                        writer.WriteLine($"AxomLogReturn(\"{EscapeString(functionName)}\", null);");
+                        writer.WriteLine("return;");
+                        writer.Unindent();
+                        writer.WriteLine("}");
+                        return;
+                    }
+
                     writer.WriteLine("return;");
+                    return;
+                }
+
+                if (logFunctionReturns && functionName is not null)
+                {
+                    writer.WriteLine("{");
+                    writer.Indent();
+                    writer.WriteLine($"var __axomReturn = {WriteExpression(returnStatement.Expression)};");
+                    writer.WriteLine($"AxomLogReturn(\"{EscapeString(functionName)}\", __axomReturn);");
+                    writer.WriteLine("return __axomReturn;");
+                    writer.Unindent();
+                    writer.WriteLine("}");
                     return;
                 }
 
@@ -465,11 +499,11 @@ public sealed class Emitter
                 return;
             case LoweredIfStatement ifStatement:
                 writer.WriteLine($"if ({WriteExpression(ifStatement.Condition)})");
-                WriteStatement(writer, ifStatement.Then);
+                WriteStatement(writer, ifStatement.Then, logFunctionReturns, functionName);
                 if (ifStatement.Else is not null)
                 {
                     writer.WriteLine("else");
-                    WriteStatement(writer, ifStatement.Else);
+                    WriteStatement(writer, ifStatement.Else, logFunctionReturns, functionName);
                 }
                 return;
             default:
@@ -824,13 +858,44 @@ public sealed class Emitter
             : string.Empty;
         var parameters = string.Join(", ", function.Parameters.Select(parameter =>
             $"{TypeToCSharp(parameter.Type)} {EscapeIdentifier(parameter.Name)}"));
+        var logFunction = function.Symbol.EnableLogging;
         builder.AppendLine($"    static {returnType} {EscapeIdentifier(function.Symbol.Name)}{typeParameters}({parameters})");
         builder.AppendLine("    {");
         var writer = new IndentedWriter(builder, 2);
+        if (logFunction)
+        {
+            var argsArray = function.Parameters.Count == 0
+                ? "Array.Empty<object?>()"
+                : $"new object?[] {{ {string.Join(", ", function.Parameters.Select(parameter => EscapeIdentifier(parameter.Name)))} }}";
+            writer.WriteLine($"AxomLogInvocation(\"{EscapeString(function.Symbol.Name)}\", {argsArray});");
+        }
+
         foreach (var statement in function.Body.Statements)
         {
-            WriteStatement(writer, statement);
+            WriteStatement(writer, statement, logFunction, function.Symbol.Name);
         }
+
+        if (logFunction && function.Symbol.ReturnType == TypeSymbol.Unit)
+        {
+            writer.WriteLine($"AxomLogReturn(\"{EscapeString(function.Symbol.Name)}\", null);");
+        }
+
+        builder.AppendLine("    }");
+    }
+
+    private static void WriteFunctionLoggingHelpers(StringBuilder builder)
+    {
+        builder.AppendLine("    static void AxomLogInvocation(string name, object?[] args)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var rendered = string.Join(\", \", args.Select(AxomStringify));");
+        builder.AppendLine("        var timestamp = DateTimeOffset.Now.ToString(\"yyyy-MM-dd HH:mm:ss\", System.Globalization.CultureInfo.InvariantCulture);");
+        builder.AppendLine("        Console.WriteLine($\"{timestamp} [log] call {name}({rendered})\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static void AxomLogReturn(string name, object? value)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var timestamp = DateTimeOffset.Now.ToString(\"yyyy-MM-dd HH:mm:ss\", System.Globalization.CultureInfo.InvariantCulture);");
+        builder.AppendLine("        Console.WriteLine($\"{timestamp} [log] return {name} => {AxomStringify(value)}\");");
         builder.AppendLine("    }");
     }
 

@@ -30,7 +30,10 @@ public sealed class Interpreter
     {
         var binder = new Binder();
         var bindResult = binder.Bind(syntaxTree);
-        if (bindResult.Diagnostics.Count > 0)
+        var bindingErrors = bindResult.Diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToList();
+        if (bindingErrors.Count > 0)
         {
             return new InterpreterResult(string.Empty, bindResult.Diagnostics);
         }
@@ -38,7 +41,11 @@ public sealed class Interpreter
         var lowerer = new Lowerer();
         var loweredProgram = lowerer.Lower(bindResult.Program);
         var evaluator = new Evaluator(loweredProgram, inputBuffer);
-        return evaluator.Evaluate();
+        var evaluationResult = evaluator.Evaluate();
+        var mergedDiagnostics = bindResult.Diagnostics
+            .Concat(evaluationResult.Diagnostics)
+            .ToList();
+        return new InterpreterResult(evaluationResult.Output, mergedDiagnostics);
     }
 
     private sealed class Evaluator
@@ -1036,6 +1043,12 @@ public sealed class Interpreter
             }
 
             object? result = null;
+            if (functionSymbol?.EnableLogging == true)
+            {
+                var renderedArguments = string.Join(", ", arguments.Select(FormatValue));
+                output.AppendLine($"{LogTimestamp()} [log] call {functionSymbol.Name}({renderedArguments})");
+            }
+
             try
             {
                 currentFunction = functionSymbol;
@@ -1055,7 +1068,8 @@ public sealed class Interpreter
                             EvaluateStatement(statement);
                         }
 
-                        return null;
+                        result = null;
+                        break;
                     }
                     catch (TailCallSignal signal)
                     {
@@ -1081,6 +1095,11 @@ public sealed class Interpreter
                     {
                         values.Remove(symbol);
                     }
+                }
+
+                if (functionSymbol?.EnableLogging == true)
+                {
+                    output.AppendLine($"{LogTimestamp()} [log] return {functionSymbol.Name} => {FormatValue(result)}");
                 }
             }
 
@@ -1232,6 +1251,11 @@ public sealed class Interpreter
                 SumValue sum => sum.ToString(),
                 _ => value.ToString() ?? string.Empty
             };
+        }
+
+        private static string LogTimestamp()
+        {
+            return DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private static string ApplyFormat(object? value, string formatSpecifier)

@@ -5,6 +5,7 @@ namespace Axom.Compiler.Syntax;
 
 public sealed class FunctionDeclarationSyntax : StatementSyntax
 {
+    public IReadOnlyList<string> Aspects { get; }
     public SyntaxToken FnKeyword { get; }
     public SyntaxToken IdentifierToken { get; }
     public SyntaxToken? TypeParameterOpenToken { get; }
@@ -20,6 +21,7 @@ public sealed class FunctionDeclarationSyntax : StatementSyntax
     public ExpressionSyntax? BodyExpression { get; }
 
     public FunctionDeclarationSyntax(
+        IReadOnlyList<string>? aspects,
         SyntaxToken fnKeyword,
         SyntaxToken identifierToken,
         SyntaxToken? typeParameterOpenToken,
@@ -34,6 +36,7 @@ public sealed class FunctionDeclarationSyntax : StatementSyntax
         BlockStatementSyntax? bodyBlock,
         ExpressionSyntax? bodyExpression)
     {
+        Aspects = aspects ?? Array.Empty<string>();
         FnKeyword = fnKeyword;
         IdentifierToken = identifierToken;
         TypeParameterOpenToken = typeParameterOpenToken;

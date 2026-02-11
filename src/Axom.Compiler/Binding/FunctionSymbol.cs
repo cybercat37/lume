@@ -9,19 +9,22 @@ public sealed class FunctionSymbol
     public IReadOnlyList<TypeSymbol> GenericParameters { get; }
     public TypeSymbol ReturnType { get; private set; }
     public bool IsBuiltin { get; }
+    public bool EnableLogging { get; }
 
     public FunctionSymbol(
         string name,
         IReadOnlyList<ParameterSymbol> parameters,
         IReadOnlyList<TypeSymbol> genericParameters,
         TypeSymbol returnType,
-        bool isBuiltin = false)
+        bool isBuiltin = false,
+        bool enableLogging = false)
     {
         Name = name;
         Parameters = parameters;
         GenericParameters = genericParameters;
         ReturnType = returnType;
         IsBuiltin = isBuiltin;
+        EnableLogging = enableLogging;
     }
 
     public void SetReturnType(TypeSymbol returnType)

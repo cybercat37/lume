@@ -325,8 +325,9 @@ public sealed class Binder
             var returnType = declaration.ReturnType is null
                 ? TypeSymbol.Unit
                 : BindType(declaration.ReturnType);
+            var enableLogging = declaration.Aspects.Any(aspect => string.Equals(aspect, "logging", StringComparison.OrdinalIgnoreCase));
 
-            var symbol = new FunctionSymbol(name, parameters, genericParameters, returnType);
+            var symbol = new FunctionSymbol(name, parameters, genericParameters, returnType, enableLogging: enableLogging);
             var declared = scope.TryDeclareFunction(symbol);
             if (declared is null)
             {
@@ -507,7 +508,8 @@ public sealed class Binder
             name,
             declaration.Parameters.Select(parameter => new ParameterSymbol(parameter.IdentifierToken.Text, BindType(parameter.Type))).ToList(),
             genericParameters,
-            declaration.ReturnType is null ? TypeSymbol.Unit : BindType(declaration.ReturnType));
+            declaration.ReturnType is null ? TypeSymbol.Unit : BindType(declaration.ReturnType),
+            enableLogging: declaration.Aspects.Any(aspect => string.Equals(aspect, "logging", StringComparison.OrdinalIgnoreCase)));
 
         var previousScope = scope;
         var previousFunction = currentFunction;
@@ -671,6 +673,199 @@ public sealed class Binder
         }
 
         return true;
+    }
+
+    private void ValidateIntentCoverage(BoundIntentAnnotation? annotation, IReadOnlyCollection<string> inferredEffects)
+    {
+        if (annotation is null || inferredEffects.Count == 0)
+        {
+            return;
+        }
+
+        var declared = new HashSet<string>(annotation.Effects, StringComparer.OrdinalIgnoreCase);
+        var missing = inferredEffects
+            .Where(effect => !declared.Contains(effect))
+            .OrderBy(effect => effect, StringComparer.Ordinal)
+            .ToList();
+        if (missing.Count == 0)
+        {
+            return;
+        }
+
+        diagnostics.Add(Diagnostic.Warning(
+            SourceText,
+            annotation.Span,
+            $"Intent does not declare inferred effects: {string.Join(", ", missing)}."));
+    }
+
+    private static HashSet<string> InferEffects(IReadOnlyList<BoundStatement> statements)
+    {
+        var effects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var statement in statements)
+        {
+            InferEffects(statement, effects);
+        }
+
+        return effects;
+    }
+
+    private static HashSet<string> InferEffects(BoundExpression expression)
+    {
+        var effects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        InferEffects(expression, effects);
+        return effects;
+    }
+
+    private static void InferEffects(BoundStatement statement, ISet<string> effects)
+    {
+        switch (statement)
+        {
+            case BoundBlockStatement block:
+                foreach (var nested in block.Statements)
+                {
+                    InferEffects(nested, effects);
+                }
+                break;
+            case BoundVariableDeclaration declaration:
+                InferEffects(declaration.Initializer, effects);
+                break;
+            case BoundDeconstructionStatement deconstruction:
+                InferEffects(deconstruction.Initializer, effects);
+                break;
+            case BoundPrintStatement print:
+                effects.Add("io");
+                InferEffects(print.Expression, effects);
+                break;
+            case BoundExpressionStatement expressionStatement:
+                InferEffects(expressionStatement.Expression, effects);
+                break;
+            case BoundReturnStatement returnStatement when returnStatement.Expression is not null:
+                InferEffects(returnStatement.Expression, effects);
+                break;
+        }
+    }
+
+    private static void InferEffects(BoundExpression expression, ISet<string> effects)
+    {
+        switch (expression)
+        {
+            case BoundInputExpression:
+                effects.Add("io");
+                break;
+            case BoundDotNetCallExpression dotNetCall:
+                effects.Add("dotnet");
+                InferEffects(dotNetCall.TypeNameExpression, effects);
+                InferEffects(dotNetCall.MethodNameExpression, effects);
+                foreach (var argument in dotNetCall.Arguments)
+                {
+                    InferEffects(argument, effects);
+                }
+                break;
+            case BoundSpawnExpression spawn:
+                effects.Add("concurrency");
+                InferEffects(spawn.Body, effects);
+                break;
+            case BoundJoinExpression join:
+                effects.Add("concurrency");
+                InferEffects(join.Expression, effects);
+                break;
+            case BoundChannelCreateExpression:
+                effects.Add("concurrency");
+                break;
+            case BoundChannelSendExpression send:
+                effects.Add("concurrency");
+                InferEffects(send.Sender, effects);
+                InferEffects(send.Value, effects);
+                break;
+            case BoundChannelReceiveExpression receive:
+                effects.Add("concurrency");
+                InferEffects(receive.Receiver, effects);
+                break;
+            case BoundCallExpression call:
+                if (call.Callee is BoundFunctionExpression functionExpression
+                    && functionExpression.Function.IsBuiltin
+                    && string.Equals(functionExpression.Function.Name, "input", StringComparison.Ordinal))
+                {
+                    effects.Add("io");
+                }
+
+                if (call.Callee is BoundLambdaExpression lambda)
+                {
+                    InferEffects(lambda.Body, effects);
+                }
+
+                InferEffects(call.Callee, effects);
+                foreach (var argument in call.Arguments)
+                {
+                    InferEffects(argument, effects);
+                }
+                break;
+            case BoundUnaryExpression unary:
+                InferEffects(unary.Operand, effects);
+                break;
+            case BoundBinaryExpression binary:
+                InferEffects(binary.Left, effects);
+                InferEffects(binary.Right, effects);
+                break;
+            case BoundAssignmentExpression assignment:
+                InferEffects(assignment.Expression, effects);
+                break;
+            case BoundLambdaExpression:
+                break;
+            case BoundMatchExpression match:
+                InferEffects(match.Expression, effects);
+                foreach (var arm in match.Arms)
+                {
+                    if (arm.Guard is not null)
+                    {
+                        InferEffects(arm.Guard, effects);
+                    }
+
+                    InferEffects(arm.Expression, effects);
+                }
+                break;
+            case BoundTupleExpression tuple:
+                foreach (var element in tuple.Elements)
+                {
+                    InferEffects(element, effects);
+                }
+                break;
+            case BoundListExpression list:
+                foreach (var element in list.Elements)
+                {
+                    InferEffects(element, effects);
+                }
+                break;
+            case BoundMapExpression map:
+                foreach (var entry in map.Entries)
+                {
+                    InferEffects(entry.Key, effects);
+                    InferEffects(entry.Value, effects);
+                }
+                break;
+            case BoundRecordLiteralExpression record:
+                foreach (var field in record.Fields)
+                {
+                    InferEffects(field.Expression, effects);
+                }
+                break;
+            case BoundFieldAccessExpression fieldAccess:
+                InferEffects(fieldAccess.Target, effects);
+                break;
+            case BoundIndexExpression index:
+                InferEffects(index.Target, effects);
+                InferEffects(index.Index, effects);
+                break;
+            case BoundQuestionExpression question:
+                InferEffects(question.Expression, effects);
+                break;
+            case BoundUnwrapExpression unwrap:
+                InferEffects(unwrap.Expression, effects);
+                break;
+            case BoundSumConstructorExpression sum when sum.Payload is not null:
+                InferEffects(sum.Payload, effects);
+                break;
+        }
     }
 
     private BoundExpression BindExpression(ExpressionSyntax expression, TypeSymbol? expectedType = null)

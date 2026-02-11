@@ -22,8 +22,8 @@ public sealed class CompilationResult
         SyntaxTree = syntaxTree;
     }
 
-    public static CompilationResult CreateSuccess(string code, SyntaxTree syntaxTree) =>
-        new(true, code, Array.Empty<Diagnostic>(), syntaxTree);
+    public static CompilationResult CreateSuccess(string code, SyntaxTree syntaxTree, IReadOnlyList<Diagnostic>? diagnostics = null) =>
+        new(true, code, diagnostics ?? Array.Empty<Diagnostic>(), syntaxTree);
 
     public static CompilationResult Fail(IReadOnlyList<Diagnostic> diagnostics, SyntaxTree syntaxTree) =>
         new(false, string.Empty, diagnostics, syntaxTree);

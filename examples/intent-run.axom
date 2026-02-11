@@ -1,0 +1,7 @@
+@intent("io,dotnet") {
+  print "intent demo"
+  print dotnet.call<Int>("System.Math", "Max", 3, 9)
+}
+
+@intent("concurrency") let pair = channel<Int>()
+print pair

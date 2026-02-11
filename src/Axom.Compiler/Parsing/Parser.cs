@@ -97,6 +97,25 @@ public sealed class Parser
     {
         if (Current().Kind == TokenKind.At)
         {
+            if (Peek(1).Kind == TokenKind.OpenParen)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    sourceText,
+                    Current().Span,
+                    "Use aspect keyword syntax (e.g. @logging) instead of @(\"...\")."));
+                return ParseExpressionStatement();
+            }
+
+            if (Peek(1).Kind == TokenKind.Identifier && Peek(2).Kind == TokenKind.OpenParen)
+            {
+                return ParseAspectAnnotatedStatement();
+            }
+
+            if (Peek(1).Kind == TokenKind.Identifier)
+            {
+                return ParseKeywordAspectAnnotatedStatement();
+            }
+
             return ParseAnnotatedStatement();
         }
 
@@ -127,6 +146,41 @@ public sealed class Parser
             TokenKind.OpenBrace => ParseBlockStatement(intentAnnotation),
             _ => ParseInvalidIntentTarget(intentAnnotation)
         };
+    }
+
+    private StatementSyntax ParseAspectAnnotatedStatement()
+    {
+        return ParseAnnotatedStatement();
+    }
+
+    private StatementSyntax ParseKeywordAspectAnnotatedStatement()
+    {
+        var aspects = new List<string>();
+        while (Current().Kind == TokenKind.At
+            && Peek(1).Kind == TokenKind.Identifier
+            && !(string.Equals(Peek(1).Text, "intent", StringComparison.Ordinal) && Peek(2).Kind == TokenKind.OpenParen))
+        {
+            aspects.Add(ParseAspectTag());
+            ConsumeSeparators();
+        }
+
+        if (Current().Kind == TokenKind.FnKeyword && Peek(1).Kind == TokenKind.Identifier)
+        {
+            return ParseFunctionDeclaration(aspects);
+        }
+
+        diagnostics.Add(Diagnostic.Error(
+            sourceText,
+            Current().Span,
+            "@aspect can only be applied to fn declarations."));
+        return ParseStatement();
+    }
+
+    private string ParseAspectTag()
+    {
+        _ = MatchToken(TokenKind.At, "@");
+        var tagToken = MatchToken(TokenKind.Identifier, "aspect identifier");
+        return tagToken.Text;
     }
 
     private StatementSyntax ParseInvalidIntentTarget(IntentAnnotationSyntax intentAnnotation)
@@ -311,7 +365,7 @@ public sealed class Parser
         return new SumTypeDeclarationSyntax(typeKeyword, identifier, openBrace, variants, closeBrace);
     }
 
-    private StatementSyntax ParseFunctionDeclaration()
+    private StatementSyntax ParseFunctionDeclaration(IReadOnlyList<string>? aspects = null)
     {
         var fnKeyword = MatchToken(TokenKind.FnKeyword, "fn");
         var identifier = MatchToken(TokenKind.Identifier, "identifier");
@@ -355,6 +409,7 @@ public sealed class Parser
             var arrowToken = NextToken();
             var expressionBody = ParseExpression();
             return new FunctionDeclarationSyntax(
+                aspects,
                 fnKeyword,
                 identifier,
                 typeParameterOpenToken,
@@ -372,6 +427,7 @@ public sealed class Parser
 
         var bodyBlock = ParseBlockStatement();
         return new FunctionDeclarationSyntax(
+            aspects,
             fnKeyword,
             identifier,
             typeParameterOpenToken,

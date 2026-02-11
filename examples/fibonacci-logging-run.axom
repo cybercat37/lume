@@ -1,0 +1,8 @@
+@logging fn fib(n: Int) -> Int {
+  return match n {
+    <= 1 -> 1
+    _ -> fib(n - 1) + fib(n - 2)
+  }
+}
+
+print fib(6)
