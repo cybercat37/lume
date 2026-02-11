@@ -87,9 +87,15 @@ Value pipe examples:
 
 ### Modules & Visibility
 - One file = one module; no nested modules for now.
-- Implemented v1 forms: `import mod`, `from mod import name[, ...]`.
-- Alias forms are parsed but not yet supported by resolver semantics.
+- Implemented v1 forms: `import mod`, `import mod as alias`, `from mod import name[, ...]`.
+- Alias forms are supported for `from mod import name as alias` (values and types).
 - Visibility (`pub`/private) is enforced across module boundaries.
+
+### Aspects (Partial)
+- Builtin aspect tags use identifier syntax on declarations (for example `@logging`).
+- `@logging` on `fn` is implemented in interpreter and codegen.
+- Logging emits timestamped invocation/return lines and includes arguments/return values.
+- Additional aspects (`@retry`, `@timeout`, webhook/mqtt policies) are planned.
 
 ### Pattern Matching
 - Current implementation supports literal, relational, `_`, identifier, tuple, and record patterns.
@@ -104,12 +110,12 @@ Value pipe examples:
 ### Comments & Docs
 - Traditional comments are not supported; intent annotations are the planned alternative.
 
-### Intent Annotations (Planned)
+### Intent Annotations (Partial)
 - Intent annotations are structured metadata, not general-purpose comments.
 - Syntax: `@intent("...")` where the argument is a string literal.
 - May appear on blocks and `let` bindings; function-level intent is a future extension.
-- No runtime effect; only used for diagnostics, tooling, and documentation.
-- Tooling may warn if intent does not match inferred effects (db/network/fs/time/random).
+- No runtime effect; current implementation carries metadata through parser/binder/lowering.
+- Effect-mismatch warnings are currently disabled while intent UX is refined.
 - `@intent` is a built-in attribute; user-defined attributes use `@attr` later.
 
 Syntax sketch (planned):

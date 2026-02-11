@@ -71,6 +71,18 @@ print min(3, 7)
 print max(3, 7)
 ```
 
+**Time and random builtins**
+
+```axom
+rand_seed(42)
+print rand_float()
+print rand_int(10)
+sleep(20)
+```
+
+- `sleep(ms)` waits for `ms` milliseconds (`ms <= 0` is a no-op)
+- `rand_int(max)` returns `Ok(n)` or `Error("max must be > 0")`
+
 **Value pipe**
 
 ```axom
@@ -79,6 +91,18 @@ print score
 ```
 
 `value |> f` is shorthand for `f(value)`.
+
+**Aspects (`@logging`)**
+
+```axom
+@logging fn add(a: Int, b: Int) -> Int {
+  return a + b
+}
+
+print add(3, 4)
+```
+
+`@logging` emits timestamped call/return logs with arguments and return values.
 
 **Collections + combinators**
 
@@ -162,6 +186,15 @@ Current concurrency status (Partial):
 - Bounded channel capacity is available (`channel<T>(N)`, default `64`).
 - Scope cancellation propagation is implemented (`Error("cancelled")` on interrupted channel ops).
 - Advanced backpressure policies are follow-up work.
+
+Current aspects status (Partial):
+- `@logging` is implemented for function declarations (`@logging fn ...`).
+- Interpreter and codegen both emit timestamped invocation/return logs.
+- Additional aspects (`@retry`, `@timeout`, webhook/mqtt policies) are planned.
+
+Current intent status (Partial):
+- `@intent("...")` metadata on `let` and blocks is implemented.
+- Intent effect-mismatch warnings are currently disabled.
 
 ## Building and Running
 

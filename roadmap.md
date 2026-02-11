@@ -35,6 +35,7 @@ Runtime + tooling:
 - Interpreter and codegen (C# emitter)
 - Dedicated lowering pass with lowered nodes
 - Concurrency runtime prototype (scope/spawn/join)
+- Aspect runtime v1 (`@logging` on functions, timestamped call/return logs)
 - CLI: check, build, run (+ out/verbosity flags)
 - Golden + snapshot tests and fuzz harness
 - Compilation cache and large input guardrail
@@ -58,10 +59,11 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Modules/imports | One-file modules + import | Implemented | Resolver v1 is implemented (imports, pub visibility, wildcard rejection, cycle/conflict diagnostics, aliases for `import ... as ...` and `from ... import ... as ...`) |
 | String interpolation | f"...{expr}..." | Partial | `f"...{expr}..."` interpolation is implemented with escaped braces and baseline `:specifier` formatting; advanced formatting controls remain planned |
 | Time/random builtins | sleep + random helpers | Implemented | `sleep(ms)`, `rand_float()`, `rand_int(max) -> Result`, `rand_seed(seed)` are implemented in interpreter+codegen |
-| Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
+| Intent annotations | @intent metadata on blocks/let | Partial | Parser/binder/lowering metadata exists; effect-mismatch warnings are currently disabled |
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
 | .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with `System.Math` whitelist |
 | Pipeline operator + combinators | \|> and combinators | Partial | Value pipe `|>` implemented; combinator syntax remains proposal-only |
+| Aspects/runtime policies | Builtin aspect tags + runtime behavior | Partial | `@logging` is implemented with keyword syntax and interpreter/codegen parity |
 
 ## Milestones (Priority Ordered)
 
@@ -172,17 +174,17 @@ Status:
 - Baseline formatting specifiers are supported via `f"...{expr:specifier}..."` (`IFormattable` + `upper`/`lower` string specifiers).
 - Advanced formatting controls and extended spec coverage remain follow-up work.
 
-### M8: Intent Annotations + Effect Inference
-Objective: intent metadata for docs and diagnostics.
+### M8: Intent Annotations + Effect Metadata
+Objective: structured intent metadata for docs/tooling and future policy checks.
 
 DoD:
 - @intent on blocks and let bindings.
-- Basic effect inference (db/network/fs/time/random).
-- Warnings on mismatch; docs output path.
+- Intent metadata available through parser -> binder -> lowering.
+- Stable diagnostics for invalid intent forms.
 
 Key tasks:
-- Decide effect taxonomy and warning codes.
-- Snapshot tests for warnings.
+- Decide long-term intent semantics (policy checks vs advisory docs).
+- Reintroduce effect comparison only when UX and taxonomy are finalized.
 
 ### M9: Concurrency + Parallelism (Mostly Complete)
 Objective: structured concurrency and explicit parallel execution.
@@ -224,7 +226,7 @@ DoD:
 Key tasks:
 - Keep docs/tutorial in sync per release.
 
-### M12: Aspects and Runtime Policies (Proposed)
+### M12: Aspects and Runtime Policies (Partial)
 Objective: evolve `@...` from passive metadata into concrete, opt-in behavior
 for observability, reliability, and integration boundaries.
 
@@ -234,6 +236,12 @@ DoD (v1):
 - First runtime-capable aspects are available end-to-end in interpreter + codegen.
 - Aspect target rules are explicit and diagnostics are deterministic.
 - Baseline tests and examples exist for each shipped builtin aspect.
+
+Status:
+- `@logging` is implemented for function declarations.
+- Interpreter and codegen both emit timestamped invocation/return logs.
+- Concurrency examples (`spawn` + `sleep`) demonstrate completion-order logging.
+- Follow-up aspects (`@retry`, `@timeout`, webhook/mqtt, etc.) remain planned.
 
 MVP priorities (execution order):
 1. `@logging` (invocation, args, return value, optional duration)
