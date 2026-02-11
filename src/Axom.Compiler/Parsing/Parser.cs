@@ -2,6 +2,7 @@ using Axom.Compiler.Diagnostics;
 using Axom.Compiler.Lexing;
 using Axom.Compiler.Syntax;
 using Axom.Compiler.Text;
+using System.Text;
 
 namespace Axom.Compiler.Parsing;
 
@@ -641,6 +642,11 @@ public sealed class Parser
 
                 return new InputExpressionSyntax(NextToken());
             case TokenKind.Identifier:
+                if (string.Equals(Current().Text, "f", StringComparison.Ordinal) && Peek(1).Kind == TokenKind.StringLiteral)
+                {
+                    return ParseInterpolatedStringExpression();
+                }
+
                 if (Peek(1).Kind == TokenKind.ArrowType)
                 {
                     return ParseShorthandLambdaExpression();
@@ -696,6 +702,159 @@ public sealed class Parser
 
         var closeParenToken = MatchToken(TokenKind.CloseParen, ")");
         return new ChannelExpressionSyntax(channelIdentifier, lessToken, elementType, greaterToken, openParenToken, capacityExpression, closeParenToken);
+    }
+
+    private ExpressionSyntax ParseInterpolatedStringExpression()
+    {
+        var prefixToken = MatchToken(TokenKind.Identifier, "f");
+        var stringToken = MatchToken(TokenKind.StringLiteral, "string literal");
+        var content = stringToken.Value as string ?? string.Empty;
+
+        var segments = ParseInterpolatedSegments(content, stringToken, prefixToken.Span.Start);
+        if (segments.Count == 0)
+        {
+            return new LiteralExpressionSyntax(new SyntaxToken(
+                TokenKind.StringLiteral,
+                stringToken.Span,
+                stringToken.Text,
+                string.Empty));
+        }
+
+        var plusToken = new SyntaxToken(TokenKind.Plus, stringToken.Span, "+", null);
+        var combined = segments[0];
+        for (var i = 1; i < segments.Count; i++)
+        {
+            combined = new BinaryExpressionSyntax(combined, plusToken, segments[i]);
+        }
+
+        return combined;
+    }
+
+    private List<ExpressionSyntax> ParseInterpolatedSegments(string content, SyntaxToken stringToken, int positionHint)
+    {
+        var segments = new List<ExpressionSyntax>();
+        var literalBuilder = new StringBuilder();
+        var sawInterpolation = false;
+        var index = 0;
+
+        while (index < content.Length)
+        {
+            var current = content[index];
+            if (current == '{')
+            {
+                if (index + 1 < content.Length && content[index + 1] == '{')
+                {
+                    literalBuilder.Append('{');
+                    index += 2;
+                    continue;
+                }
+
+                FlushLiteralSegment(segments, literalBuilder, stringToken, positionHint);
+
+                var closeIndex = content.IndexOf('}', index + 1);
+                if (closeIndex < 0)
+                {
+                    diagnostics.Add(Diagnostic.Error(sourceText, stringToken.Span, "Interpolated string expression is not closed."));
+                    break;
+                }
+
+                var expressionText = content.Substring(index + 1, closeIndex - index - 1).Trim();
+                if (string.IsNullOrEmpty(expressionText))
+                {
+                    diagnostics.Add(Diagnostic.Error(sourceText, stringToken.Span, "Interpolated string expression cannot be empty."));
+                    segments.Add(CreateStringLiteralExpression(string.Empty, stringToken, positionHint));
+                }
+                else
+                {
+                    var parsedExpression = ParseInterpolatedExpression(expressionText, stringToken, positionHint);
+                    segments.Add(WrapStringifyCall(parsedExpression, positionHint));
+                }
+
+                sawInterpolation = true;
+                index = closeIndex + 1;
+                continue;
+            }
+
+            if (current == '}')
+            {
+                if (index + 1 < content.Length && content[index + 1] == '}')
+                {
+                    literalBuilder.Append('}');
+                    index += 2;
+                    continue;
+                }
+
+                diagnostics.Add(Diagnostic.Error(sourceText, stringToken.Span, "Interpolated string contains an unexpected '}'."));
+                index++;
+                continue;
+            }
+
+            literalBuilder.Append(current);
+            index++;
+        }
+
+        FlushLiteralSegment(segments, literalBuilder, stringToken, positionHint);
+
+        if (!sawInterpolation)
+        {
+            return segments;
+        }
+
+        if (segments.Count == 0)
+        {
+            segments.Add(CreateStringLiteralExpression(string.Empty, stringToken, positionHint));
+        }
+
+        return segments;
+    }
+
+    private ExpressionSyntax ParseInterpolatedExpression(string expressionText, SyntaxToken stringToken, int positionHint)
+    {
+        var expressionSource = new SourceText($"print {expressionText}", sourceText.FileName);
+        var expressionTree = SyntaxTree.Parse(expressionSource);
+        if (expressionTree.Diagnostics.Count > 0)
+        {
+            diagnostics.Add(Diagnostic.Error(sourceText, stringToken.Span, $"Invalid interpolation expression: {expressionText}"));
+            return CreateStringLiteralExpression(string.Empty, stringToken, positionHint);
+        }
+
+        if (expressionTree.Root.Statements.FirstOrDefault() is not PrintStatementSyntax printStatement)
+        {
+            diagnostics.Add(Diagnostic.Error(sourceText, stringToken.Span, $"Invalid interpolation expression: {expressionText}"));
+            return CreateStringLiteralExpression(string.Empty, stringToken, positionHint);
+        }
+
+        return printStatement.Expression;
+    }
+
+    private static void FlushLiteralSegment(List<ExpressionSyntax> segments, StringBuilder literalBuilder, SyntaxToken stringToken, int positionHint)
+    {
+        if (literalBuilder.Length == 0)
+        {
+            return;
+        }
+
+        segments.Add(CreateStringLiteralExpression(literalBuilder.ToString(), stringToken, positionHint));
+        literalBuilder.Clear();
+    }
+
+    private static ExpressionSyntax CreateStringLiteralExpression(string value, SyntaxToken stringToken, int positionHint)
+    {
+        var token = new SyntaxToken(
+            TokenKind.StringLiteral,
+            stringToken.Span,
+            $"\"{value}\"",
+            value);
+        return new LiteralExpressionSyntax(token);
+    }
+
+    private static ExpressionSyntax WrapStringifyCall(ExpressionSyntax expression, int positionHint)
+    {
+        var strToken = new SyntaxToken(TokenKind.Identifier, new TextSpan(positionHint, 1), "str", null);
+        var callee = new NameExpressionSyntax(strToken);
+        var openParen = SyntaxToken.Missing(TokenKind.OpenParen, positionHint);
+        var closeParen = SyntaxToken.Missing(TokenKind.CloseParen, positionHint);
+        return new CallExpressionSyntax(callee, openParen, new[] { expression }, closeParen);
     }
 
     private ExpressionSyntax ParseListOrMapExpression()

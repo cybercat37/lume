@@ -921,6 +921,8 @@ public sealed class Interpreter
                     return arguments[0] is int intValue ? (double)intValue : 0.0;
                 case "int":
                     return arguments[0] is double doubleValue ? (int)doubleValue : 0;
+                case "str":
+                    return FormatValue(arguments[0]);
                 case "map":
                     if (arguments.Length == 2 && arguments[0] is List<object?> mapItems)
                     {

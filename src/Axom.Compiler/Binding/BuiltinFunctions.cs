@@ -70,6 +70,13 @@ public static class BuiltinFunctions
         TypeSymbol.Int,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Str = new(
+        "str",
+        new[] { new ParameterSymbol("value", GenericT) },
+        new[] { GenericT },
+        TypeSymbol.String,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Map = new(
         "map",
         new[]
@@ -126,6 +133,7 @@ public static class BuiltinFunctions
         [Max.Name] = Max,
         [Float.Name] = Float,
         [Int.Name] = Int,
+        [Str.Name] = Str,
         [Map.Name] = Map,
         [Filter.Name] = Filter,
         [Fold.Name] = Fold,

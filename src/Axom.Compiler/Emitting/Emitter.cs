@@ -12,6 +12,7 @@ public sealed class Emitter
 {
     public string Emit(LoweredProgram program)
     {
+        var requiresStringify = RequiresStringify(program);
         var builder = new StringBuilder();
         builder.AppendLine("using System;");
         if (RequiresCollections(program))
@@ -70,6 +71,13 @@ public sealed class Emitter
             WriteFunction(builder, function);
             builder.AppendLine();
         }
+
+        if (requiresStringify)
+        {
+            WriteStringifyHelper(builder);
+            builder.AppendLine();
+        }
+
         builder.AppendLine("    static void Main()");
         builder.AppendLine("    {");
         var writer = new IndentedWriter(builder, 2);
@@ -101,6 +109,11 @@ public sealed class Emitter
     private static bool RequiresDotNetInterop(LoweredProgram program)
     {
         return program.Statements.Any(UsesDotNetInterop) || program.Functions.Any(function => UsesDotNetInterop(function.Body));
+    }
+
+    private static bool RequiresStringify(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesStringify) || program.Functions.Any(function => UsesStringify(function.Body));
     }
 
     private static bool UsesCollections(LoweredStatement statement)
@@ -155,6 +168,20 @@ public sealed class Emitter
             LoweredExpressionStatement expressionStatement => UsesDotNetInterop(expressionStatement.Expression),
             LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesDotNetInterop(returnStatement.Expression),
             LoweredIfStatement ifStatement => UsesDotNetInterop(ifStatement.Condition) || UsesDotNetInterop(ifStatement.Then) || (ifStatement.Else is not null && UsesDotNetInterop(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesStringify(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesStringify),
+            LoweredVariableDeclaration declaration => UsesStringify(declaration.Initializer),
+            LoweredPrintStatement print => UsesStringify(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesStringify(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesStringify(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesStringify(ifStatement.Condition) || UsesStringify(ifStatement.Then) || (ifStatement.Else is not null && UsesStringify(ifStatement.Else)),
             _ => false
         };
     }
@@ -278,6 +305,43 @@ public sealed class Emitter
             LoweredChannelCreateExpression => false,
             LoweredChannelSendExpression send => UsesDotNetInterop(send.Sender) || UsesDotNetInterop(send.Value),
             LoweredChannelReceiveExpression recv => UsesDotNetInterop(recv.Receiver),
+            _ => false
+        };
+    }
+
+    private static bool UsesStringify(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
+                && function.Function.IsBuiltin
+                && string.Equals(function.Function.Name, "str", StringComparison.Ordinal) => true,
+            LoweredCallExpression call => UsesStringify(call.Callee) || call.Arguments.Any(UsesStringify),
+            LoweredUnaryExpression unary => UsesStringify(unary.Operand),
+            LoweredBinaryExpression binary => UsesStringify(binary.Left) || UsesStringify(binary.Right),
+            LoweredAssignmentExpression assignment => UsesStringify(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesStringify) || UsesStringify(block.Result),
+            LoweredLambdaExpression lambda => UsesStringify(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesStringify(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesStringify(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesStringify(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesStringify(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesStringify(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesStringify(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesStringify(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesStringify(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesStringify(unwrap.Target),
+            LoweredSpawnExpression spawn => UsesStringify(spawn.Body),
+            LoweredJoinExpression join => UsesStringify(join.Expression),
+            LoweredIndexExpression index => UsesStringify(index.Target) || UsesStringify(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesStringify),
+            LoweredListExpression list => list.Elements.Any(UsesStringify),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesStringify(entry.Key) || UsesStringify(entry.Value)),
+            LoweredChannelSendExpression send => UsesStringify(send.Sender) || UsesStringify(send.Value),
+            LoweredChannelReceiveExpression recv => UsesStringify(recv.Receiver),
+            LoweredDotNetCallExpression dotNet => UsesStringify(dotNet.TypeNameExpression)
+                || UsesStringify(dotNet.MethodNameExpression)
+                || dotNet.Arguments.Any(UsesStringify),
             _ => false
         };
     }
@@ -647,6 +711,7 @@ public sealed class Emitter
                 "max" => $"Math.Max({args})",
                 "float" => $"(double){args}",
                 "int" => $"(int){args}",
+                "str" => $"AxomStringify({argumentExpressions[0]})",
                 "map" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "filter" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "fold" => $"System.Linq.Enumerable.Aggregate({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
@@ -702,6 +767,20 @@ public sealed class Emitter
         {
             WriteStatement(writer, statement);
         }
+        builder.AppendLine("    }");
+    }
+
+    private static void WriteStringifyHelper(StringBuilder builder)
+    {
+        builder.AppendLine("    static string AxomStringify(object? value)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return value switch");
+        builder.AppendLine("        {");
+        builder.AppendLine("            null => string.Empty,");
+        builder.AppendLine("            double d => d.ToString(System.Globalization.CultureInfo.InvariantCulture),");
+        builder.AppendLine("            float f => f.ToString(System.Globalization.CultureInfo.InvariantCulture),");
+        builder.AppendLine("            _ => value.ToString() ?? string.Empty");
+        builder.AppendLine("        };");
         builder.AppendLine("    }");
     }
 
