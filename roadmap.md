@@ -228,6 +228,6 @@ Key tasks:
 
 ## Not in Scope / Uncommitted Proposals
 
-- Pipeline operator and combinator expressions (proposal only).
+- Dedicated pipeline-combinator expression syntax (proposal only).
 - Alternative comment systems beyond intent annotations.
 - Advanced effect system beyond pragmatic diagnostics.
