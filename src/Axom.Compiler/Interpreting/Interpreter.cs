@@ -834,6 +834,11 @@ public sealed class Interpreter
         {
             var callee = EvaluateExpression(call.Callee);
             var arguments = call.Arguments.Select(EvaluateExpression).ToArray();
+            return InvokeCallable(callee, arguments);
+        }
+
+        private object? InvokeCallable(object? callee, object?[] arguments)
+        {
             if (callee is FunctionSymbol functionSymbol)
             {
                 if (functionSymbol.IsBuiltin)
@@ -874,7 +879,13 @@ public sealed class Interpreter
                 case "input":
                     return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
                 case "len":
-                    return arguments[0] is string text ? text.Length : 0;
+                    return arguments[0] switch
+                    {
+                        string text => text.Length,
+                        List<object?> list => list.Count,
+                        Dictionary<string, object?> map => map.Count,
+                        _ => 0
+                    };
                 case "abs":
                     return arguments[0] switch
                     {
@@ -910,6 +921,58 @@ public sealed class Interpreter
                     return arguments[0] is int intValue ? (double)intValue : 0.0;
                 case "int":
                     return arguments[0] is double doubleValue ? (int)doubleValue : 0;
+                case "map":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> mapItems)
+                    {
+                        var mapped = new List<object?>(mapItems.Count);
+                        foreach (var item in mapItems)
+                        {
+                            mapped.Add(InvokeCallable(arguments[1], new[] { item }));
+                        }
+
+                        return mapped;
+                    }
+
+                    return new List<object?>();
+                case "filter":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> filterItems)
+                    {
+                        var filtered = new List<object?>();
+                        foreach (var item in filterItems)
+                        {
+                            if (InvokeCallable(arguments[1], new[] { item }) is bool keep && keep)
+                            {
+                                filtered.Add(item);
+                            }
+                        }
+
+                        return filtered;
+                    }
+
+                    return new List<object?>();
+                case "fold":
+                    if (arguments.Length == 3 && arguments[0] is List<object?> foldItems)
+                    {
+                        var accumulator = arguments[1];
+                        foreach (var item in foldItems)
+                        {
+                            accumulator = InvokeCallable(arguments[2], new[] { accumulator, item });
+                        }
+
+                        return accumulator;
+                    }
+
+                    return null;
+                case "each":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> eachItems)
+                    {
+                        foreach (var item in eachItems)
+                        {
+                            InvokeCallable(arguments[1], new[] { item });
+                        }
+                    }
+
+                    return null;
                 default:
                     return null;
             }

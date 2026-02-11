@@ -71,6 +71,27 @@ print min(3, 7)
 print max(3, 7)
 ```
 
+**Value pipe**
+
+```axom
+let score = -3 |> abs
+print score
+```
+
+`value |> f` is shorthand for `f(value)`.
+
+**Collections + combinators**
+
+```axom
+let doubled = map([1, 2, 3], fn(x: Int) => x * 2)
+let sum = [1, 2, 3]
+  |> map(fn(x: Int) => x * 2)
+  |> fold(0, fn(acc: Int, x: Int) => acc + x)
+
+print doubled
+print sum
+```
+
 **Match as control flow**
 
 ```axom

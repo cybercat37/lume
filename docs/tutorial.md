@@ -218,6 +218,9 @@ print b
 `value |> f` means `f(value)`.
 `value |> f(a, b)` means `f(value, a, b)`.
 
+For single-parameter lambdas in typed call contexts, you can use shorthand:
+`x -> expr`.
+
 
 ---
 
@@ -334,20 +337,23 @@ The compiler optimizes tail calls to prevent stack overflow.
 
 ---
 
-### 3.4 Iteration with Standard Library (Planned)
+### 3.4 Iteration with Standard Library
 
 For collections, use iterator combinators:
 
 ```axom
-items.each(fn(x) { println x })
+each(items, fn(x: Int) { println x })
 
-let doubled = items.map(fn(x) { x * 2 })
+let doubled = map(items, fn(x: Int) => x * 2)
+let doubled2 = map(items, x -> x * 2)
 
-let sum = items.fold(0, fn(acc, x) { acc + x })
+let sum = fold(items, 0, fn(acc: Int, x: Int) => acc + x)
 
-let evens = items.filter(fn(x) { x % 2 == 0 })
+let evens = filter(items, fn(x: Int) => x % 2 == 0)
 
-range(1, 10).each(fn(i) { println i })
+let piped = items
+  |> map(fn(x: Int) => x * 2)
+  |> fold(0, fn(acc: Int, x: Int) => acc + x)
 ```
 
 
@@ -603,16 +609,20 @@ Keys are `String` only for now.
 
 ---
 
-### 7.3 Iterator Combinators (Planned)
+### 7.3 Iterator Combinators
 
 ```axom
-[1, 2, 3].each(fn(x) { println x })
+each([1, 2, 3], fn(x: Int) { println x })
 
-let doubled = [1, 2, 3].map(fn(x) { x * 2 })
+let doubled = map([1, 2, 3], fn(x: Int) => x * 2)
 
-let sum = [1, 2, 3].fold(0, fn(acc, x) { acc + x })
+let sum = fold([1, 2, 3], 0, fn(acc: Int, x: Int) => acc + x)
 
-let evens = [1, 2, 3, 4].filter(fn(x) { x % 2 == 0 })
+let evens = filter([1, 2, 3, 4], fn(x: Int) => x % 2 == 0)
+
+let total = [1, 2, 3]
+  |> map(fn(x: Int) => x * 2)
+  |> fold(0, fn(acc: Int, x: Int) => acc + x)
 ```
 
 
@@ -621,7 +631,7 @@ let evens = [1, 2, 3, 4].filter(fn(x) { x % 2 == 0 })
 ### 7.4 Range (Planned)
 
 ```axom
-range(1, 10).each(fn(i) { println i })
+each(range(1, 10), fn(i: Int) { println i })
 ```
 
 
@@ -918,7 +928,7 @@ let message = match condition {
 
 ✅ **Prefer** iterator combinators:
 ```axom
-let sum = numbers.fold(0, fn(acc, x) { acc + x })
+let sum = fold(numbers, 0, fn(acc: Int, x: Int) => acc + x)
 ```
 
 ✅ **Use** tail recursion for custom iteration:
@@ -946,7 +956,7 @@ let x = compute()
 ✅ **Use** `let mut` only for local accumulators:
 ```axom
 let mut sum = 0
-numbers.each(fn(x) { sum = sum + x })
+each(numbers, fn(x: Int) { sum = sum + x })
 ```
 
 ❌ **Don't use** `mut` for manual loop counters - use iterators or recursion.

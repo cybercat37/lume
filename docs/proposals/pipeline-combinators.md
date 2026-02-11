@@ -1,5 +1,10 @@
 # Pipeline Combinator Expressions (Proposal)
 
+Status note (current implementation):
+- Value pipe `|>` is implemented.
+- Function-style combinators `map` / `filter` / `fold` / `each` are implemented.
+- The compact combinator expression syntax in this document is still proposed.
+
 This proposal introduces compact, pipeline-friendly combinators as first-class
 language expressions. The goal is to enable readable, efficient iteration
 without adding traditional loops, while keeping syntax small and explicit.

@@ -595,7 +595,7 @@ public sealed class Binder
         return new BoundDeconstructionStatement(boundPattern, initializer);
     }
 
-    private BoundExpression BindExpression(ExpressionSyntax expression)
+    private BoundExpression BindExpression(ExpressionSyntax expression, TypeSymbol? expectedType = null)
     {
         switch (expression)
         {
@@ -634,7 +634,7 @@ public sealed class Binder
             case UnaryExpressionSyntax unary:
                 return BindUnaryExpression(unary);
             case ParenthesizedExpressionSyntax parenthesized:
-                return BindExpression(parenthesized.Expression);
+                return BindExpression(parenthesized.Expression, expectedType);
             case InputExpressionSyntax:
                 return BindInputExpression();
             case CallExpressionSyntax call:
@@ -643,6 +643,8 @@ public sealed class Binder
                 return BindGenericCallExpression(genericCall);
             case LambdaExpressionSyntax lambda:
                 return BindLambdaExpression(lambda);
+            case ShorthandLambdaExpressionSyntax shorthandLambda:
+                return BindShorthandLambdaExpression(shorthandLambda, expectedType);
             default:
                 throw new InvalidOperationException($"Unexpected expression: {expression.GetType().Name}");
         }
@@ -1984,32 +1986,31 @@ public sealed class Binder
         }
 
         var callee = BindExpression(call.Callee);
-        var boundArguments = new List<BoundExpression>();
-        foreach (var argument in call.Arguments)
-        {
-            boundArguments.Add(BindExpression(argument));
-        }
-
-        if (callee is BoundFunctionExpression builtin && builtin.Function.IsBuiltin)
-        {
-            var builtinResult = BindBuiltinCall(builtin.Function, call, boundArguments);
-            if (builtinResult is not null)
-            {
-                return builtinResult;
-            }
-        }
         var parameterTypes = callee.Type.ParameterTypes;
         if (parameterTypes is null)
         {
+            var nonCallableArguments = new List<BoundExpression>();
+            foreach (var argument in call.Arguments)
+            {
+                nonCallableArguments.Add(BindExpression(argument));
+            }
+
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
                 call.Span,
                 "Expression is not callable."));
-            return new BoundCallExpression(callee, boundArguments, TypeSymbol.Error);
+            return new BoundCallExpression(callee, nonCallableArguments, TypeSymbol.Error);
         }
 
-        if (parameterTypes.Count != boundArguments.Count)
+        var boundArguments = new List<BoundExpression>();
+
+        if (parameterTypes.Count != call.Arguments.Count)
         {
+            foreach (var argument in call.Arguments)
+            {
+                boundArguments.Add(BindExpression(argument));
+            }
+
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
                 call.Span,
@@ -2020,26 +2021,11 @@ public sealed class Binder
             var substitutions = new Dictionary<TypeSymbol, TypeSymbol>();
             for (var i = 0; i < parameterTypes.Count; i++)
             {
-                var expected = parameterTypes[i];
-                var actual = boundArguments[i].Type;
-                if (expected.IsGenericParameter)
-                {
-                    if (substitutions.TryGetValue(expected, out var existing))
-                    {
-                        if (existing != actual && actual != TypeSymbol.Error)
-                        {
-                            diagnostics.Add(Diagnostic.Error(
-                                SourceText,
-                                call.Span,
-                                $"Type parameter '{expected.Name}' expects '{existing}' but got '{actual}'."));
-                        }
-                    }
-                    else
-                    {
-                        substitutions[expected] = actual;
-                    }
-                }
-                else if (expected != actual && actual != TypeSymbol.Error)
+                var expected = SubstituteGenericTypes(parameterTypes[i], substitutions);
+                var boundArgument = BindExpression(call.Arguments[i], expected);
+                boundArguments.Add(boundArgument);
+                var actual = boundArgument.Type;
+                if (!TryBindGenericTypes(expected, actual, substitutions) && actual != TypeSymbol.Error)
                 {
                     diagnostics.Add(Diagnostic.Error(
                         SourceText,
@@ -2048,9 +2034,27 @@ public sealed class Binder
                 }
             }
 
+            if (callee is BoundFunctionExpression builtin && builtin.Function.IsBuiltin)
+            {
+                var builtinResult = BindBuiltinCall(builtin.Function, call, boundArguments);
+                if (builtinResult is not null)
+                {
+                    return builtinResult;
+                }
+            }
+
             var returnType = callee.Type.ReturnType ?? TypeSymbol.Error;
             returnType = SubstituteGenericTypes(returnType, substitutions);
             return new BoundCallExpression(callee, boundArguments, returnType);
+        }
+
+        if (callee is BoundFunctionExpression fallbackBuiltin && fallbackBuiltin.Function.IsBuiltin)
+        {
+            var fallbackBuiltinResult = BindBuiltinCall(fallbackBuiltin.Function, call, boundArguments);
+            if (fallbackBuiltinResult is not null)
+            {
+                return fallbackBuiltinResult;
+            }
         }
 
         var fallbackReturnType = callee.Type.ReturnType ?? TypeSymbol.Error;
@@ -2297,7 +2301,112 @@ public sealed class Binder
             return TypeSymbol.Tuple(elements);
         }
 
+        if (type.ParameterTypes is not null)
+        {
+            var parameterTypes = type.ParameterTypes
+                .Select(parameter => SubstituteGenericTypes(parameter, substitutions))
+                .ToList();
+            var returnType = SubstituteGenericTypes(type.ReturnType ?? TypeSymbol.Unit, substitutions);
+            return TypeSymbol.Function(parameterTypes, returnType);
+        }
+
         return type;
+    }
+
+    private static bool TryBindGenericTypes(TypeSymbol expected, TypeSymbol actual, IDictionary<TypeSymbol, TypeSymbol> substitutions)
+    {
+        if (expected == TypeSymbol.Error || actual == TypeSymbol.Error)
+        {
+            return true;
+        }
+
+        if (expected.IsGenericParameter)
+        {
+            if (substitutions.TryGetValue(expected, out var existing))
+            {
+                return existing == actual;
+            }
+
+            substitutions[expected] = actual;
+            return true;
+        }
+
+        if (expected == actual)
+        {
+            return true;
+        }
+
+        if (expected.ListElementType is not null)
+        {
+            return actual.ListElementType is not null
+                && TryBindGenericTypes(expected.ListElementType, actual.ListElementType, substitutions);
+        }
+
+        if (expected.MapValueType is not null)
+        {
+            return actual.MapValueType is not null
+                && TryBindGenericTypes(expected.MapValueType, actual.MapValueType, substitutions);
+        }
+
+        if (expected.IsChannelSender && expected.ChannelElementType is not null)
+        {
+            return actual.IsChannelSender
+                && actual.ChannelElementType is not null
+                && TryBindGenericTypes(expected.ChannelElementType, actual.ChannelElementType, substitutions);
+        }
+
+        if (expected.IsChannelReceiver && expected.ChannelElementType is not null)
+        {
+            return actual.IsChannelReceiver
+                && actual.ChannelElementType is not null
+                && TryBindGenericTypes(expected.ChannelElementType, actual.ChannelElementType, substitutions);
+        }
+
+        if (expected.ResultValueType is not null && expected.ResultErrorType is not null)
+        {
+            return actual.ResultValueType is not null
+                && actual.ResultErrorType is not null
+                && TryBindGenericTypes(expected.ResultValueType, actual.ResultValueType, substitutions)
+                && TryBindGenericTypes(expected.ResultErrorType, actual.ResultErrorType, substitutions);
+        }
+
+        if (expected.TupleElementTypes is not null)
+        {
+            if (actual.TupleElementTypes is null || expected.TupleElementTypes.Count != actual.TupleElementTypes.Count)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < expected.TupleElementTypes.Count; i++)
+            {
+                if (!TryBindGenericTypes(expected.TupleElementTypes[i], actual.TupleElementTypes[i], substitutions))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (expected.ParameterTypes is not null)
+        {
+            if (actual.ParameterTypes is null || expected.ParameterTypes.Count != actual.ParameterTypes.Count)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < expected.ParameterTypes.Count; i++)
+            {
+                if (!TryBindGenericTypes(expected.ParameterTypes[i], actual.ParameterTypes[i], substitutions))
+                {
+                    return false;
+                }
+            }
+
+            return TryBindGenericTypes(expected.ReturnType ?? TypeSymbol.Unit, actual.ReturnType ?? TypeSymbol.Unit, substitutions);
+        }
+
+        return false;
     }
 
     private BoundStatement BindReturnStatement(ReturnStatementSyntax returnStatement)
@@ -2392,6 +2501,73 @@ public sealed class Binder
         var parameterTypes = parameterSymbols.Select(parameter => parameter.Type).ToList();
         var lambdaType = TypeSymbol.Function(parameterTypes, functionType);
         return new BoundLambdaExpression(parameterSymbols, body, captures, lambdaType);
+    }
+
+    private BoundExpression BindShorthandLambdaExpression(ShorthandLambdaExpressionSyntax lambda, TypeSymbol? expectedType)
+    {
+        if (expectedType?.ParameterTypes is null || expectedType.ParameterTypes.Count != 1)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                lambda.Span,
+                "Shorthand lambda requires an expected single-parameter function type."));
+            return new BoundLiteralExpression(null, TypeSymbol.Error);
+        }
+
+        var parameterType = expectedType.ParameterTypes[0];
+        var expectedReturnType = expectedType.ReturnType ?? TypeSymbol.Error;
+
+        var previousScope = scope;
+        scope = new BoundScope(previousScope);
+        currentScopeDepth++;
+        var context = new LambdaBindingContext(scope);
+        lambdaStack.Push(context);
+        returnBoundaryDepths.Push(currentScopeDepth);
+
+        var parameterSymbol = new VariableSymbol(lambda.ParameterIdentifier.Text, false, parameterType, currentScopeDepth);
+        var declared = scope.TryDeclare(parameterSymbol);
+        if (declared is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                lambda.ParameterIdentifier.Span,
+                $"Parameter '{lambda.ParameterIdentifier.Text}' is already declared in this scope."));
+        }
+
+        var previousFunction = currentFunction;
+        var previousReturnTypes = returnTypes;
+        currentFunction = null;
+        returnTypes = new List<TypeSymbol>();
+
+        var bodyExpression = BindExpression(lambda.BodyExpression, expectedReturnType);
+        returnTypes.Add(bodyExpression.Type);
+        var body = new BoundBlockStatement(new BoundStatement[]
+        {
+            new BoundReturnStatement(bodyExpression)
+        });
+
+        if (expectedReturnType != TypeSymbol.Error
+            && !expectedReturnType.IsGenericParameter
+            && bodyExpression.Type != expectedReturnType
+            && bodyExpression.Type != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                lambda.BodyExpression.Span,
+                $"Lambda body expects '{expectedReturnType}' but got '{bodyExpression.Type}'."));
+        }
+
+        currentFunction = previousFunction;
+        returnTypes = previousReturnTypes;
+
+        lambdaStack.Pop();
+        scope = previousScope;
+        currentScopeDepth--;
+        returnBoundaryDepths.Pop();
+
+        var captures = context.Captures.ToList();
+        var functionType = TypeSymbol.Function(new[] { parameterType }, bodyExpression.Type);
+        return new BoundLambdaExpression(new[] { parameterSymbol }, body, captures, functionType);
     }
 
     private void TrackLambdaCapture(VariableSymbol symbol, TextSpan span)

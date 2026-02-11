@@ -68,12 +68,14 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - Tuples are included; access via destructuring only.
 - String interpolation: `f"...{expr}..."` with `{}` expressions.
 - String helpers (length/split) live in stdlib.
-- Pipeline combinator expressions are proposed for iteration ergonomics
+- Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`.
+- Dedicated pipeline-combinator expression syntax remains proposed
   (see `docs/proposals/pipeline-combinators.md`).
 
 Value pipe examples:
 - `value |> f` desugars to `f(value)`
 - `value |> f(a, b)` desugars to `f(value, a, b)`
+- `map(items, x -> x * 2)` is shorthand for `map(items, fn(x: T) => x * 2)` when `T` is inferred from context.
 
 ### Modules & Visibility
 - One file = one module; no nested modules for now.
@@ -299,15 +301,17 @@ The compiler optimizes tail calls to prevent stack overflow.
 For collections, use iterator combinators:
 
 ```axom
-items.each(fn(x) { println x })
+each(items, fn(x: Int) { println x })
 
-let doubled = items.map(fn(x) { x * 2 })
+let doubled = map(items, fn(x: Int) => x * 2)
 
-let sum = items.fold(0, fn(acc, x) { acc + x })
+let sum = fold(items, 0, fn(acc: Int, x: Int) => acc + x)
 
-let evens = items.filter(fn(x) { x % 2 == 0 })
+let evens = filter(items, fn(x: Int) => x % 2 == 0)
 
-range(1, 10).each(fn(i) { println i })
+let piped = items
+  |> map(fn(x: Int) => x * 2)
+  |> filter(fn(x: Int) => x > 2)
 ```
 
 ---

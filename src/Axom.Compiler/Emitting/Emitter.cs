@@ -632,7 +632,8 @@ public sealed class Emitter
 
     private static string WriteCallExpression(LoweredCallExpression call)
     {
-        var args = string.Join(", ", call.Arguments.Select(arg => WriteExpression(arg)));
+        var argumentExpressions = call.Arguments.Select(WriteExpression).ToList();
+        var args = string.Join(", ", argumentExpressions);
         if (call.Callee is LoweredFunctionExpression function && function.Function.IsBuiltin)
         {
             return function.Function.Name switch
@@ -646,6 +647,10 @@ public sealed class Emitter
                 "max" => $"Math.Max({args})",
                 "float" => $"(double){args}",
                 "int" => $"(int){args}",
+                "map" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select({argumentExpressions[0]}, {argumentExpressions[1]}))",
+                "filter" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where({argumentExpressions[0]}, {argumentExpressions[1]}))",
+                "fold" => $"System.Linq.Enumerable.Aggregate({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
+                "each" => $"{argumentExpressions[0]}.ForEach({argumentExpressions[1]})",
                 _ => $"{EscapeIdentifier(function.Function.Name)}({args})"
             };
         }

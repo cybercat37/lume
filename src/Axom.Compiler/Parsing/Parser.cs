@@ -641,6 +641,11 @@ public sealed class Parser
 
                 return new InputExpressionSyntax(NextToken());
             case TokenKind.Identifier:
+                if (Peek(1).Kind == TokenKind.ArrowType)
+                {
+                    return ParseShorthandLambdaExpression();
+                }
+
                 if (string.Equals(Current().Text, "channel", StringComparison.Ordinal) &&
                     Peek(1).Kind == TokenKind.Less)
                 {
@@ -666,6 +671,14 @@ public sealed class Parser
                 }
                 return new LiteralExpressionSyntax(missing);
         }
+    }
+
+    private ExpressionSyntax ParseShorthandLambdaExpression()
+    {
+        var parameter = MatchToken(TokenKind.Identifier, "identifier");
+        var arrowToken = MatchToken(TokenKind.ArrowType, "->");
+        var body = ParseExpression(allowRecordLiteral: false);
+        return new ShorthandLambdaExpressionSyntax(parameter, arrowToken, body);
     }
 
     private ExpressionSyntax ParseChannelExpression()
