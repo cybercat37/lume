@@ -1,0 +1,12 @@
+@logging fn delayed_value(value: Int, wait_ms: Int) -> Int {
+  sleep(wait_ms)
+  return value
+}
+
+scope {
+  let a = spawn { delayed_value(1, 300) }
+  let b = spawn { delayed_value(2, 200) }
+  let c = spawn { delayed_value(3, 100) }
+
+  print a.join() + b.join() + c.join()
+}

@@ -51,7 +51,7 @@ public sealed class Emitter
             builder.AppendLine();
         }
 
-        if (RequiresChannels(program) || RequiresDotNetInterop(program) || requiresRandomResultRuntime)
+        if (RequiresChannels(program) || RequiresDotNetInterop(program) || requiresRandomBuiltins || requiresRandomResultRuntime)
         {
             WriteAxomResultRuntime(builder);
             builder.AppendLine();
