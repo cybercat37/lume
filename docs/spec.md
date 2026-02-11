@@ -28,6 +28,14 @@ This section captures agreed design choices to guide implementation.
 
 Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 
+### Syntactic Sugar Acceptance Criteria
+- Sugar is accepted only when it improves readability in common, real code paths.
+- Sugar must keep one obvious way at the usage site; avoid parallel equivalent forms.
+- Desugaring must be direct and predictable (simple source-to-source rewrite).
+- Diagnostics must remain clear and point to user-written syntax.
+- Sugar should not increase parser/binder complexity disproportionately.
+- If these criteria are not met, keep the explicit core form.
+
 ### Functions
 - Parameters require type annotations: `fn add(x: Int, y: Int) -> Int { x + y }`.
 - Return is implicit from the last expression; `return` is allowed for early exit.
