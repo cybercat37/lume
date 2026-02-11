@@ -29,4 +29,30 @@ public class InterpreterStringInterpolationTests
         Assert.Equal("{value}", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Interpolated_string_applies_numeric_format_specifier()
+    {
+        var sourceText = new SourceText("let n = 7\nprint f\"n={n:000}\"", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("n=007", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Interpolated_string_applies_string_format_specifier()
+    {
+        var sourceText = new SourceText("let name = \"ada\"\nprint f\"{name:upper}\"", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("ADA", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

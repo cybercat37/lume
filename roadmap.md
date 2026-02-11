@@ -56,7 +56,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Generics | Minimal generics | Partial | Function generics are implemented; type generics remain planned |
 | Records update syntax | One obvious update form | Implemented | `target with { ... }` is the only update syntax; spread literals are copy-only |
 | Modules/imports | One-file modules + import | Implemented | Resolver v1 is implemented (imports, pub visibility, wildcard rejection, cycle/conflict diagnostics, aliases for `import ... as ...` and `from ... import ... as ...`) |
-| String interpolation | f"...{expr}..." | Partial | `f"...{expr}..."` interpolation is implemented; richer formatting controls remain planned |
+| String interpolation | f"...{expr}..." | Partial | `f"...{expr}..."` interpolation is implemented with escaped braces and baseline `:specifier` formatting; advanced formatting controls remain planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
 | .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with `System.Math` whitelist |
@@ -168,7 +168,8 @@ DoD:
 Status:
 - Baseline interpolation syntax is implemented (`f"...{expr}..."`) with escaped braces (`{{` / `}}`).
 - Interpolated expressions are stringified consistently through builtin `str(...)`.
-- Richer formatting specifiers remain follow-up work.
+- Baseline formatting specifiers are supported via `f"...{expr:specifier}..."` (`IFormattable` + `upper`/`lower` string specifiers).
+- Advanced formatting controls and extended spec coverage remain follow-up work.
 
 ### M8: Intent Annotations + Effect Inference
 Objective: intent metadata for docs and diagnostics.

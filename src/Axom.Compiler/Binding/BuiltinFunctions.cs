@@ -77,6 +77,13 @@ public static class BuiltinFunctions
         TypeSymbol.String,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Format = new(
+        "format",
+        new[] { new ParameterSymbol("value", GenericT), new ParameterSymbol("specifier", TypeSymbol.String) },
+        new[] { GenericT },
+        TypeSymbol.String,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Map = new(
         "map",
         new[]
@@ -134,6 +141,7 @@ public static class BuiltinFunctions
         [Float.Name] = Float,
         [Int.Name] = Int,
         [Str.Name] = Str,
+        [Format.Name] = Format,
         [Map.Name] = Map,
         [Filter.Name] = Filter,
         [Fold.Name] = Fold,

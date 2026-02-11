@@ -12,7 +12,8 @@ public sealed class Emitter
 {
     public string Emit(LoweredProgram program)
     {
-        var requiresStringify = RequiresStringify(program);
+        var requiresFormat = RequiresFormat(program);
+        var requiresStringify = RequiresStringify(program) || requiresFormat;
         var builder = new StringBuilder();
         builder.AppendLine("using System;");
         if (RequiresCollections(program))
@@ -78,6 +79,12 @@ public sealed class Emitter
             builder.AppendLine();
         }
 
+        if (requiresFormat)
+        {
+            WriteFormatHelper(builder);
+            builder.AppendLine();
+        }
+
         builder.AppendLine("    static void Main()");
         builder.AppendLine("    {");
         var writer = new IndentedWriter(builder, 2);
@@ -114,6 +121,11 @@ public sealed class Emitter
     private static bool RequiresStringify(LoweredProgram program)
     {
         return program.Statements.Any(UsesStringify) || program.Functions.Any(function => UsesStringify(function.Body));
+    }
+
+    private static bool RequiresFormat(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesFormat) || program.Functions.Any(function => UsesFormat(function.Body));
     }
 
     private static bool UsesCollections(LoweredStatement statement)
@@ -182,6 +194,20 @@ public sealed class Emitter
             LoweredExpressionStatement expressionStatement => UsesStringify(expressionStatement.Expression),
             LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesStringify(returnStatement.Expression),
             LoweredIfStatement ifStatement => UsesStringify(ifStatement.Condition) || UsesStringify(ifStatement.Then) || (ifStatement.Else is not null && UsesStringify(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesFormat(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesFormat),
+            LoweredVariableDeclaration declaration => UsesFormat(declaration.Initializer),
+            LoweredPrintStatement print => UsesFormat(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesFormat(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesFormat(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesFormat(ifStatement.Condition) || UsesFormat(ifStatement.Then) || (ifStatement.Else is not null && UsesFormat(ifStatement.Else)),
             _ => false
         };
     }
@@ -342,6 +368,43 @@ public sealed class Emitter
             LoweredDotNetCallExpression dotNet => UsesStringify(dotNet.TypeNameExpression)
                 || UsesStringify(dotNet.MethodNameExpression)
                 || dotNet.Arguments.Any(UsesStringify),
+            _ => false
+        };
+    }
+
+    private static bool UsesFormat(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
+                && function.Function.IsBuiltin
+                && string.Equals(function.Function.Name, "format", StringComparison.Ordinal) => true,
+            LoweredCallExpression call => UsesFormat(call.Callee) || call.Arguments.Any(UsesFormat),
+            LoweredUnaryExpression unary => UsesFormat(unary.Operand),
+            LoweredBinaryExpression binary => UsesFormat(binary.Left) || UsesFormat(binary.Right),
+            LoweredAssignmentExpression assignment => UsesFormat(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesFormat) || UsesFormat(block.Result),
+            LoweredLambdaExpression lambda => UsesFormat(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesFormat(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesFormat(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesFormat(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesFormat(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesFormat(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesFormat(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesFormat(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesFormat(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesFormat(unwrap.Target),
+            LoweredSpawnExpression spawn => UsesFormat(spawn.Body),
+            LoweredJoinExpression join => UsesFormat(join.Expression),
+            LoweredIndexExpression index => UsesFormat(index.Target) || UsesFormat(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesFormat),
+            LoweredListExpression list => list.Elements.Any(UsesFormat),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesFormat(entry.Key) || UsesFormat(entry.Value)),
+            LoweredChannelSendExpression send => UsesFormat(send.Sender) || UsesFormat(send.Value),
+            LoweredChannelReceiveExpression recv => UsesFormat(recv.Receiver),
+            LoweredDotNetCallExpression dotNet => UsesFormat(dotNet.TypeNameExpression)
+                || UsesFormat(dotNet.MethodNameExpression)
+                || dotNet.Arguments.Any(UsesFormat),
             _ => false
         };
     }
@@ -712,6 +775,7 @@ public sealed class Emitter
                 "float" => $"(double){args}",
                 "int" => $"(int){args}",
                 "str" => $"AxomStringify({argumentExpressions[0]})",
+                "format" => $"AxomFormat({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "map" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "filter" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "fold" => $"System.Linq.Enumerable.Aggregate({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
@@ -781,6 +845,43 @@ public sealed class Emitter
         builder.AppendLine("            float f => f.ToString(System.Globalization.CultureInfo.InvariantCulture),");
         builder.AppendLine("            _ => value.ToString() ?? string.Empty");
         builder.AppendLine("        };");
+        builder.AppendLine("    }");
+    }
+
+    private static void WriteFormatHelper(StringBuilder builder)
+    {
+        builder.AppendLine("    static string AxomFormat(object? value, string specifier)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        if (string.IsNullOrEmpty(specifier))");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomStringify(value);");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        if (value is IFormattable formattable)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            try");
+        builder.AppendLine("            {");
+        builder.AppendLine("                return formattable.ToString(specifier, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;");
+        builder.AppendLine("            }");
+        builder.AppendLine("            catch (FormatException)");
+        builder.AppendLine("            {");
+        builder.AppendLine("            }");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        if (value is string text)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            if (string.Equals(specifier, \"upper\", StringComparison.OrdinalIgnoreCase))");
+        builder.AppendLine("            {");
+        builder.AppendLine("                return text.ToUpperInvariant();");
+        builder.AppendLine("            }");
+        builder.AppendLine();
+        builder.AppendLine("            if (string.Equals(specifier, \"lower\", StringComparison.OrdinalIgnoreCase))");
+        builder.AppendLine("            {");
+        builder.AppendLine("                return text.ToLowerInvariant();");
+        builder.AppendLine("            }");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        return AxomStringify(value);");
         builder.AppendLine("    }");
     }
 

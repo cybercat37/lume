@@ -15,4 +15,16 @@ public class StringInterpolationTypeTests
 
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Interpolated_string_with_format_specifier_type_checks()
+    {
+        var sourceText = new SourceText("let n = 7\nprint f\"n={n:000}\"", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
 }

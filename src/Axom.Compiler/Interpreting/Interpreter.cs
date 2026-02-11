@@ -923,6 +923,13 @@ public sealed class Interpreter
                     return arguments[0] is double doubleValue ? (int)doubleValue : 0;
                 case "str":
                     return FormatValue(arguments[0]);
+                case "format":
+                    if (arguments.Length == 2 && arguments[1] is string specifier)
+                    {
+                        return ApplyFormat(arguments[0], specifier);
+                    }
+
+                    return FormatValue(arguments[0]);
                 case "map":
                     if (arguments.Length == 2 && arguments[0] is List<object?> mapItems)
                     {
@@ -1225,6 +1232,40 @@ public sealed class Interpreter
                 SumValue sum => sum.ToString(),
                 _ => value.ToString() ?? string.Empty
             };
+        }
+
+        private static string ApplyFormat(object? value, string formatSpecifier)
+        {
+            if (string.IsNullOrEmpty(formatSpecifier))
+            {
+                return FormatValue(value);
+            }
+
+            if (value is IFormattable formattable)
+            {
+                try
+                {
+                    return formattable.ToString(formatSpecifier, CultureInfo.InvariantCulture) ?? string.Empty;
+                }
+                catch (FormatException)
+                {
+                }
+            }
+
+            if (value is string text)
+            {
+                if (string.Equals(formatSpecifier, "upper", StringComparison.OrdinalIgnoreCase))
+                {
+                    return text.ToUpperInvariant();
+                }
+
+                if (string.Equals(formatSpecifier, "lower", StringComparison.OrdinalIgnoreCase))
+                {
+                    return text.ToLowerInvariant();
+                }
+            }
+
+            return FormatValue(value);
         }
 
         private sealed class ReturnSignal : Exception
