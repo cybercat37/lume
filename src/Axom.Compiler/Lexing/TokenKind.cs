@@ -38,6 +38,7 @@ public enum TokenKind
     GreaterOrEqual,
     AmpersandAmpersand,
     PipePipe,
+    PipeGreater,
     Arrow,
     ArrowType,
     Plus,

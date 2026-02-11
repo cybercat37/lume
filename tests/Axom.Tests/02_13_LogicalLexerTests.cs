@@ -6,7 +6,7 @@ public class LogicalLexerTests
     [Fact]
     public void Logical_tokens_are_lexed()
     {
-        var sourceText = new SourceText("true && false || !true", "test.axom");
+        var sourceText = new SourceText("true && false || !true |> abs", "test.axom");
         var lexer = new Lexer(sourceText);
 
         var tokens = new List<TokenKind>();
@@ -22,6 +22,7 @@ public class LogicalLexerTests
 
         Assert.Contains(TokenKind.AmpersandAmpersand, tokens);
         Assert.Contains(TokenKind.PipePipe, tokens);
+        Assert.Contains(TokenKind.PipeGreater, tokens);
         Assert.Contains(TokenKind.Bang, tokens);
     }
 }

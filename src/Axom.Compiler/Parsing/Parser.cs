@@ -501,7 +501,9 @@ public sealed class Parser
 
             var operatorToken = NextToken();
             var right = ParseBinaryExpression(allowRecordLiteral, precedence);
-            left = new BinaryExpressionSyntax(left, operatorToken, right);
+            left = operatorToken.Kind == TokenKind.PipeGreater
+                ? new PipelineExpressionSyntax(left, operatorToken, right)
+                : new BinaryExpressionSyntax(left, operatorToken, right);
         }
 
         return left;
@@ -1213,6 +1215,7 @@ public sealed class Parser
             TokenKind.GreaterOrEqual => 3,
             TokenKind.AmpersandAmpersand => 2,
             TokenKind.PipePipe => 1,
+            TokenKind.PipeGreater => 1,
             _ => 0
         };
     }

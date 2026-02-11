@@ -35,6 +35,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - Diagnostics must remain clear and point to user-written syntax.
 - Sugar should not increase parser/binder complexity disproportionately.
 - If these criteria are not met, keep the explicit core form.
+- Current approved sugar exceptions: relational match arms (`<= 1`) and value pipe (`|>`).
 
 ### Functions
 - Parameters require type annotations: `fn add(x: Int, y: Int) -> Int { x + y }`.
@@ -51,7 +52,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - `+` is used for string concatenation.
 - Division is integer-only for now; floats later.
 - Overflow is checked (no silent wrap).
-- Pipe operator `|>` planned for later, passes value as first argument.
+- Pipe operator `|>` is implemented as value pipe, passes value as first argument.
 
 ### Types & Data
 - `Int` is 64-bit. `Float` is 64-bit (double precision). No `Char`, `Byte`, or `UInt` for now.
@@ -69,6 +70,10 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - String helpers (length/split) live in stdlib.
 - Pipeline combinator expressions are proposed for iteration ergonomics
   (see `docs/proposals/pipeline-combinators.md`).
+
+Value pipe examples:
+- `value |> f` desugars to `f(value)`
+- `value |> f(a, b)` desugars to `f(value, a, b)`
 
 ### Modules & Visibility
 - One file = one module; no nested modules for now.

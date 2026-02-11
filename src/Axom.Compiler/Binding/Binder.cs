@@ -607,6 +607,8 @@ public sealed class Binder
                 return BindAssignmentExpression(assignment);
             case BinaryExpressionSyntax binary:
                 return BindBinaryExpression(binary);
+            case PipelineExpressionSyntax pipeline:
+                return BindPipelineExpression(pipeline);
             case MatchExpressionSyntax match:
                 return BindMatchExpression(match);
             case TupleExpressionSyntax tuple:
@@ -1072,6 +1074,23 @@ public sealed class Binder
         }
 
         return new BoundBinaryExpression(left, op, right, TypeSymbol.Error);
+    }
+
+    private BoundExpression BindPipelineExpression(PipelineExpressionSyntax pipeline)
+    {
+        if (pipeline.Right is CallExpressionSyntax call)
+        {
+            var arguments = new List<ExpressionSyntax>(call.Arguments.Count + 1) { pipeline.Left };
+            arguments.AddRange(call.Arguments);
+            var rewrittenCall = new CallExpressionSyntax(call.Callee, call.OpenParenToken, arguments, call.CloseParenToken);
+            return BindCallExpression(rewrittenCall);
+        }
+
+        var position = pipeline.OperatorToken.Span.End;
+        var openParen = SyntaxToken.Missing(TokenKind.OpenParen, position);
+        var closeParen = SyntaxToken.Missing(TokenKind.CloseParen, position);
+        var pipelineCall = new CallExpressionSyntax(pipeline.Right, openParen, new[] { pipeline.Left }, closeParen);
+        return BindCallExpression(pipelineCall);
     }
 
     private BoundExpression BindMatchExpression(MatchExpressionSyntax match)

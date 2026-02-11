@@ -60,7 +60,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
 | .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with `System.Math` whitelist |
-| Pipeline operator + combinators | \|> and combinators | Planned | Proposal only |
+| Pipeline operator + combinators | \|> and combinators | Partial | Value pipe `|>` implemented; combinator syntax remains proposal-only |
 
 ## Milestones (Priority Ordered)
 

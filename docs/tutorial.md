@@ -207,6 +207,17 @@ let not = !false
 let msg = "Hello" + " " + "World"
 ```
 
+#### Value Pipe
+
+```axom
+let a = -3 |> abs
+let b = 1 |> max(2)
+print b
+```
+
+`value |> f` means `f(value)`.
+`value |> f(a, b)` means `f(value, a, b)`.
+
 
 ---
 

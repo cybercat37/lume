@@ -141,6 +141,12 @@ public sealed class Lexer
 
                 break;
             case '|':
+                if (Peek(1) == '>')
+                {
+                    position += 2;
+                    return new SyntaxToken(TokenKind.PipeGreater, new TextSpan(start, 2), "|>", null);
+                }
+
                 if (Peek(1) == '|')
                 {
                     position += 2;
