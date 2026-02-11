@@ -34,7 +34,8 @@ public sealed class Lowerer
             BoundBlockStatement block => LowerBlockStatement(block),
             BoundVariableDeclaration declaration => new LoweredVariableDeclaration(
                 declaration.Symbol,
-                LowerExpression(declaration.Initializer)),
+                LowerExpression(declaration.Initializer),
+                LowerIntentAnnotation(declaration.IntentAnnotation)),
             BoundDeconstructionStatement deconstruction => LowerDeconstructionStatement(deconstruction),
             BoundPrintStatement print => new LoweredPrintStatement(LowerExpression(print.Expression)),
             BoundExpressionStatement expressionStatement => new LoweredExpressionStatement(
@@ -47,7 +48,17 @@ public sealed class Lowerer
     private LoweredBlockStatement LowerBlockStatement(BoundBlockStatement block)
     {
         var lowered = block.Statements.Select(LowerStatement).ToList();
-        return new LoweredBlockStatement(lowered, block.IsScopeBlock);
+        return new LoweredBlockStatement(lowered, block.IsScopeBlock, false, LowerIntentAnnotation(block.IntentAnnotation));
+    }
+
+    private static LoweredIntentAnnotation? LowerIntentAnnotation(BoundIntentAnnotation? intentAnnotation)
+    {
+        if (intentAnnotation is null)
+        {
+            return null;
+        }
+
+        return new LoweredIntentAnnotation(intentAnnotation.Message, intentAnnotation.Effects);
     }
 
     private LoweredBlockExpression LowerSpawnBlock(BoundBlockStatement block)

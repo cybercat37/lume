@@ -456,6 +456,7 @@ public sealed class Binder
 
     private BoundStatement BindBlockStatement(BlockStatementSyntax block, bool isScopeBlock = false)
     {
+        var intentAnnotation = BindIntentAnnotation(block.IntentAnnotation);
         var previousScope = scope;
         scope = new BoundScope(previousScope);
         currentScopeDepth++;
@@ -468,7 +469,7 @@ public sealed class Binder
 
         scope = previousScope;
         currentScopeDepth--;
-        return new BoundBlockStatement(statements, isScopeBlock);
+        return new BoundBlockStatement(statements, isScopeBlock, intentAnnotation);
     }
 
     private BoundFunctionDeclaration BindFunctionDeclaration(FunctionDeclarationSyntax declaration)
@@ -564,6 +565,7 @@ public sealed class Binder
 
     private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax declaration)
     {
+        var intentAnnotation = BindIntentAnnotation(declaration.IntentAnnotation);
         var initializer = BindExpression(declaration.Initializer);
         var isMutable = declaration.MutKeyword is not null;
 
@@ -586,7 +588,7 @@ public sealed class Binder
             }
 
             declaredSymbol ??= new VariableSymbol(name, isMutable, type, currentScopeDepth);
-            return new BoundVariableDeclaration(declaredSymbol, initializer);
+            return new BoundVariableDeclaration(declaredSymbol, initializer, intentAnnotation);
         }
 
         if (declaration.Pattern is not TuplePatternSyntax)
@@ -599,6 +601,76 @@ public sealed class Binder
 
         var boundPattern = BindPattern(declaration.Pattern, initializer.Type);
         return new BoundDeconstructionStatement(boundPattern, initializer);
+    }
+
+    private BoundIntentAnnotation? BindIntentAnnotation(IntentAnnotationSyntax? annotation)
+    {
+        if (annotation is null)
+        {
+            return null;
+        }
+
+        var message = annotation.MessageToken.Value as string ?? string.Empty;
+        var effects = ParseIntentEffects(message, annotation.Span);
+        return new BoundIntentAnnotation(message, effects, annotation.Span);
+    }
+
+    private IReadOnlyList<string> ParseIntentEffects(string message, TextSpan span)
+    {
+        var normalized = message.Trim();
+        if (string.IsNullOrEmpty(normalized))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                span,
+                "@intent must declare at least one effect tag."));
+            return Array.Empty<string>();
+        }
+
+        var tokens = normalized
+            .Split(new[] { ',', ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(static token => token.Trim())
+            .Where(static token => token.Length > 0)
+            .ToList();
+
+        if (tokens.Count == 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                span,
+                "@intent must declare at least one effect tag."));
+            return Array.Empty<string>();
+        }
+
+        var unique = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var token in tokens)
+        {
+            if (!IsValidIntentEffectTag(token))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    span,
+                    $"Invalid intent effect tag '{token}'."));
+                continue;
+            }
+
+            unique.Add(token.ToLowerInvariant());
+        }
+
+        return unique.ToList();
+    }
+
+    private static bool IsValidIntentEffectTag(string token)
+    {
+        foreach (var character in token)
+        {
+            if (!char.IsLetterOrDigit(character) && character != '_' && character != '-')
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private BoundExpression BindExpression(ExpressionSyntax expression, TypeSymbol? expectedType = null)
