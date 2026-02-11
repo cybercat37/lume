@@ -55,7 +55,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Tuples (general) | Tuple literals + destructuring | Partial | Match tuples exist; general tuples planned |
 | Generics | Minimal generics | Partial | Function generics are implemented; type generics remain planned |
 | Records update syntax | One obvious update form | Implemented | `target with { ... }` is the only update syntax; spread literals are copy-only |
-| Modules/imports | One-file modules + import | Partial | Parser/import forms + resolver v1 implemented; visibility/conflict hardening pending |
+| Modules/imports | One-file modules + import | Partial | Resolver v1 is implemented (imports, pub visibility, wildcard rejection, cycle/conflict diagnostics); alias resolver semantics remain pending |
 | String interpolation | f"...{expr}..." | Planned | Spec planned |
 | Intent annotations | @intent + effect checks + docs | Planned | Step 14 pending |
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
@@ -100,7 +100,7 @@ Key tasks:
 - Extend generics from functions to types (follow-up).
 - Continue tuple support beyond current syntax/usage.
 
-### M3: Collections v1 + Iteration (Partial)
+### M3: Collections v1 + Iteration (Mostly Complete)
 Objective: core list/map literals and iteration helpers.
 
 DoD:
@@ -110,7 +110,8 @@ DoD:
 
 Status:
 - List/map literal support is implemented.
-- Iterator combinators remain pending.
+- Iterator combinators (`map`/`filter`/`fold`/`each`) are implemented.
+- Remaining follow-up: `range` and richer iterator APIs.
 
 ### M4: Error Handling Core (Done)
 Objective: Result/Option and propagation semantics.
@@ -148,12 +149,8 @@ DoD:
 - CLI supports multi-file compilation from an entrypoint.
 
 Key tasks:
-- Parser additions for import statements and alias forms.
-- Module resolver mapping module names to filesystem paths.
-- Dependency graph loader (DFS/toposort) and cycle detection diagnostics.
-- Global export table for `pub` symbols and cross-module binder lookup.
-- Name conflict rules for imported symbols/aliases with explicit diagnostics.
-- Integrate resolver into `check`/`build`/`run` entrypoints.
+- Complete resolver semantics for module alias forms.
+- Continue diagnostics hardening for multi-module edge cases.
 
 Implementation notes (v1 scope):
 - Top-level declarations only (`fn`, `type`, `let`) participate in exports.
@@ -186,7 +183,7 @@ Objective: structured concurrency and explicit parallel execution.
 
 DoD:
 - scope/spawn/join semantics with cancellation.
-- Suspensive function typing (ValueTask mapping).
+- Suspensive function typing (planned `ValueTask` mapping; current runtime/codegen path uses `Task`).
 - CPU parallelism via structured `scope` + `spawn` patterns.
 - Typed channel messaging (`channel<T>`, `send`, blocking `recv`).
 - Strict channel error handling (`recv -> Result<T, String>`, explicit handling via `?`/`match`).
@@ -195,7 +192,6 @@ DoD:
 Remaining follow-up tasks:
 - Runtime primitives and scheduler model.
 - Effect tagging for suspensive functions.
-- Concurrency syntax stubs (scope/spawn/join) in parser/binder.
 - Extend cancellation propagation behavior beyond baseline semantics.
 - Add advanced buffering/backpressure strategies beyond bounded FIFO capacity.
 
