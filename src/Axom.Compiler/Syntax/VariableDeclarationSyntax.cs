@@ -5,6 +5,7 @@ namespace Axom.Compiler.Syntax;
 
 public sealed class VariableDeclarationSyntax : StatementSyntax
 {
+    public IntentAnnotationSyntax? IntentAnnotation { get; }
     public SyntaxToken LetKeyword { get; }
     public SyntaxToken? MutKeyword { get; }
     public PatternSyntax Pattern { get; }
@@ -13,6 +14,7 @@ public sealed class VariableDeclarationSyntax : StatementSyntax
     public SyntaxToken? SemicolonToken { get; }
 
     public VariableDeclarationSyntax(
+        IntentAnnotationSyntax? intentAnnotation,
         SyntaxToken letKeyword,
         SyntaxToken? mutKeyword,
         PatternSyntax pattern,
@@ -20,6 +22,7 @@ public sealed class VariableDeclarationSyntax : StatementSyntax
         ExpressionSyntax initializer,
         SyntaxToken? semicolonToken)
     {
+        IntentAnnotation = intentAnnotation;
         LetKeyword = letKeyword;
         MutKeyword = mutKeyword;
         Pattern = pattern;
@@ -29,5 +32,5 @@ public sealed class VariableDeclarationSyntax : StatementSyntax
     }
 
     public override TextSpan Span =>
-        TextSpan.FromBounds(LetKeyword.Span.Start, (SemicolonToken?.Span.End ?? Initializer.Span.End));
+        TextSpan.FromBounds((IntentAnnotation?.Span.Start ?? LetKeyword.Span.Start), (SemicolonToken?.Span.End ?? Initializer.Span.End));
 }

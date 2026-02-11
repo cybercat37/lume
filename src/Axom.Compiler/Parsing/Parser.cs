@@ -24,6 +24,7 @@ public sealed class Parser
         TokenKind.PubKeyword,
         TokenKind.ImportKeyword,
         TokenKind.FromKeyword,
+        TokenKind.At,
         TokenKind.ScopeKeyword,
         TokenKind.MatchKeyword,
         TokenKind.Identifier,
@@ -94,6 +95,11 @@ public sealed class Parser
 
     private StatementSyntax ParseStatement()
     {
+        if (Current().Kind == TokenKind.At)
+        {
+            return ParseAnnotatedStatement();
+        }
+
         return Current().Kind switch
         {
             TokenKind.OpenBrace => ParseBlockStatement(),
@@ -109,6 +115,43 @@ public sealed class Parser
             TokenKind.FnKeyword when Peek(1).Kind == TokenKind.Identifier => ParseFunctionDeclaration(),
             _ => ParseExpressionStatement()
         };
+    }
+
+    private StatementSyntax ParseAnnotatedStatement()
+    {
+        var intentAnnotation = ParseIntentAnnotation();
+        ConsumeSeparators();
+        return Current().Kind switch
+        {
+            TokenKind.LetKeyword => ParseVariableDeclaration(intentAnnotation),
+            TokenKind.OpenBrace => ParseBlockStatement(intentAnnotation),
+            _ => ParseInvalidIntentTarget(intentAnnotation)
+        };
+    }
+
+    private StatementSyntax ParseInvalidIntentTarget(IntentAnnotationSyntax intentAnnotation)
+    {
+        diagnostics.Add(Diagnostic.Error(
+            sourceText,
+            intentAnnotation.Span,
+            "@intent can only be applied to block statements and let declarations."));
+
+        return ParseStatement();
+    }
+
+    private IntentAnnotationSyntax ParseIntentAnnotation()
+    {
+        var atToken = MatchToken(TokenKind.At, "@");
+        var intentIdentifier = MatchToken(TokenKind.Identifier, "intent");
+        if (!string.Equals(intentIdentifier.Text, "intent", StringComparison.Ordinal))
+        {
+            diagnostics.Add(Diagnostic.Error(sourceText, intentIdentifier.Span, "Only @intent annotations are supported."));
+        }
+
+        var openParenToken = MatchToken(TokenKind.OpenParen, "(");
+        var messageToken = MatchToken(TokenKind.StringLiteral, "string literal");
+        var closeParenToken = MatchToken(TokenKind.CloseParen, ")");
+        return new IntentAnnotationSyntax(atToken, intentIdentifier, openParenToken, messageToken, closeParenToken);
     }
 
     private StatementSyntax ParsePubStatement()
@@ -376,7 +419,7 @@ public sealed class Parser
         return new PrintStatementSyntax(keywordToken, expression);
     }
 
-    private StatementSyntax ParseVariableDeclaration()
+    private StatementSyntax ParseVariableDeclaration(IntentAnnotationSyntax? intentAnnotation = null)
     {
         var letKeyword = MatchToken(TokenKind.LetKeyword, "let");
         SyntaxToken? mutKeyword = null;
@@ -412,6 +455,7 @@ public sealed class Parser
         }
 
         return new VariableDeclarationSyntax(
+            intentAnnotation,
             letKeyword,
             mutKeyword,
             pattern,
@@ -430,7 +474,7 @@ public sealed class Parser
         return new ExpressionStatementSyntax(expression);
     }
 
-    private StatementSyntax ParseBlockStatement()
+    private StatementSyntax ParseBlockStatement(IntentAnnotationSyntax? intentAnnotation = null)
     {
         var openBrace = MatchToken(TokenKind.OpenBrace, "{");
         var statements = new List<StatementSyntax>();
@@ -458,7 +502,7 @@ public sealed class Parser
         }
 
         var closeBrace = MatchToken(TokenKind.CloseBrace, "}");
-        return new BlockStatementSyntax(openBrace, statements, closeBrace);
+        return new BlockStatementSyntax(intentAnnotation, openBrace, statements, closeBrace);
     }
 
     private ExpressionSyntax ParseExpression(bool allowRecordLiteral = true) =>

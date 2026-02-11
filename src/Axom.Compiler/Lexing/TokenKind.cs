@@ -47,6 +47,7 @@ public enum TokenKind
     Slash,
     Comma,
     Colon,
+    At,
     Dot,
     OpenParen,
     CloseParen,

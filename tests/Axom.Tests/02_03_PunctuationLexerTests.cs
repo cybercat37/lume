@@ -50,4 +50,24 @@ public class PunctuationLexerTests
 
         Assert.Contains(TokenKind.Ellipsis, tokens);
     }
+
+    [Fact]
+    public void At_token_is_lexed()
+    {
+        var sourceText = new SourceText("@intent(\"io\") let x = 1", "test.axom");
+        var lexer = new Lexer(sourceText);
+
+        var tokens = new List<TokenKind>();
+        SyntaxToken token;
+        do
+        {
+            token = lexer.Lex();
+            if (token.Kind != TokenKind.BadToken)
+            {
+                tokens.Add(token.Kind);
+            }
+        } while (token.Kind != TokenKind.EndOfFile);
+
+        Assert.Contains(TokenKind.At, tokens);
+    }
 }

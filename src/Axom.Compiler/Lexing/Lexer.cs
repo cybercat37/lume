@@ -178,6 +178,9 @@ public sealed class Lexer
             case ':':
                 Next();
                 return new SyntaxToken(TokenKind.Colon, new TextSpan(start, 1), ":", null);
+            case '@':
+                Next();
+                return new SyntaxToken(TokenKind.At, new TextSpan(start, 1), "@", null);
             case '.':
                 if (Peek(1) == '.' && Peek(2) == '.')
                 {
