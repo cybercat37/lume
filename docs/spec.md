@@ -69,8 +69,16 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - String interpolation: `f"...{expr}..."` with `{}` expressions.
 - String helpers (length/split) live in stdlib.
 - Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`.
+- Time/random builtins are available: `sleep(ms)`, `rand_float()`, `rand_int(max)`, `rand_seed(seed)`.
 - Dedicated pipeline-combinator expression syntax remains proposed
   (see `docs/proposals/pipeline-combinators.md`).
+
+Builtin notes:
+- `sleep(ms: Int) -> Unit` blocks for `ms` milliseconds (`ms <= 0` is a no-op).
+- `rand_float() -> Float` returns a value in `[0.0, 1.0)`.
+- `rand_int(max: Int) -> Result<Int, String>` returns `Ok(n)` for `0 <= n < max`,
+  or `Error("max must be > 0")` when `max <= 0`.
+- `rand_seed(seed: Int) -> Unit` resets random state for deterministic runs/tests.
 
 Value pipe examples:
 - `value |> f` desugars to `f(value)`
@@ -312,6 +320,11 @@ let evens = filter(items, fn(x: Int) => x % 2 == 0)
 let piped = items
   |> map(fn(x: Int) => x * 2)
   |> filter(fn(x: Int) => x > 2)
+
+rand_seed(42)
+print rand_float()
+print rand_int(10)
+sleep(20)
 ```
 
 ---
