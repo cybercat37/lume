@@ -1,0 +1,6 @@
+from math.models import User as U, make_user
+
+fn keep(user: U) -> U => user
+
+let user = keep(make_user("Ada", 37))
+print user.name

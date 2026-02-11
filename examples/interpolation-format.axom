@@ -1,0 +1,8 @@
+let name = "ada"
+let n = 7
+let price = 12.5
+
+print f"Hello, {name:upper}!"
+print f"n={n:000}"
+print f"price={price:0.00}"
+print f"literal braces: {{ok}}"
