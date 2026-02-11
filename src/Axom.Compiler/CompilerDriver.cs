@@ -31,7 +31,7 @@ public sealed class CompilerDriver
         source = resolved.CombinedSource;
         var sourceText = new SourceText(source, fileName);
         var syntaxTree = SyntaxTree.Parse(sourceText);
-        var binder = new Binder();
+        var binder = new Binder(resolved.TypeAliases);
         var bindResult = binder.Bind(syntaxTree);
         var diagnostics = syntaxTree.Diagnostics
             .Concat(bindResult.Diagnostics)
@@ -68,7 +68,7 @@ public sealed class CompilerDriver
         source = resolved.CombinedSource;
         var sourceText = new SourceText(source, fileName);
         var syntaxTree = SyntaxTree.ParseCached(sourceText, cache.SyntaxTrees);
-        var binder = new Binder();
+        var binder = new Binder(resolved.TypeAliases);
         var bindResult = binder.BindCached(syntaxTree, cache.Bindings);
         var diagnostics = syntaxTree.Diagnostics
             .Concat(bindResult.Diagnostics)

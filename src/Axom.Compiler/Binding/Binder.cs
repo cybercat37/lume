@@ -9,6 +9,7 @@ namespace Axom.Compiler.Binding;
 
 public sealed class Binder
 {
+    private readonly IReadOnlyDictionary<string, string> importedTypeAliases;
     private readonly List<Diagnostic> diagnostics = new();
     private BoundScope scope = new(null);
     private SourceText? sourceText;
@@ -25,6 +26,11 @@ public sealed class Binder
     private readonly Dictionary<string, TypeSymbol> sumTypes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, BoundSumTypeDeclaration> sumDefinitions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SumVariantSymbol> variantDefinitions = new(StringComparer.Ordinal);
+
+    public Binder(IReadOnlyDictionary<string, string>? importedTypeAliases = null)
+    {
+        this.importedTypeAliases = importedTypeAliases ?? new Dictionary<string, string>(StringComparer.Ordinal);
+    }
 
     private sealed class LambdaBindingContext
     {
@@ -2860,6 +2866,11 @@ public sealed class Binder
             {
                 return genericType;
             }
+
+            var typeLookupName = importedTypeAliases.TryGetValue(name, out var importedAliasTarget)
+                ? importedAliasTarget
+                : name;
+
             var resolved = name switch
             {
                 "Int" => TypeSymbol.Int,
@@ -2867,9 +2878,9 @@ public sealed class Binder
                 "Bool" => TypeSymbol.Bool,
                 "String" => TypeSymbol.String,
                 "Unit" => TypeSymbol.Unit,
-                _ => recordTypes.TryGetValue(name, out var recordType)
+                _ => recordTypes.TryGetValue(typeLookupName, out var recordType)
                     ? recordType
-                    : sumTypes.TryGetValue(name, out var sumType)
+                    : sumTypes.TryGetValue(typeLookupName, out var sumType)
                         ? sumType
                         : TypeSymbol.Error
             };

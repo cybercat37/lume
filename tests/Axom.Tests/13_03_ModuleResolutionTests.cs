@@ -291,6 +291,30 @@ public class ModuleResolutionTests
         }
     }
 
+    [Fact]
+    public void From_import_type_alias_binds_in_type_annotations()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var libDir = Path.Combine(tempDir, "lib");
+            Directory.CreateDirectory(libDir);
+            File.WriteAllText(Path.Combine(libDir, "models.axom"), "pub type User { name: String }\n");
+
+            var mainPath = Path.Combine(tempDir, "main.axom");
+            File.WriteAllText(mainPath, "from lib.models import User as U\nfn keep(user: U) -> U => user\nprint 1\n");
+
+            var compiler = new CompilerDriver();
+            var result = compiler.Compile(File.ReadAllText(mainPath), mainPath);
+
+            Assert.True(result.Success);
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_modules_{Guid.NewGuid():N}");

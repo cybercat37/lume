@@ -655,7 +655,7 @@ from std.math import max, min
 
 Supported resolver forms in v1 are `import mod`, `import mod as alias`, and `from mod import name[, ...]`.
 `from ... import name as alias` is supported for value exports (`fn`, `let`).
-Aliasing type exports in from-import currently produces a resolver diagnostic.
+Aliasing type exports in from-import is supported for `pub type` exports.
 
 
 ---

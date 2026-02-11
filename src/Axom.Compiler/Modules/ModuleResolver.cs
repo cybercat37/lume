@@ -20,6 +20,7 @@ public sealed class ModuleResolver
 
         ValidateFromImports(diagnostics, modules);
         ValidateImportConflicts(diagnostics, modules);
+        var typeAliases = BuildImportedTypeAliases(diagnostics, modules);
         if (diagnostics.Count > 0)
         {
             var entryTree = modules.TryGetValue(fullEntryPath, out var info)
@@ -29,7 +30,7 @@ public sealed class ModuleResolver
         }
 
         var combinedSource = BuildCombinedSource(ordered, fullEntryPath, modules);
-        return ModuleResolutionResult.CreateSuccess(combinedSource);
+        return ModuleResolutionResult.CreateSuccess(combinedSource, typeAliases);
     }
 
     private static void VisitModule(
@@ -214,10 +215,6 @@ public sealed class ModuleResolver
                         continue;
                     }
 
-                    if (specifier.AliasToken is not null && !CanAliasAsValue(exportedDeclaration))
-                    {
-                        diagnostics.Add(CreateModuleDiagnostic(module, specifier.AliasToken.Span, $"Cannot alias type export '{importedName}' in from-import."));
-                    }
                 }
             }
         }
@@ -413,6 +410,54 @@ public sealed class ModuleResolver
         return declaration is FunctionDeclarationSyntax or VariableDeclarationSyntax;
     }
 
+    private static bool IsTypeDeclaration(StatementSyntax declaration)
+    {
+        return declaration is RecordTypeDeclarationSyntax or SumTypeDeclarationSyntax;
+    }
+
+    private static Dictionary<string, string> BuildImportedTypeAliases(
+        List<Diagnostic> diagnostics,
+        IReadOnlyDictionary<string, ModuleInfo> modules)
+    {
+        var aliases = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var module in modules.Values)
+        {
+            foreach (var import in module.Imports)
+            {
+                if (!import.IsFromImport || import.ResolvedPath is null || !modules.TryGetValue(import.ResolvedPath, out var dependency))
+                {
+                    continue;
+                }
+
+                var exports = CollectExportDeclarations(dependency.SyntaxTree.Root.Statements);
+                foreach (var specifier in import.Specifiers)
+                {
+                    if (specifier.IsWildcard || specifier.AliasToken is null)
+                    {
+                        continue;
+                    }
+
+                    var importedName = specifier.NameToken.Text;
+                    if (!exports.TryGetValue(importedName, out var declaration) || !IsTypeDeclaration(declaration))
+                    {
+                        continue;
+                    }
+
+                    var aliasName = specifier.AliasToken.Text;
+                    if (aliases.TryGetValue(aliasName, out var existingTarget) && !string.Equals(existingTarget, importedName, StringComparison.Ordinal))
+                    {
+                        diagnostics.Add(CreateModuleDiagnostic(module, specifier.AliasToken.Span, $"Imported type alias '{aliasName}' conflicts with an existing type alias."));
+                        continue;
+                    }
+
+                    aliases[aliasName] = importedName;
+                }
+            }
+        }
+
+        return aliases;
+    }
+
     private static Dictionary<string, ImportDemand> BuildImportDemand(IReadOnlyList<ModuleInfo> orderedModules)
     {
         var demand = new Dictionary<string, ImportDemand>(StringComparer.Ordinal);
@@ -566,18 +611,25 @@ public sealed class ModuleResolutionResult
     public string CombinedSource { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
     public SyntaxTree? EntrySyntaxTree { get; }
+    public IReadOnlyDictionary<string, string> TypeAliases { get; }
 
-    private ModuleResolutionResult(bool success, string combinedSource, IReadOnlyList<Diagnostic> diagnostics, SyntaxTree? entrySyntaxTree)
+    private ModuleResolutionResult(
+        bool success,
+        string combinedSource,
+        IReadOnlyList<Diagnostic> diagnostics,
+        SyntaxTree? entrySyntaxTree,
+        IReadOnlyDictionary<string, string> typeAliases)
     {
         Success = success;
         CombinedSource = combinedSource;
         Diagnostics = diagnostics;
         EntrySyntaxTree = entrySyntaxTree;
+        TypeAliases = typeAliases;
     }
 
-    public static ModuleResolutionResult CreateSuccess(string combinedSource) =>
-        new(true, combinedSource, Array.Empty<Diagnostic>(), null);
+    public static ModuleResolutionResult CreateSuccess(string combinedSource, IReadOnlyDictionary<string, string>? typeAliases = null) =>
+        new(true, combinedSource, Array.Empty<Diagnostic>(), null, typeAliases ?? new Dictionary<string, string>(StringComparer.Ordinal));
 
     public static ModuleResolutionResult CreateFailure(IReadOnlyList<Diagnostic> diagnostics, SyntaxTree entrySyntaxTree) =>
-        new(false, string.Empty, diagnostics, entrySyntaxTree);
+        new(false, string.Empty, diagnostics, entrySyntaxTree, new Dictionary<string, string>(StringComparer.Ordinal));
 }
