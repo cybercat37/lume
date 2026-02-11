@@ -57,8 +57,10 @@ public sealed class Interpreter
         private readonly List<Diagnostic> diagnostics;
         private readonly Queue<string> inputBuffer;
         private readonly object inputLock;
+        private readonly object randomLock;
         private readonly Stack<ScopeFrame> scopeFrames;
         private readonly CancellationToken cancellationToken;
+        private Random random;
         private FunctionSymbol? currentFunction;
 
         public Evaluator(
@@ -66,6 +68,8 @@ public sealed class Interpreter
             Queue<string> inputBuffer,
             Dictionary<VariableSymbol, object?>? initialValues = null,
             object? sharedInputLock = null,
+            Random? sharedRandom = null,
+            object? sharedRandomLock = null,
             CancellationToken cancellationToken = default)
         {
             this.program = program;
@@ -77,6 +81,8 @@ public sealed class Interpreter
             diagnostics = new List<Diagnostic>();
             this.inputBuffer = inputBuffer;
             inputLock = sharedInputLock ?? new object();
+            random = sharedRandom ?? new Random();
+            randomLock = sharedRandomLock ?? new object();
             scopeFrames = new Stack<ScopeFrame>();
             this.cancellationToken = cancellationToken;
         }
@@ -630,7 +636,7 @@ public sealed class Interpreter
             var token = ownerScope?.CancellationToken ?? cancellationToken;
             var task = Task.Run(() =>
             {
-                var evaluator = new Evaluator(program, inputBuffer, snapshot, inputLock, token);
+                var evaluator = new Evaluator(program, inputBuffer, snapshot, inputLock, random, randomLock, token);
                 return evaluator.EvaluateSpawnBody(spawn.Body);
             }, token);
 
@@ -937,6 +943,38 @@ public sealed class Interpreter
                     }
 
                     return FormatValue(arguments[0]);
+                case "sleep":
+                    if (arguments[0] is int ms && ms > 0)
+                    {
+                        Thread.Sleep(ms);
+                    }
+
+                    return null;
+                case "rand_float":
+                    lock (randomLock)
+                    {
+                        return random.NextDouble();
+                    }
+                case "rand_int":
+                    if (arguments[0] is int max && max > 0)
+                    {
+                        lock (randomLock)
+                        {
+                            return BuildIntResult(isSuccess: true, random.Next(max), null);
+                        }
+                    }
+
+                    return BuildIntResult(isSuccess: false, null, "max must be > 0");
+                case "rand_seed":
+                    if (arguments[0] is int seed)
+                    {
+                        lock (randomLock)
+                        {
+                            random = new Random(seed);
+                        }
+                    }
+
+                    return null;
                 case "map":
                     if (arguments.Length == 2 && arguments[0] is List<object?> mapItems)
                     {
@@ -1256,6 +1294,19 @@ public sealed class Interpreter
         private static string LogTimestamp()
         {
             return DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private static object BuildIntResult(bool isSuccess, int? value, string? error)
+        {
+            var resultType = TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String);
+            var okVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
+            var errorVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Error", StringComparison.Ordinal));
+            if (isSuccess)
+            {
+                return new SumValue(okVariant ?? new SumVariantSymbol("Ok", resultType, TypeSymbol.Int), value ?? 0);
+            }
+
+            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.String), error ?? "random error");
         }
 
         private static string ApplyFormat(object? value, string formatSpecifier)

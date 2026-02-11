@@ -1,0 +1,5 @@
+rand_seed(37)
+print rand_float()
+print rand_int(10)
+sleep(20)
+print rand_int(0)

@@ -13,6 +13,8 @@ public sealed class Emitter
     public string Emit(LoweredProgram program)
     {
         var requiresFunctionLogging = program.Functions.Any(function => function.Symbol.EnableLogging);
+        var requiresRandomBuiltins = RequiresRandomBuiltins(program);
+        var requiresRandomResultRuntime = RequiresRandomResultRuntime(program);
         var requiresFormat = RequiresFormat(program);
         var requiresStringify = RequiresStringify(program) || requiresFormat || requiresFunctionLogging;
         var builder = new StringBuilder();
@@ -49,7 +51,7 @@ public sealed class Emitter
             builder.AppendLine();
         }
 
-        if (RequiresChannels(program) || RequiresDotNetInterop(program))
+        if (RequiresChannels(program) || RequiresDotNetInterop(program) || requiresRandomResultRuntime)
         {
             WriteAxomResultRuntime(builder);
             builder.AppendLine();
@@ -83,6 +85,12 @@ public sealed class Emitter
         if (requiresFormat)
         {
             WriteFormatHelper(builder);
+            builder.AppendLine();
+        }
+
+        if (requiresRandomBuiltins)
+        {
+            WriteRandomHelpers(builder);
             builder.AppendLine();
         }
 
@@ -133,6 +141,16 @@ public sealed class Emitter
     private static bool RequiresFormat(LoweredProgram program)
     {
         return program.Statements.Any(UsesFormat) || program.Functions.Any(function => UsesFormat(function.Body));
+    }
+
+    private static bool RequiresRandomBuiltins(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesRandomBuiltins) || program.Functions.Any(function => UsesRandomBuiltins(function.Body));
+    }
+
+    private static bool RequiresRandomResultRuntime(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesRandomResultBuiltin) || program.Functions.Any(function => UsesRandomResultBuiltin(function.Body));
     }
 
     private static bool UsesCollections(LoweredStatement statement)
@@ -215,6 +233,34 @@ public sealed class Emitter
             LoweredExpressionStatement expressionStatement => UsesFormat(expressionStatement.Expression),
             LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesFormat(returnStatement.Expression),
             LoweredIfStatement ifStatement => UsesFormat(ifStatement.Condition) || UsesFormat(ifStatement.Then) || (ifStatement.Else is not null && UsesFormat(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesRandomBuiltins(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesRandomBuiltins),
+            LoweredVariableDeclaration declaration => UsesRandomBuiltins(declaration.Initializer),
+            LoweredPrintStatement print => UsesRandomBuiltins(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesRandomBuiltins(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesRandomBuiltins(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesRandomBuiltins(ifStatement.Condition) || UsesRandomBuiltins(ifStatement.Then) || (ifStatement.Else is not null && UsesRandomBuiltins(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesRandomResultBuiltin(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesRandomResultBuiltin),
+            LoweredVariableDeclaration declaration => UsesRandomResultBuiltin(declaration.Initializer),
+            LoweredPrintStatement print => UsesRandomResultBuiltin(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesRandomResultBuiltin(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesRandomResultBuiltin(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesRandomResultBuiltin(ifStatement.Condition) || UsesRandomResultBuiltin(ifStatement.Then) || (ifStatement.Else is not null && UsesRandomResultBuiltin(ifStatement.Else)),
             _ => false
         };
     }
@@ -412,6 +458,83 @@ public sealed class Emitter
             LoweredDotNetCallExpression dotNet => UsesFormat(dotNet.TypeNameExpression)
                 || UsesFormat(dotNet.MethodNameExpression)
                 || dotNet.Arguments.Any(UsesFormat),
+            _ => false
+        };
+    }
+
+    private static bool UsesRandomBuiltins(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
+                && function.Function.IsBuiltin
+                && (string.Equals(function.Function.Name, "sleep", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "rand_float", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "rand_int", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "rand_seed", StringComparison.Ordinal)) => true,
+            LoweredCallExpression call => UsesRandomBuiltins(call.Callee) || call.Arguments.Any(UsesRandomBuiltins),
+            LoweredUnaryExpression unary => UsesRandomBuiltins(unary.Operand),
+            LoweredBinaryExpression binary => UsesRandomBuiltins(binary.Left) || UsesRandomBuiltins(binary.Right),
+            LoweredAssignmentExpression assignment => UsesRandomBuiltins(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesRandomBuiltins) || UsesRandomBuiltins(block.Result),
+            LoweredLambdaExpression lambda => UsesRandomBuiltins(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesRandomBuiltins(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesRandomBuiltins(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesRandomBuiltins(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesRandomBuiltins(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesRandomBuiltins(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesRandomBuiltins(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesRandomBuiltins(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesRandomBuiltins(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesRandomBuiltins(unwrap.Target),
+            LoweredSpawnExpression spawn => UsesRandomBuiltins(spawn.Body),
+            LoweredJoinExpression join => UsesRandomBuiltins(join.Expression),
+            LoweredIndexExpression index => UsesRandomBuiltins(index.Target) || UsesRandomBuiltins(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesRandomBuiltins),
+            LoweredListExpression list => list.Elements.Any(UsesRandomBuiltins),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesRandomBuiltins(entry.Key) || UsesRandomBuiltins(entry.Value)),
+            LoweredChannelSendExpression send => UsesRandomBuiltins(send.Sender) || UsesRandomBuiltins(send.Value),
+            LoweredChannelReceiveExpression recv => UsesRandomBuiltins(recv.Receiver),
+            LoweredDotNetCallExpression dotNet => UsesRandomBuiltins(dotNet.TypeNameExpression)
+                || UsesRandomBuiltins(dotNet.MethodNameExpression)
+                || dotNet.Arguments.Any(UsesRandomBuiltins),
+            _ => false
+        };
+    }
+
+    private static bool UsesRandomResultBuiltin(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
+                && function.Function.IsBuiltin
+                && string.Equals(function.Function.Name, "rand_int", StringComparison.Ordinal) => true,
+            LoweredCallExpression call => UsesRandomResultBuiltin(call.Callee) || call.Arguments.Any(UsesRandomResultBuiltin),
+            LoweredUnaryExpression unary => UsesRandomResultBuiltin(unary.Operand),
+            LoweredBinaryExpression binary => UsesRandomResultBuiltin(binary.Left) || UsesRandomResultBuiltin(binary.Right),
+            LoweredAssignmentExpression assignment => UsesRandomResultBuiltin(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesRandomResultBuiltin) || UsesRandomResultBuiltin(block.Result),
+            LoweredLambdaExpression lambda => UsesRandomResultBuiltin(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesRandomResultBuiltin(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesRandomResultBuiltin(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesRandomResultBuiltin(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesRandomResultBuiltin(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesRandomResultBuiltin(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesRandomResultBuiltin(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesRandomResultBuiltin(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesRandomResultBuiltin(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesRandomResultBuiltin(unwrap.Target),
+            LoweredSpawnExpression spawn => UsesRandomResultBuiltin(spawn.Body),
+            LoweredJoinExpression join => UsesRandomResultBuiltin(join.Expression),
+            LoweredIndexExpression index => UsesRandomResultBuiltin(index.Target) || UsesRandomResultBuiltin(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesRandomResultBuiltin),
+            LoweredListExpression list => list.Elements.Any(UsesRandomResultBuiltin),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesRandomResultBuiltin(entry.Key) || UsesRandomResultBuiltin(entry.Value)),
+            LoweredChannelSendExpression send => UsesRandomResultBuiltin(send.Sender) || UsesRandomResultBuiltin(send.Value),
+            LoweredChannelReceiveExpression recv => UsesRandomResultBuiltin(recv.Receiver),
+            LoweredDotNetCallExpression dotNet => UsesRandomResultBuiltin(dotNet.TypeNameExpression)
+                || UsesRandomResultBuiltin(dotNet.MethodNameExpression)
+                || dotNet.Arguments.Any(UsesRandomResultBuiltin),
             _ => false
         };
     }
@@ -810,6 +933,10 @@ public sealed class Emitter
                 "int" => $"(int){args}",
                 "str" => $"AxomStringify({argumentExpressions[0]})",
                 "format" => $"AxomFormat({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "sleep" => $"((Func<object?>)(() => {{ System.Threading.Thread.Sleep(Math.Max(0, {argumentExpressions[0]})); return null; }}))()",
+                "rand_float" => "AxomRandFloat()",
+                "rand_int" => $"AxomRandInt({argumentExpressions[0]})",
+                "rand_seed" => $"((Func<object?>)(() => {{ AxomRandSeed({argumentExpressions[0]}); return null; }}))()",
                 "map" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "filter" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "fold" => $"System.Linq.Enumerable.Aggregate({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
@@ -965,6 +1092,41 @@ public sealed class Emitter
         builder.AppendLine("        }");
         builder.AppendLine();
         builder.AppendLine("        return AxomStringify(value);");
+        builder.AppendLine("    }");
+    }
+
+    private static void WriteRandomHelpers(StringBuilder builder)
+    {
+        builder.AppendLine("    static readonly object AxomRandomLock = new();");
+        builder.AppendLine("    static Random AxomRandomState = new();");
+        builder.AppendLine();
+        builder.AppendLine("    static void AxomRandSeed(int seed)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        lock (AxomRandomLock)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            AxomRandomState = new Random(seed);");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static double AxomRandFloat()");
+        builder.AppendLine("    {");
+        builder.AppendLine("        lock (AxomRandomLock)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomRandomState.NextDouble();");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<int> AxomRandInt(int max)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        if (max <= 0)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomResult<int>.Error(\"max must be > 0\");");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        lock (AxomRandomLock)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomResult<int>.Ok(AxomRandomState.Next(max));");
+        builder.AppendLine("        }");
         builder.AppendLine("    }");
     }
 

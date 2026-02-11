@@ -84,6 +84,34 @@ public static class BuiltinFunctions
         TypeSymbol.String,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Sleep = new(
+        "sleep",
+        new[] { new ParameterSymbol("ms", TypeSymbol.Int) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Unit,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol RandFloat = new(
+        "rand_float",
+        Array.Empty<ParameterSymbol>(),
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Float,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol RandInt = new(
+        "rand_int",
+        new[] { new ParameterSymbol("max", TypeSymbol.Int) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol RandSeed = new(
+        "rand_seed",
+        new[] { new ParameterSymbol("seed", TypeSymbol.Int) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Unit,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Map = new(
         "map",
         new[]
@@ -142,6 +170,10 @@ public static class BuiltinFunctions
         [Int.Name] = Int,
         [Str.Name] = Str,
         [Format.Name] = Format,
+        [Sleep.Name] = Sleep,
+        [RandFloat.Name] = RandFloat,
+        [RandInt.Name] = RandInt,
+        [RandSeed.Name] = RandSeed,
         [Map.Name] = Map,
         [Filter.Name] = Filter,
         [Fold.Name] = Fold,
