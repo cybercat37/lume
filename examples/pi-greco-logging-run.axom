@@ -1,0 +1,14 @@
+fn denominator(k: Int) -> Float => float(2 * k + 1)
+
+@logging fn leibniz(k: Int, remaining: Int, sign: Float, acc: Float) -> Float {
+  return match remaining {
+    0 -> acc
+    _ -> leibniz(k + 1, remaining - 1, -sign, acc + sign / denominator(k))
+  }
+}
+
+fn pi(terms: Int) -> Float {
+  return 4.0 * leibniz(0, terms, 1.0, 0.0)
+}
+
+print pi(100)
