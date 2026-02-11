@@ -903,6 +903,24 @@ public sealed class Emitter
     {
         builder.AppendLine("    static string AxomStringify(object? value)");
         builder.AppendLine("    {");
+        builder.AppendLine("        if (value is not null)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            var type = value.GetType();");
+        builder.AppendLine("            var tagProperty = type.GetProperty(\"Tag\");");
+        builder.AppendLine("            var payloadProperty = type.GetProperty(\"Value\");");
+        builder.AppendLine("            if (tagProperty is not null && payloadProperty is not null && tagProperty.PropertyType == typeof(string))");
+        builder.AppendLine("            {");
+        builder.AppendLine("                var tag = tagProperty.GetValue(value) as string ?? string.Empty;");
+        builder.AppendLine("                var payload = payloadProperty.GetValue(value);");
+        builder.AppendLine("                if (payload is null)");
+        builder.AppendLine("                {");
+        builder.AppendLine("                    return tag;");
+        builder.AppendLine("                }");
+        builder.AppendLine();
+        builder.AppendLine("                return $\"{tag}({AxomStringify(payload)})\";");
+        builder.AppendLine("            }");
+        builder.AppendLine("        }");
+        builder.AppendLine();
         builder.AppendLine("        return value switch");
         builder.AppendLine("        {");
         builder.AppendLine("            null => string.Empty,");

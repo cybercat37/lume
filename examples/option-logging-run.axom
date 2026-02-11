@@ -1,0 +1,14 @@
+type OptionInt { Some(Int) None }
+type ResultOption { Ok(OptionInt) Error(String) }
+
+@logging fn load_value(x: Int) -> ResultOption {
+  return match x {
+    < 0 -> Error("invalid input")
+    0 -> Ok(None)
+    _ -> Ok(Some(x * 10))
+  }
+}
+
+print load_value(-1)
+print load_value(0)
+print load_value(7)
