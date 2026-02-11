@@ -49,8 +49,8 @@ print match user {
 type User { name: String, age: Int }
 let user = User { name: ""Ada"", age: 36 }
 print match user {
-  User { name: n, age: a } if a > 40 -> ""old""
-  User { name: n, age: a } if a > 30 -> n
+  User { name: n, age: a } when a > 40 -> ""old""
+  User { name: n, age: a } when a > 30 -> n
   _ -> ""other""
 }
 ", "test.axom");

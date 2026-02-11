@@ -54,7 +54,7 @@ let result = match user {
     {
         var sourceText = new SourceText(@"
 let result = match 2 {
-  2 if true -> ""two""
+  2 when true -> ""two""
   _ -> ""other""
 }
 ", "test.axom");

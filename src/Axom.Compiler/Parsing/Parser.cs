@@ -761,16 +761,16 @@ public sealed class Parser
         {
             var start = position;
             var pattern = ParsePattern();
-            SyntaxToken? ifKeyword = null;
+            SyntaxToken? whenKeyword = null;
             ExpressionSyntax? guard = null;
-            if (Current().Kind == TokenKind.IfKeyword)
+            if (Current().Kind == TokenKind.WhenKeyword)
             {
-                ifKeyword = NextToken();
+                whenKeyword = NextToken();
                 guard = ParseExpression();
             }
             var arrowToken = MatchToken(TokenKind.ArrowType, "->");
             var armExpression = ParseExpression();
-            arms.Add(new MatchArmSyntax(pattern, ifKeyword, guard, arrowToken, armExpression));
+            arms.Add(new MatchArmSyntax(pattern, whenKeyword, guard, arrowToken, armExpression));
             ConsumeSeparators();
 
             if (position == start)

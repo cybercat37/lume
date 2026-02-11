@@ -72,4 +72,15 @@ public class LexerKeywordTests
         Assert.Equal(TokenKind.WithKeyword, token.Kind);
     }
 
+    [Fact]
+    public void When_keyword_is_tokenized()
+    {
+        var sourceText = new SourceText("when", "test.axom");
+        var lexer = new Lexer(sourceText);
+
+        var token = lexer.Lex();
+
+        Assert.Equal(TokenKind.WhenKeyword, token.Kind);
+    }
+
 }

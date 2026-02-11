@@ -215,8 +215,8 @@ pub fn load(id: Int) -> Result<User, Err> {
 - Guards are available for record/variant patterns
 
 Relational patterns use the match expression as the implicit left operand:
-- `<= 1` desugars to `x if x <= 1`
-- `> limit` desugars to `x if x > limit`
+- `<= 1` desugars to `x when x <= 1`
+- `> limit` desugars to `x when x > limit`
 
 ```axom
 let message = match count {

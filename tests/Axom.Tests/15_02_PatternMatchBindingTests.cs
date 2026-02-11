@@ -62,7 +62,7 @@ let result = match user {
     {
         var sourceText = new SourceText(@"
 let result = match 2 {
-  2 if 123 -> ""two""
+  2 when 123 -> ""two""
   _ -> ""other""
 }
 ", "test.axom");

@@ -15,7 +15,7 @@ public enum TokenKind
     ReturnKeyword,
     TypeKeyword,
     MatchKeyword,
-    IfKeyword,
+    WhenKeyword,
     ScopeKeyword,
     SpawnKeyword,
     JoinKeyword,

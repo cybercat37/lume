@@ -295,7 +295,7 @@ print match score {
 }
 ```
 
-`<= 1` behaves like `x if x <= 1` where `x` is the match expression.
+`<= 1` behaves like `x when x <= 1` where `x` is the match expression.
 
 Pattern matching must be exhaustive (use `_` when needed).
 
