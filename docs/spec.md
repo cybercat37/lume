@@ -82,6 +82,13 @@ Builtin notes:
 - `range(start: Int, end: Int, step?: Int) -> List<Int>` returns a half-open sequence;
   positive and negative `step` values are supported, and `step = 0` yields `[]`.
 
+Range semantics examples:
+- `range(1, 5)` -> `[1, 2, 3, 4]`
+- `range(1, 10, 0)` -> `[]`
+- `range(5, 5)` -> `[]`
+- `range(1, 5, -1)` -> `[]` (step sign does not move toward `end`)
+- `range(5, 1, -2)` -> `[5, 3]`
+
 Value pipe examples:
 - `value |> f` desugars to `f(value)`
 - `value |> f(a, b)` desugars to `f(value, a, b)`
