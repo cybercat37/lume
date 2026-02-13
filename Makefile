@@ -76,7 +76,7 @@ publish:
 		echo "Package not found. Use PACKAGE=path/to/*.nupkg"; \
 		exit 1; \
 	fi
-	dotnet nuget push $(PACKAGE) -k "$$(< api.key)" -s https://api.nuget.org/v3/index.json --skip-duplicate
+	@API_KEY="$$(tr -d '\r\n' < api.key)"; dotnet nuget push $(PACKAGE) -k "$$API_KEY" -s https://api.nuget.org/v3/index.json --skip-duplicate
 
 # Clean build artifacts
 clean:
