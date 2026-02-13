@@ -23,6 +23,26 @@ public class CodegenTakeSkipZipTests
     }
 
     [Fact]
+    public void Compile_take_while_emits_linq_take_while()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print take_while([1, 2, 3], fn(x: Int) => x < 3)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("System.Linq.Enumerable.TakeWhile", result.GeneratedCode);
+    }
+
+    [Fact]
+    public void Compile_skip_while_emits_linq_skip_while()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print skip_while([1, 2, 3], fn(x: Int) => x < 3)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("System.Linq.Enumerable.SkipWhile", result.GeneratedCode);
+    }
+
+    [Fact]
     public void Compile_zip_emits_linq_zip()
     {
         var compiler = new CompilerDriver();

@@ -31,6 +31,32 @@ public class InterpreterTakeSkipZipTests
     }
 
     [Fact]
+    public void Take_while_takes_prefix_while_predicate_is_true()
+    {
+        var sourceText = new SourceText("print take_while([1, 2, 3, 1], fn(x: Int) => x < 3)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("[1, 2]", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Skip_while_skips_prefix_while_predicate_is_true()
+    {
+        var sourceText = new SourceText("print skip_while([1, 2, 3, 1], fn(x: Int) => x < 3)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("[3, 1]", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public void Zip_pairs_items_until_shortest_list_ends()
     {
         var sourceText = new SourceText("print zip([1, 2, 3], [10, 20])", "test.axom");

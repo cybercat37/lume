@@ -1014,6 +1014,8 @@ public sealed class Emitter
                 "each" => $"{argumentExpressions[0]}.ForEach({argumentExpressions[1]})",
                 "take" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Take({argumentExpressions[0]}, Math.Max(0, {argumentExpressions[1]})))",
                 "skip" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Skip({argumentExpressions[0]}, Math.Max(0, {argumentExpressions[1]})))",
+                "take_while" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.TakeWhile({argumentExpressions[0]}, {argumentExpressions[1]}))",
+                "skip_while" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.SkipWhile({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "zip" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Zip({argumentExpressions[0]}, {argumentExpressions[1]}, (left, right) => (left, right)))",
                 "zip_with" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Zip({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]}))",
                 _ => $"{EscapeIdentifier(function.Function.Name)}({args})"

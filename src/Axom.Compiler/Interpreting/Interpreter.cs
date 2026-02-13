@@ -1082,6 +1082,40 @@ public sealed class Interpreter
                     }
 
                     return new List<object?>();
+                case "take_while":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> takeWhileItems)
+                    {
+                        var taken = new List<object?>();
+                        foreach (var item in takeWhileItems)
+                        {
+                            if (InvokeCallable(arguments[1], new[] { item }) is not bool keep || !keep)
+                            {
+                                break;
+                            }
+
+                            taken.Add(item);
+                        }
+
+                        return taken;
+                    }
+
+                    return new List<object?>();
+                case "skip_while":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> skipWhileItems)
+                    {
+                        var startIndex = 0;
+                        for (; startIndex < skipWhileItems.Count; startIndex++)
+                        {
+                            if (InvokeCallable(arguments[1], new[] { skipWhileItems[startIndex] }) is not bool keep || !keep)
+                            {
+                                break;
+                            }
+                        }
+
+                        return skipWhileItems.Skip(startIndex).ToList();
+                    }
+
+                    return new List<object?>();
                 case "zip":
                     if (arguments.Length == 2 && arguments[0] is List<object?> leftItems && arguments[1] is List<object?> rightItems)
                     {

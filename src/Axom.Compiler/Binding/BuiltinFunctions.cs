@@ -191,6 +191,28 @@ public static class BuiltinFunctions
         TypeSymbol.List(GenericT),
         isBuiltin: true);
 
+    public static readonly FunctionSymbol TakeWhile = new(
+        "take_while",
+        new[]
+        {
+            new ParameterSymbol("items", TypeSymbol.List(GenericT)),
+            new ParameterSymbol("predicate", TypeSymbol.Function(new[] { GenericT }, TypeSymbol.Bool))
+        },
+        new[] { GenericT },
+        TypeSymbol.List(GenericT),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol SkipWhile = new(
+        "skip_while",
+        new[]
+        {
+            new ParameterSymbol("items", TypeSymbol.List(GenericT)),
+            new ParameterSymbol("predicate", TypeSymbol.Function(new[] { GenericT }, TypeSymbol.Bool))
+        },
+        new[] { GenericT },
+        TypeSymbol.List(GenericT),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Zip = new(
         "zip",
         new[]
@@ -238,6 +260,8 @@ public static class BuiltinFunctions
         [Each.Name] = Each,
         [Take.Name] = Take,
         [Skip.Name] = Skip,
+        [TakeWhile.Name] = TakeWhile,
+        [SkipWhile.Name] = SkipWhile,
         [Zip.Name] = Zip,
         [ZipWith.Name] = ZipWith
     };
