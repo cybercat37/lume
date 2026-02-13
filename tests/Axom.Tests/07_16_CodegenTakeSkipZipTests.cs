@@ -31,4 +31,15 @@ public class CodegenTakeSkipZipTests
         Assert.True(result.Success);
         Assert.Contains("System.Linq.Enumerable.Zip", result.GeneratedCode);
     }
+
+    [Fact]
+    public void Compile_zip_with_emits_linq_zip_selector_overload()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print zip_with([1, 2], [3, 4], fn(x: Int, y: Int) => x + y)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("System.Linq.Enumerable.Zip", result.GeneratedCode);
+        Assert.Contains("(int x, int y) => x + y", result.GeneratedCode);
+    }
 }

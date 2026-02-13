@@ -114,12 +114,14 @@ let sum = [1, 2, 3]
 let first_two = take([10, 20, 30], 2)
 let tail = skip([10, 20, 30], 1)
 let pairs = zip([1, 2, 3], ["a", "b"])
+let pair_sums = zip_with([1, 2, 3], [10, 20], fn(x: Int, y: Int) => x + y)
 
 print doubled
 print sum
 print first_two
 print tail
 print pairs
+print pair_sums
 ```
 
 **Range + pipelines**

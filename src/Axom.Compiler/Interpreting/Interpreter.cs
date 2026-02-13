@@ -1096,6 +1096,20 @@ public sealed class Interpreter
                     }
 
                     return new List<object?>();
+                case "zip_with":
+                    if (arguments.Length == 3 && arguments[0] is List<object?> zipLeft && arguments[1] is List<object?> zipRight)
+                    {
+                        var length = Math.Min(zipLeft.Count, zipRight.Count);
+                        var combined = new List<object?>(length);
+                        for (var i = 0; i < length; i++)
+                        {
+                            combined.Add(InvokeCallable(arguments[2], new[] { zipLeft[i], zipRight[i] }));
+                        }
+
+                        return combined;
+                    }
+
+                    return new List<object?>();
                 default:
                     return null;
             }

@@ -6,6 +6,7 @@ public static class BuiltinFunctions
 {
     private static readonly TypeSymbol GenericT = TypeSymbol.Generic("T");
     private static readonly TypeSymbol GenericU = TypeSymbol.Generic("U");
+    private static readonly TypeSymbol GenericV = TypeSymbol.Generic("V");
 
     public static readonly FunctionSymbol Println = new(
         "println",
@@ -201,6 +202,18 @@ public static class BuiltinFunctions
         TypeSymbol.List(TypeSymbol.Tuple(new[] { GenericT, GenericU })),
         isBuiltin: true);
 
+    public static readonly FunctionSymbol ZipWith = new(
+        "zip_with",
+        new[]
+        {
+            new ParameterSymbol("left", TypeSymbol.List(GenericT)),
+            new ParameterSymbol("right", TypeSymbol.List(GenericU)),
+            new ParameterSymbol("combine", TypeSymbol.Function(new[] { GenericT, GenericU }, GenericV))
+        },
+        new[] { GenericT, GenericU, GenericV },
+        TypeSymbol.List(GenericV),
+        isBuiltin: true);
+
     private static readonly Dictionary<string, FunctionSymbol> ByName = new(StringComparer.Ordinal)
     {
         [Print.Name] = Print,
@@ -225,7 +238,8 @@ public static class BuiltinFunctions
         [Each.Name] = Each,
         [Take.Name] = Take,
         [Skip.Name] = Skip,
-        [Zip.Name] = Zip
+        [Zip.Name] = Zip,
+        [ZipWith.Name] = ZipWith
     };
 
     public static bool TryLookup(string name, out FunctionSymbol? function) =>

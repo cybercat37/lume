@@ -623,6 +623,7 @@ let evens = filter([1, 2, 3, 4], fn(x: Int) => x % 2 == 0)
 let first_two = take([10, 20, 30], 2)
 let after_two = skip([10, 20, 30], 2)
 let pairs = zip([1, 2, 3], ["a", "b"])
+let pair_sums = zip_with([1, 2, 3], [10, 20], fn(x: Int, y: Int) => x + y)
 
 let total = [1, 2, 3]
   |> map(fn(x: Int) => x * 2)
@@ -630,6 +631,7 @@ let total = [1, 2, 3]
 ```
 
 `zip` stops when the shorter list ends.
+`zip_with` also stops at the shorter list and applies the combiner per pair.
 
 
 ---

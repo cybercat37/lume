@@ -42,4 +42,17 @@ public class InterpreterTakeSkipZipTests
         Assert.Equal("[(1, 10), (2, 20)]", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Zip_with_combines_items_until_shortest_list_ends()
+    {
+        var sourceText = new SourceText("print zip_with([1, 2, 3], [10, 20], fn(x: Int, y: Int) => x + y)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("[11, 22]", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }
