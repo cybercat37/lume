@@ -42,13 +42,13 @@
         </div>
         <div class="hero-panel">
             <div class="metal-card">
-              <p class="card-title">Collection flow in one pass</p>
-              <pre><code>let odds = range(1, 12)
-  |> skip_while(fn(x: Int) => x < 3)
-  |> take_while(fn(x: Int) => x < 10)
+              <p class="card-title">Fibonacci with relational match</p>
+              <pre><code>fn fib(n: Int) => match n {
+  <= 1 -> n
+  _ -> fib(n - 1) + fib(n - 2)
+}
 
-print odds
-print odds |> fold(0, fn(acc: Int, x: Int) => acc + x)
+print fib(8)
 </code></pre>
             </div>
           </div>
@@ -108,38 +108,56 @@ print odds |> fold(0, fn(acc: Int, x: Int) => acc + x)
           </p>
           <div class="example-grid">
             <div class="example">
-              <p class="label">Range + pipelines</p>
-              <pre><code>let squares = range(1, 6)
-  |> map(fn(x: Int) => x * x)
+              <p class="label">Fibonacci (main style)</p>
+              <pre><code>fn fib(n: Int) => match n {
+  <= 1 -> n
+  _ -> fib(n - 1) + fib(n - 2)
+}
 
-let total = squares
-  |> fold(0, fn(acc: Int, x: Int) => acc + x)
-
-print squares
-print total</code></pre>
+print fib(8)</code></pre>
             </div>
             <div class="example">
-              <p class="label">Windowed list combinators</p>
-              <pre><code>let values = [1, 2, 3, 4, 5]
+              <p class="label">Channels with explicit recv handling</p>
+              <pre><code>scope {
+  let (tx, rx) = channel<Int>()
 
-print take(values, 3)
-print skip(values, 2)
-print take_while(values, fn(x: Int) => x < 4)
-print skip_while(values, fn(x: Int) => x < 4)</code></pre>
+  let sender = spawn { tx.send(42) }
+  let worker = spawn {
+    print match rx.recv() {
+      Ok(value) -> value
+      Error(msg) -> -1
+    }
+  }
+
+  sender.join()
+  worker.join()
+}</code></pre>
             </div>
             <div class="example">
-              <p class="label">Enumerate + zip_with</p>
-              <pre><code>let xs = [10, 20, 30]
+              <p class="label">Range, enumerate, zip_with</p>
+              <pre><code>let xs = range(1, 6)
 let indexed = enumerate(xs)
+let mixed = zip_with(xs, [10, 20, 30, 40, 50],
+  fn(x: Int, y: Int) => x + y)
 
 print indexed
-print zip_with(xs, [1, 2, 3],
-  fn(x: Int, y: Int) => x + y)
-</code></pre>
+print mixed |> fold(0, fn(acc: Int, x: Int) => acc + x)</code></pre>
             </div>
             <div class="example">
-              <p class="label">Result + match</p>
-              <pre><code>let value = rand_int(10)
+              <p class="label">Interpolation + formatting</p>
+              <pre><code>let name = "ada"
+let n = 7
+let price = 12.5
+
+print f"Hello, {name:upper}!"
+print f"n={n:000}"
+print f"price={price:0.00}"
+print f"literal braces: {{ok}}"</code></pre>
+            </div>
+            <div class="example">
+              <p class="label">Result-friendly random API</p>
+              <pre><code>rand_seed(7)
+let value = rand_int(10)
 
 print match value {
   Ok(n) -> n
@@ -155,13 +173,6 @@ let updated = user with { age: 37 }
 
 print user.name
 print updated.age</code></pre>
-            </div>
-            <div class="example">
-              <p class="label">Tuples and match</p>
-              <pre><code>print match (1, 2) {
-  (a, b) -> a + b
-  _ -> 0
-}</code></pre>
             </div>
           </div>
         </div>
