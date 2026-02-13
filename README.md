@@ -120,6 +120,8 @@ print sum
 
 ```axom
 print range(1, 6)
+print range(1, 10, 3)
+print range(5, 0, -2)
 
 let squares = range(1, 6)
   |> map(fn(x: Int) => x * x)
@@ -129,6 +131,9 @@ let sum = range(1, 6)
   |> fold(0, fn(acc: Int, x: Int) => acc + x)
 print sum
 ```
+
+`range(start, end)` is half-open (`start` included, `end` excluded).
+`range(start, end, step)` supports positive or negative step.
 
 **Match as control flow**
 

@@ -14,6 +14,7 @@ public sealed class Emitter
     {
         var requiresFunctionLogging = program.Functions.Any(function => function.Symbol.EnableLogging);
         var requiresRandomBuiltins = RequiresRandomBuiltins(program);
+        var requiresRangeBuiltin = RequiresRangeBuiltin(program);
         var requiresRandomResultRuntime = RequiresRandomResultRuntime(program);
         var requiresFormat = RequiresFormat(program);
         var requiresStringify = RequiresStringify(program) || requiresFormat || requiresFunctionLogging;
@@ -94,6 +95,12 @@ public sealed class Emitter
             builder.AppendLine();
         }
 
+        if (requiresRangeBuiltin)
+        {
+            WriteRangeHelper(builder);
+            builder.AppendLine();
+        }
+
         if (requiresFunctionLogging)
         {
             WriteFunctionLoggingHelpers(builder);
@@ -115,7 +122,9 @@ public sealed class Emitter
 
     private static bool RequiresCollections(LoweredProgram program)
     {
-        return program.Statements.Any(UsesCollections) || program.Functions.Any(function => UsesCollections(function.Body));
+        return program.Statements.Any(UsesCollections)
+            || program.Functions.Any(function => UsesCollections(function.Body))
+            || RequiresRangeBuiltin(program);
     }
 
     private static bool RequiresTasks(LoweredProgram program)
@@ -146,6 +155,11 @@ public sealed class Emitter
     private static bool RequiresRandomBuiltins(LoweredProgram program)
     {
         return program.Statements.Any(UsesRandomBuiltins) || program.Functions.Any(function => UsesRandomBuiltins(function.Body));
+    }
+
+    private static bool RequiresRangeBuiltin(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesRangeBuiltin) || program.Functions.Any(function => UsesRangeBuiltin(function.Body));
     }
 
     private static bool RequiresRandomResultRuntime(LoweredProgram program)
@@ -247,6 +261,20 @@ public sealed class Emitter
             LoweredExpressionStatement expressionStatement => UsesRandomBuiltins(expressionStatement.Expression),
             LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesRandomBuiltins(returnStatement.Expression),
             LoweredIfStatement ifStatement => UsesRandomBuiltins(ifStatement.Condition) || UsesRandomBuiltins(ifStatement.Then) || (ifStatement.Else is not null && UsesRandomBuiltins(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesRangeBuiltin(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesRangeBuiltin),
+            LoweredVariableDeclaration declaration => UsesRangeBuiltin(declaration.Initializer),
+            LoweredPrintStatement print => UsesRangeBuiltin(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesRangeBuiltin(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesRangeBuiltin(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesRangeBuiltin(ifStatement.Condition) || UsesRangeBuiltin(ifStatement.Then) || (ifStatement.Else is not null && UsesRangeBuiltin(ifStatement.Else)),
             _ => false
         };
     }
@@ -498,6 +526,43 @@ public sealed class Emitter
             LoweredDotNetCallExpression dotNet => UsesRandomBuiltins(dotNet.TypeNameExpression)
                 || UsesRandomBuiltins(dotNet.MethodNameExpression)
                 || dotNet.Arguments.Any(UsesRandomBuiltins),
+            _ => false
+        };
+    }
+
+    private static bool UsesRangeBuiltin(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
+                && function.Function.IsBuiltin
+                && string.Equals(function.Function.Name, "range", StringComparison.Ordinal) => true,
+            LoweredCallExpression call => UsesRangeBuiltin(call.Callee) || call.Arguments.Any(UsesRangeBuiltin),
+            LoweredUnaryExpression unary => UsesRangeBuiltin(unary.Operand),
+            LoweredBinaryExpression binary => UsesRangeBuiltin(binary.Left) || UsesRangeBuiltin(binary.Right),
+            LoweredAssignmentExpression assignment => UsesRangeBuiltin(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesRangeBuiltin) || UsesRangeBuiltin(block.Result),
+            LoweredLambdaExpression lambda => UsesRangeBuiltin(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesRangeBuiltin(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesRangeBuiltin(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesRangeBuiltin(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesRangeBuiltin(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesRangeBuiltin(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesRangeBuiltin(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesRangeBuiltin(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesRangeBuiltin(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesRangeBuiltin(unwrap.Target),
+            LoweredSpawnExpression spawn => UsesRangeBuiltin(spawn.Body),
+            LoweredJoinExpression join => UsesRangeBuiltin(join.Expression),
+            LoweredIndexExpression index => UsesRangeBuiltin(index.Target) || UsesRangeBuiltin(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesRangeBuiltin),
+            LoweredListExpression list => list.Elements.Any(UsesRangeBuiltin),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesRangeBuiltin(entry.Key) || UsesRangeBuiltin(entry.Value)),
+            LoweredChannelSendExpression send => UsesRangeBuiltin(send.Sender) || UsesRangeBuiltin(send.Value),
+            LoweredChannelReceiveExpression recv => UsesRangeBuiltin(recv.Receiver),
+            LoweredDotNetCallExpression dotNet => UsesRangeBuiltin(dotNet.TypeNameExpression)
+                || UsesRangeBuiltin(dotNet.MethodNameExpression)
+                || dotNet.Arguments.Any(UsesRangeBuiltin),
             _ => false
         };
     }
@@ -937,7 +1002,12 @@ public sealed class Emitter
                 "rand_float" => "AxomRandFloat()",
                 "rand_int" => $"AxomRandInt({argumentExpressions[0]})",
                 "rand_seed" => $"((Func<object?>)(() => {{ AxomRandSeed({argumentExpressions[0]}); return null; }}))()",
-                "range" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Range({argumentExpressions[0]}, Math.Max(0, {argumentExpressions[1]} - {argumentExpressions[0]})))",
+                "range" => argumentExpressions.Count switch
+                {
+                    2 => $"AxomRange({argumentExpressions[0]}, {argumentExpressions[1]})",
+                    3 => $"AxomRange({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
+                    _ => "new List<int>()"
+                },
                 "map" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "filter" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "fold" => $"System.Linq.Enumerable.Aggregate({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
@@ -1128,6 +1198,35 @@ public sealed class Emitter
         builder.AppendLine("        {");
         builder.AppendLine("            return AxomResult<int>.Ok(AxomRandomState.Next(max));");
         builder.AppendLine("        }");
+        builder.AppendLine("    }");
+    }
+
+    private static void WriteRangeHelper(StringBuilder builder)
+    {
+        builder.AppendLine("    static List<int> AxomRange(int start, int end, int step = 1)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var values = new List<int>();");
+        builder.AppendLine("        if (step == 0)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return values;");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        if (step > 0)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            for (var i = start; i < end; i += step)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                values.Add(i);");
+        builder.AppendLine("            }");
+        builder.AppendLine("        }");
+        builder.AppendLine("        else");
+        builder.AppendLine("        {");
+        builder.AppendLine("            for (var i = start; i > end; i += step)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                values.Add(i);");
+        builder.AppendLine("            }");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        return values;");
         builder.AppendLine("    }");
     }
 

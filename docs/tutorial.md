@@ -632,6 +632,8 @@ let total = [1, 2, 3]
 
 ```axom
 each(range(1, 10), fn(i: Int) { println i })
+print range(1, 10, 3)
+print range(5, 0, -2)
 
 let squares = range(1, 6)
   |> map(fn(x: Int) => x * x)
@@ -643,7 +645,8 @@ print sum
 ```
 
 `range(start, end)` returns a list from `start` (inclusive) to `end` (exclusive).
-If `end <= start`, it returns `[]`.
+`range(start, end, step)` supports custom positive/negative steps (`step = 0` returns `[]`).
+If `end <= start` with positive step, it returns `[]`.
 
 
 ---

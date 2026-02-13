@@ -29,4 +29,30 @@ public class InterpreterRangeBuiltinTests
         Assert.Equal("[]", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Range_with_step_builds_sequence()
+    {
+        var sourceText = new SourceText("print range(1, 10, 3)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("[1, 4, 7]", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Range_with_negative_step_builds_descending_sequence()
+    {
+        var sourceText = new SourceText("print range(5, 0, -2)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("[5, 3, 1]", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

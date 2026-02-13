@@ -976,12 +976,35 @@ public sealed class Interpreter
 
                     return null;
                 case "range":
-                    if (arguments.Length == 2 && arguments[0] is int start && arguments[1] is int end)
+                    if ((arguments.Length == 2 || arguments.Length == 3)
+                        && arguments[0] is int start
+                        && arguments[1] is int end)
                     {
-                        var values = new List<object?>();
-                        for (var i = start; i < end; i++)
+                        var step = 1;
+                        if (arguments.Length == 3)
                         {
-                            values.Add(i);
+                            if (arguments[2] is not int explicitStep || explicitStep == 0)
+                            {
+                                return new List<object?>();
+                            }
+
+                            step = explicitStep;
+                        }
+
+                        var values = new List<object?>();
+                        if (step > 0)
+                        {
+                            for (var i = start; i < end; i += step)
+                            {
+                                values.Add(i);
+                            }
+                        }
+                        else
+                        {
+                            for (var i = start; i > end; i += step)
+                            {
+                                values.Add(i);
+                            }
                         }
 
                         return values;

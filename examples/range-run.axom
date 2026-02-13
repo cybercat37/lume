@@ -1,4 +1,6 @@
 print range(1, 6)
+print range(1, 10, 3)
+print range(5, 0, -2)
 
 let squares = range(1, 6)
   |> map(fn(x: Int) => x * x)

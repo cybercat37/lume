@@ -79,6 +79,8 @@ Builtin notes:
 - `rand_int(max: Int) -> Result<Int, String>` returns `Ok(n)` for `0 <= n < max`,
   or `Error("max must be > 0")` when `max <= 0`.
 - `rand_seed(seed: Int) -> Unit` resets random state for deterministic runs/tests.
+- `range(start: Int, end: Int, step?: Int) -> List<Int>` returns a half-open sequence;
+  positive and negative `step` values are supported, and `step = 0` yields `[]`.
 
 Value pipe examples:
 - `value |> f` desugars to `f(value)`

@@ -2284,6 +2284,15 @@ public sealed class Binder
                 boundArguments.Add(BindExpression(argument));
             }
 
+            if (callee is BoundFunctionExpression mismatchBuiltin && mismatchBuiltin.Function.IsBuiltin)
+            {
+                var mismatchBuiltinResult = BindBuiltinCall(mismatchBuiltin.Function, call, boundArguments);
+                if (mismatchBuiltinResult is not null)
+                {
+                    return mismatchBuiltinResult;
+                }
+            }
+
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
                 call.Span,
@@ -2437,6 +2446,8 @@ public sealed class Binder
     {
         switch (function.Name)
         {
+            case "range":
+                return BindBuiltinRange(function, call, arguments);
             case "abs":
                 return BindBuiltinUnary(function, call, arguments, allowFloat: true);
             case "min":
@@ -2445,6 +2456,42 @@ public sealed class Binder
             default:
                 return null;
         }
+    }
+
+    private BoundExpression BindBuiltinRange(
+        FunctionSymbol function,
+        CallExpressionSyntax call,
+        IReadOnlyList<BoundExpression> arguments)
+    {
+        if (arguments.Count != 2 && arguments.Count != 3)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                "range() expects 2 or 3 Int arguments."));
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+        }
+
+        var hasTypeError = false;
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            var argumentType = arguments[index].Type;
+            if (argumentType == TypeSymbol.Int || argumentType == TypeSymbol.Error)
+            {
+                continue;
+            }
+
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Arguments[index].Span,
+                $"range() expects Int arguments but got '{argumentType}'."));
+            hasTypeError = true;
+        }
+
+        return new BoundCallExpression(
+            new BoundFunctionExpression(function),
+            arguments,
+            hasTypeError ? TypeSymbol.Error : TypeSymbol.List(TypeSymbol.Int));
     }
 
     private BoundExpression BindBuiltinUnary(
