@@ -1,0 +1,11 @@
+let now = time_now_utc()
+let later = time_add_ms(now, 1500)
+
+print time_to_iso(now)
+print time_to_local_iso(now)
+print time_diff_ms(later, now)
+
+let parsed = time_from_iso(time_to_iso(now))
+print result_map(parsed, fn(value: Instant) => time_diff_ms(value, now))
+
+print time_from_iso("not-a-date")

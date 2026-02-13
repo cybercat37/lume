@@ -92,6 +92,56 @@ public static class BuiltinFunctions
         TypeSymbol.Unit,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol TimeNowUtc = new(
+        "time_now_utc",
+        Array.Empty<ParameterSymbol>(),
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Instant,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol TimeAddMs = new(
+        "time_add_ms",
+        new[]
+        {
+            new ParameterSymbol("value", TypeSymbol.Instant),
+            new ParameterSymbol("ms", TypeSymbol.Int)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Instant,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol TimeDiffMs = new(
+        "time_diff_ms",
+        new[]
+        {
+            new ParameterSymbol("left", TypeSymbol.Instant),
+            new ParameterSymbol("right", TypeSymbol.Instant)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Int,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol TimeToIso = new(
+        "time_to_iso",
+        new[] { new ParameterSymbol("value", TypeSymbol.Instant) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.String,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol TimeToLocalIso = new(
+        "time_to_local_iso",
+        new[] { new ParameterSymbol("value", TypeSymbol.Instant) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.String,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol TimeFromIso = new(
+        "time_from_iso",
+        new[] { new ParameterSymbol("text", TypeSymbol.String) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.Instant, TypeSymbol.String),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol RandFloat = new(
         "rand_float",
         Array.Empty<ParameterSymbol>(),
@@ -313,6 +363,12 @@ public static class BuiltinFunctions
         [Str.Name] = Str,
         [Format.Name] = Format,
         [Sleep.Name] = Sleep,
+        [TimeNowUtc.Name] = TimeNowUtc,
+        [TimeAddMs.Name] = TimeAddMs,
+        [TimeDiffMs.Name] = TimeDiffMs,
+        [TimeToIso.Name] = TimeToIso,
+        [TimeToLocalIso.Name] = TimeToLocalIso,
+        [TimeFromIso.Name] = TimeFromIso,
         [RandFloat.Name] = RandFloat,
         [RandInt.Name] = RandInt,
         [RandSeed.Name] = RandSeed,

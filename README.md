@@ -75,12 +75,19 @@ print max(3, 7)
 
 ```axom
 rand_seed(42)
+let now = time_now_utc()
+let later = time_add_ms(now, 250)
+print time_diff_ms(later, now)
+print time_to_iso(now)
+print time_to_local_iso(now)
+print time_from_iso(time_to_iso(now))
 print rand_float()
 print rand_int(10)
 sleep(20)
 ```
 
 - `sleep(ms)` waits for `ms` milliseconds (`ms <= 0` is a no-op)
+- `time_from_iso(text)` returns `Ok(instant)` or `Error("invalid ISO-8601 instant")`
 - `rand_int(max)` returns `Ok(n)` or `Error("max must be > 0")`
 
 **Value pipe**

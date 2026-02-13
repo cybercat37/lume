@@ -3647,6 +3647,7 @@ public sealed class Binder
                 "Float" => TypeSymbol.Float,
                 "Bool" => TypeSymbol.Bool,
                 "String" => TypeSymbol.String,
+                "Instant" => TypeSymbol.Instant,
                 "Unit" => TypeSymbol.Unit,
                 _ => recordTypes.TryGetValue(typeLookupName, out var recordType)
                     ? recordType

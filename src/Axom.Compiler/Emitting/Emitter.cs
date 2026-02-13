@@ -591,6 +591,7 @@ public sealed class Emitter
             LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
                 && function.Function.IsBuiltin
                 && (string.Equals(function.Function.Name, "rand_int", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "time_from_iso", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "result_map", StringComparison.Ordinal)) => true,
             LoweredCallExpression call => UsesRandomResultBuiltin(call.Callee) || call.Arguments.Any(UsesRandomResultBuiltin),
             LoweredUnaryExpression unary => UsesRandomResultBuiltin(unary.Operand),
@@ -1059,6 +1060,12 @@ public sealed class Emitter
                 "str" => $"AxomStringify({argumentExpressions[0]})",
                 "format" => $"AxomFormat({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "sleep" => $"((Func<object?>)(() => {{ System.Threading.Thread.Sleep(Math.Max(0, {argumentExpressions[0]})); return null; }}))()",
+                "time_now_utc" => "DateTimeOffset.UtcNow",
+                "time_add_ms" => $"({argumentExpressions[0]}).AddMilliseconds({argumentExpressions[1]})",
+                "time_diff_ms" => $"(int)({argumentExpressions[0]} - {argumentExpressions[1]}).TotalMilliseconds",
+                "time_to_iso" => $"({argumentExpressions[0]}).ToString(\"O\", System.Globalization.CultureInfo.InvariantCulture)",
+                "time_to_local_iso" => $"({argumentExpressions[0]}).ToLocalTime().ToString(\"O\", System.Globalization.CultureInfo.InvariantCulture)",
+                "time_from_iso" => $"((Func<AxomResult<DateTimeOffset>>)(() => {{ if (DateTimeOffset.TryParse({argumentExpressions[0]}, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var __axomInstant)) return AxomResult<DateTimeOffset>.Ok(__axomInstant); return AxomResult<DateTimeOffset>.Error(\"invalid ISO-8601 instant\"); }}))()",
                 "rand_float" => "AxomRandFloat()",
                 "rand_int" => $"AxomRandInt({argumentExpressions[0]})",
                 "rand_seed" => $"((Func<object?>)(() => {{ AxomRandSeed({argumentExpressions[0]}); return null; }}))()",
@@ -1658,6 +1665,7 @@ public sealed class Emitter
             var t when t == TypeSymbol.Float => "double",
             var t when t == TypeSymbol.Bool => "bool",
             var t when t == TypeSymbol.String => "string",
+            var t when t == TypeSymbol.Instant => "DateTimeOffset",
             var t when t == TypeSymbol.Unit => "void",
             _ => EscapeIdentifier(type.Name)
         };

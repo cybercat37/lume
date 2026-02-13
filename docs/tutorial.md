@@ -638,6 +638,13 @@ let has_large = any([1, 2, 3], fn(x: Int) => x > 2)
 let all_positive = all([1, 2, 3], fn(x: Int) => x > 0)
 let mapped = result_map(rand_int(10), fn(x: Int) => x + 1)
 
+let now = time_now_utc()
+let later = time_add_ms(now, 1500)
+print time_diff_ms(later, now)
+print time_to_iso(now)
+print time_to_local_iso(now)
+print time_from_iso(time_to_iso(now))
+
 let total = [1, 2, 3]
   |> map(fn(x: Int) => x * 2)
   |> fold(0, fn(acc: Int, x: Int) => acc + x)

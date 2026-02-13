@@ -59,7 +59,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Records update syntax | One obvious update form | Implemented | `target with { ... }` is the only update syntax; spread literals are copy-only |
 | Modules/imports | One-file modules + import | Implemented | Resolver v1 is implemented (imports, pub visibility, wildcard rejection, cycle/conflict diagnostics, aliases for `import ... as ...` and `from ... import ... as ...`) |
 | String interpolation | f"...{expr}..." | Partial | `f"...{expr}..."` interpolation is implemented with escaped braces and baseline `:specifier` formatting; advanced formatting controls remain planned |
-| Time/random builtins | sleep + random helpers | Implemented | `sleep(ms)`, `rand_float()`, `rand_int(max) -> Result`, `rand_seed(seed)` are implemented in interpreter+codegen |
+| Time/random builtins | sleep + time + random helpers | Implemented | `sleep(ms)`, UTC instant helpers (`time_now_utc`, add/diff/ISO parse+format), `rand_float()`, `rand_int(max) -> Result`, `rand_seed(seed)` are implemented in interpreter+codegen |
 | Intent annotations | @intent metadata on blocks/let | Partial | Parser/binder/lowering metadata exists; effect-mismatch warnings are currently disabled |
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
 | .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with `System.Math` whitelist |

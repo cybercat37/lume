@@ -951,6 +951,50 @@ public sealed class Interpreter
                     }
 
                     return null;
+                case "time_now_utc":
+                    return DateTimeOffset.UtcNow;
+                case "time_add_ms":
+                    if (arguments.Length == 2 && arguments[0] is DateTimeOffset instant && arguments[1] is int deltaMs)
+                    {
+                        return instant.AddMilliseconds(deltaMs);
+                    }
+
+                    return DateTimeOffset.UtcNow;
+                case "time_diff_ms":
+                    if (arguments.Length == 2 && arguments[0] is DateTimeOffset leftInstant && arguments[1] is DateTimeOffset rightInstant)
+                    {
+                        return (int)(leftInstant - rightInstant).TotalMilliseconds;
+                    }
+
+                    return 0;
+                case "time_to_iso":
+                    if (arguments.Length == 1 && arguments[0] is DateTimeOffset utcInstant)
+                    {
+                        return utcInstant.ToString("O", CultureInfo.InvariantCulture);
+                    }
+
+                    return string.Empty;
+                case "time_to_local_iso":
+                    if (arguments.Length == 1 && arguments[0] is DateTimeOffset localInstant)
+                    {
+                        return localInstant.ToLocalTime().ToString("O", CultureInfo.InvariantCulture);
+                    }
+
+                    return string.Empty;
+                case "time_from_iso":
+                    if (arguments.Length == 1 && arguments[0] is string isoText)
+                    {
+                        if (DateTimeOffset.TryParse(isoText, CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
+                        {
+                            return new SumValue(
+                                new SumVariantSymbol("Ok", TypeSymbol.Result(TypeSymbol.Instant, TypeSymbol.String), TypeSymbol.Instant),
+                                parsed);
+                        }
+                    }
+
+                    return new SumValue(
+                        new SumVariantSymbol("Error", TypeSymbol.Result(TypeSymbol.Instant, TypeSymbol.String), TypeSymbol.String),
+                        "invalid ISO-8601 instant");
                 case "rand_float":
                     lock (randomLock)
                     {
@@ -1507,6 +1551,7 @@ public sealed class Interpreter
                 null => string.Empty,
                 bool boolValue => boolValue ? "true" : "false",
                 double doubleValue => doubleValue.ToString(CultureInfo.InvariantCulture),
+                DateTimeOffset instant => instant.ToString("O", CultureInfo.InvariantCulture),
                 object?[] tuple => $"({string.Join(", ", tuple.Select(FormatValue))})",
                 List<object?> list => $"[{string.Join(", ", list.Select(FormatValue))}]",
                 Dictionary<string, object?> map => $"{{ {string.Join(", ", map.Select(pair => $"{pair.Key}: {FormatValue(pair.Value)}"))} }}",

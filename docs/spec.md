@@ -69,12 +69,18 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - String interpolation: `f"...{expr}..."` with `{}` expressions.
 - String helpers (length/split) live in stdlib.
 - Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`, `range`, `take`, `skip`, `take_while`, `skip_while`, `enumerate`, `zip`, `zip_with`, `count`, `sum`, `any`, `all`, `result_map`.
-- Time/random builtins are available: `sleep(ms)`, `rand_float()`, `rand_int(max)`, `rand_seed(seed)`.
+- Time/random builtins are available: `sleep(ms)`, `time_now_utc()`, `time_add_ms`, `time_diff_ms`, `time_to_iso`, `time_to_local_iso`, `time_from_iso`, `rand_float()`, `rand_int(max)`, `rand_seed(seed)`.
 - Dedicated pipeline-combinator expression syntax remains proposed
   (see `docs/proposals/pipeline-combinators.md`).
 
 Builtin notes:
 - `sleep(ms: Int) -> Unit` blocks for `ms` milliseconds (`ms <= 0` is a no-op).
+- `time_now_utc() -> Instant` returns current UTC instant.
+- `time_add_ms(value: Instant, ms: Int) -> Instant` shifts an instant by milliseconds.
+- `time_diff_ms(a: Instant, b: Instant) -> Int` returns signed millisecond difference (`a - b`).
+- `time_to_iso(value: Instant) -> String` renders ISO-8601 roundtrip text.
+- `time_to_local_iso(value: Instant) -> String` renders local-time ISO-8601 text.
+- `time_from_iso(text: String) -> Result<Instant, String>` parses ISO-8601 or returns `Error("invalid ISO-8601 instant")`.
 - `rand_float() -> Float` returns a value in `[0.0, 1.0)`.
 - `rand_int(max: Int) -> Result<Int, String>` returns `Ok(n)` for `0 <= n < max`,
   or `Error("max must be > 0")` when `max <= 0`.
