@@ -1,0 +1,10 @@
+fn describe(xs: List<Int>, parsed: Result<Int, String>) -> Int {
+  let n = count(xs)
+  return match parsed {
+    Ok(v) -> v + n
+    Error(_) -> n
+  }
+}
+
+let values = [1, 2, 3, 4]
+print describe(values, rand_int(10))

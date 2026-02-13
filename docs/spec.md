@@ -59,7 +59,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - Numeric conversions are explicit: `float(Int) -> Float` and `int(Float) -> Int`.
 - Records use `type` with literal construction `User { name: "Ada" }` and update syntax `user with { age: 37 }`.
 - Sum types use `Variant` / `Variant(value)` payload style.
-- Generics use `<T>` with inference; no constraints for now.
+- Generics use `<T>` with inference; no constraints for now. Function generics are implemented, and type declarations/annotations support initial generic syntax (for example `type Box<T> { value: T }`, `List<Int>`).
 - Type aliases are equivalent to the base type (no newtype yet).
 
 ### Collections & Strings

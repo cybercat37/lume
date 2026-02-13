@@ -354,6 +354,14 @@ public sealed class Parser
     {
         var typeKeyword = MatchToken(TokenKind.TypeKeyword, "type");
         var identifier = MatchToken(TokenKind.Identifier, "type name");
+        SyntaxToken? typeParameterOpenToken = null;
+        SyntaxToken? typeParameterCloseToken = null;
+        var typeParameters = Array.Empty<SyntaxToken>();
+        if (Current().Kind == TokenKind.Less && Peek(1).Kind == TokenKind.Identifier)
+        {
+            (typeParameterOpenToken, typeParameters, typeParameterCloseToken) = ParseTypeParameterList();
+        }
+
         var openBrace = MatchToken(TokenKind.OpenBrace, "{");
         var fields = new List<RecordFieldSyntax>();
         var variants = new List<SumVariantSyntax>();
@@ -404,10 +412,26 @@ public sealed class Parser
 
         if (fields.Count > 0)
         {
-            return new RecordTypeDeclarationSyntax(typeKeyword, identifier, openBrace, fields, closeBrace);
+            return new RecordTypeDeclarationSyntax(
+                typeKeyword,
+                identifier,
+                typeParameterOpenToken,
+                typeParameters,
+                typeParameterCloseToken,
+                openBrace,
+                fields,
+                closeBrace);
         }
 
-        return new SumTypeDeclarationSyntax(typeKeyword, identifier, openBrace, variants, closeBrace);
+        return new SumTypeDeclarationSyntax(
+            typeKeyword,
+            identifier,
+            typeParameterOpenToken,
+            typeParameters,
+            typeParameterCloseToken,
+            openBrace,
+            variants,
+            closeBrace);
     }
 
     private StatementSyntax ParseFunctionDeclaration(IReadOnlyList<string>? aspects = null)
@@ -1590,7 +1614,50 @@ public sealed class Parser
         }
 
         var identifier = MatchToken(TokenKind.Identifier, "type name");
+        if (Current().Kind == TokenKind.Less)
+        {
+            var openToken = MatchToken(TokenKind.Less, "<");
+            var typeArguments = new List<TypeSyntax>();
+            while (Current().Kind != TokenKind.Greater && Current().Kind != TokenKind.EndOfFile)
+            {
+                typeArguments.Add(ParseTypeSyntax());
+                if (Current().Kind == TokenKind.Comma)
+                {
+                    NextToken();
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            var closeToken = MatchToken(TokenKind.Greater, ">");
+            return new NameTypeSyntax(identifier, openToken, typeArguments, closeToken);
+        }
+
         return new NameTypeSyntax(identifier);
+    }
+
+    private (SyntaxToken openToken, SyntaxToken[] typeParameters, SyntaxToken closeToken) ParseTypeParameterList()
+    {
+        var openToken = MatchToken(TokenKind.Less, "<");
+        var typeParameterList = new List<SyntaxToken>();
+        while (Current().Kind != TokenKind.Greater && Current().Kind != TokenKind.EndOfFile)
+        {
+            var typeParam = MatchToken(TokenKind.Identifier, "type parameter");
+            typeParameterList.Add(typeParam);
+            if (Current().Kind == TokenKind.Comma)
+            {
+                NextToken();
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        var closeToken = MatchToken(TokenKind.Greater, ">");
+        return (openToken, typeParameterList.ToArray(), closeToken);
     }
 
     private TypeSyntax ParseTupleTypeSyntax()

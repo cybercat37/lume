@@ -1,0 +1,12 @@
+fn id<T>(value: T) -> T => value
+
+fn score(values: List<Int>, parsed: Result<Int, String>) -> Int {
+  return match parsed {
+    Ok(v) -> v + count(values)
+    Error(_) -> count(values)
+  }
+}
+
+let values = [1, 2, 3, 4]
+print id("generic function")
+print score(values, rand_int(10))

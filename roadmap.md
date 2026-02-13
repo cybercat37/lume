@@ -28,7 +28,7 @@ Language core:
 - Map literals (string keys, uniform value type)
 - Records v1.1 (`with` update + spread copy) and sum types v1
 - Option/Result patterns with ? and unwrap()
-- Generics v1 (functions only)
+- Generics v1 (functions + initial type-generic syntax)
 - Builtins: print, println, input, len, abs, min, max, sleep, rand_float, rand_int, rand_seed
 
 Runtime + tooling:
@@ -55,7 +55,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Result/Option + ? | Explicit error types + propagation | Implemented | `?` and `.unwrap()` available for `Result` and `Option` |
 | Collections + iterators | List/Map + combinators | Partial | List/Map literals plus `map`/`filter`/`fold`/`each`/`range`/`take`/`skip`/`take_while`/`skip_while`/`enumerate`/`zip`/`zip_with`/`count`/`sum`/`any`/`all`/`result_map` builtins implemented; richer iterator APIs remain planned |
 | Tuples (general) | Tuple literals + destructuring | Partial | Match tuples exist; general tuples planned |
-| Generics | Minimal generics | Partial | Function generics are implemented; type generics remain planned |
+| Generics | Minimal generics | Partial | Function generics are implemented; initial type generics are implemented for declarations and type annotations (full generic value construction/inference remains planned) |
 | Records update syntax | One obvious update form | Implemented | `target with { ... }` is the only update syntax; spread literals are copy-only |
 | Modules/imports | One-file modules + import | Implemented | Resolver v1 is implemented (imports, pub visibility, wildcard rejection, cycle/conflict diagnostics, aliases for `import ... as ...` and `from ... import ... as ...`) |
 | String interpolation | f"...{expr}..." | Partial | `f"...{expr}..."` interpolation is implemented with escaped braces and baseline `:specifier` formatting; advanced formatting controls remain planned |

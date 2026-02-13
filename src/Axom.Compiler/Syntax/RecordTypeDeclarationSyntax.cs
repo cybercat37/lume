@@ -7,6 +7,9 @@ public sealed class RecordTypeDeclarationSyntax : StatementSyntax
 {
     public SyntaxToken TypeKeyword { get; }
     public SyntaxToken IdentifierToken { get; }
+    public SyntaxToken? TypeParameterOpenToken { get; }
+    public IReadOnlyList<SyntaxToken> TypeParameters { get; }
+    public SyntaxToken? TypeParameterCloseToken { get; }
     public SyntaxToken OpenBraceToken { get; }
     public IReadOnlyList<RecordFieldSyntax> Fields { get; }
     public SyntaxToken CloseBraceToken { get; }
@@ -14,12 +17,18 @@ public sealed class RecordTypeDeclarationSyntax : StatementSyntax
     public RecordTypeDeclarationSyntax(
         SyntaxToken typeKeyword,
         SyntaxToken identifierToken,
+        SyntaxToken? typeParameterOpenToken,
+        IReadOnlyList<SyntaxToken> typeParameters,
+        SyntaxToken? typeParameterCloseToken,
         SyntaxToken openBraceToken,
         IReadOnlyList<RecordFieldSyntax> fields,
         SyntaxToken closeBraceToken)
     {
         TypeKeyword = typeKeyword;
         IdentifierToken = identifierToken;
+        TypeParameterOpenToken = typeParameterOpenToken;
+        TypeParameters = typeParameters;
+        TypeParameterCloseToken = typeParameterCloseToken;
         OpenBraceToken = openBraceToken;
         Fields = fields;
         CloseBraceToken = closeBraceToken;

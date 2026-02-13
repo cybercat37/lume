@@ -23,8 +23,10 @@ public sealed class Binder
     private int currentScopeDepth;
     private readonly Stack<int> returnBoundaryDepths = new();
     private readonly Dictionary<string, TypeSymbol> recordTypes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IReadOnlyList<TypeSymbol>> recordTypeParameters = new(StringComparer.Ordinal);
     private readonly Dictionary<string, BoundRecordTypeDeclaration> recordDefinitions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TypeSymbol> sumTypes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IReadOnlyList<TypeSymbol>> sumTypeParameters = new(StringComparer.Ordinal);
     private readonly Dictionary<string, BoundSumTypeDeclaration> sumDefinitions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SumVariantSymbol> variantDefinitions = new(StringComparer.Ordinal);
 
@@ -49,8 +51,10 @@ public sealed class Binder
         sourceText = syntaxTree.SourceText;
         scope = new BoundScope(null);
         recordTypes.Clear();
+        recordTypeParameters.Clear();
         recordDefinitions.Clear();
         sumTypes.Clear();
+        sumTypeParameters.Clear();
         sumDefinitions.Clear();
         variantDefinitions.Clear();
         scopeStatementDepth = 0;
@@ -164,7 +168,24 @@ public sealed class Binder
                 continue;
             }
 
+            var typeParameters = new List<TypeSymbol>();
+            var seenTypeParameters = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var typeParameter in declaration.TypeParameters)
+            {
+                if (!seenTypeParameters.Add(typeParameter.Text))
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        typeParameter.Span,
+                        $"Type parameter '{typeParameter.Text}' is already declared."));
+                    continue;
+                }
+
+                typeParameters.Add(TypeSymbol.Generic(typeParameter.Text));
+            }
+
             recordTypes[name] = TypeSymbol.Record(name);
+            recordTypeParameters[name] = typeParameters;
         }
     }
 
@@ -184,6 +205,16 @@ public sealed class Binder
                 continue;
             }
 
+            var previousGenericParameters = genericTypeParameters;
+            genericTypeParameters = new Dictionary<string, TypeSymbol>(StringComparer.Ordinal);
+            if (recordTypeParameters.TryGetValue(name, out var declarationTypeParameters))
+            {
+                foreach (var typeParameter in declarationTypeParameters)
+                {
+                    genericTypeParameters[typeParameter.Name] = typeParameter;
+                }
+            }
+
             var fields = new List<RecordFieldSymbol>();
             var seenFields = new HashSet<string>(StringComparer.Ordinal);
             foreach (var field in declaration.Fields)
@@ -201,6 +232,8 @@ public sealed class Binder
                 var fieldType = BindType(field.Type);
                 fields.Add(new RecordFieldSymbol(fieldName, fieldType));
             }
+
+            genericTypeParameters = previousGenericParameters;
 
             var record = new BoundRecordTypeDeclaration(type, fields);
             records.Add(record);
@@ -229,7 +262,24 @@ public sealed class Binder
                 continue;
             }
 
+            var typeParameters = new List<TypeSymbol>();
+            var seenTypeParameters = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var typeParameter in declaration.TypeParameters)
+            {
+                if (!seenTypeParameters.Add(typeParameter.Text))
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        typeParameter.Span,
+                        $"Type parameter '{typeParameter.Text}' is already declared."));
+                    continue;
+                }
+
+                typeParameters.Add(TypeSymbol.Generic(typeParameter.Text));
+            }
+
             sumTypes[name] = TypeSymbol.Sum(name);
+            sumTypeParameters[name] = typeParameters;
         }
     }
 
@@ -247,6 +297,16 @@ public sealed class Binder
             if (!sumTypes.TryGetValue(name, out var type))
             {
                 continue;
+            }
+
+            var previousGenericParameters = genericTypeParameters;
+            genericTypeParameters = new Dictionary<string, TypeSymbol>(StringComparer.Ordinal);
+            if (sumTypeParameters.TryGetValue(name, out var declarationTypeParameters))
+            {
+                foreach (var typeParameter in declarationTypeParameters)
+                {
+                    genericTypeParameters[typeParameter.Name] = typeParameter;
+                }
             }
 
             var variants = new List<SumVariantSymbol>();
@@ -277,6 +337,8 @@ public sealed class Binder
                 variants.Add(symbol);
                 variantDefinitions[variantName] = symbol;
             }
+
+            genericTypeParameters = previousGenericParameters;
 
             var sum = new BoundSumTypeDeclaration(type, variants);
             sums.Add(sum);
@@ -3660,12 +3722,60 @@ public sealed class Binder
             var name = nameType.IdentifierToken.Text;
             if (genericTypeParameters is not null && genericTypeParameters.TryGetValue(name, out var genericType))
             {
+                if (nameType.TypeArguments.Count > 0)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        nameType.Span,
+                        $"Type parameter '{name}' cannot have type arguments."));
+                    return TypeSymbol.Error;
+                }
+
                 return genericType;
             }
 
             var typeLookupName = importedTypeAliases.TryGetValue(name, out var importedAliasTarget)
                 ? importedAliasTarget
                 : name;
+
+            var typeArguments = nameType.TypeArguments.Select(BindType).ToList();
+
+            if (recordTypes.TryGetValue(typeLookupName, out var recordType))
+            {
+                if (TryValidateAndConstructNamedType(
+                    typeLookupName,
+                    typeArguments,
+                    recordTypeParameters,
+                    recordType,
+                    nameType,
+                    out var constructedRecord))
+                {
+                    return constructedRecord;
+                }
+
+                return TypeSymbol.Error;
+            }
+
+            if (TryBindBuiltinGenericType(typeLookupName, typeArguments, nameType, out var builtinType))
+            {
+                return builtinType;
+            }
+
+            if (sumTypes.TryGetValue(typeLookupName, out var sumType))
+            {
+                if (TryValidateAndConstructNamedType(
+                    typeLookupName,
+                    typeArguments,
+                    sumTypeParameters,
+                    sumType,
+                    nameType,
+                    out var constructedSum))
+                {
+                    return constructedSum;
+                }
+
+                return TypeSymbol.Error;
+            }
 
             var resolved = name switch
             {
@@ -3675,12 +3785,17 @@ public sealed class Binder
                 "String" => TypeSymbol.String,
                 "Instant" => TypeSymbol.Instant,
                 "Unit" => TypeSymbol.Unit,
-                _ => recordTypes.TryGetValue(typeLookupName, out var recordType)
-                    ? recordType
-                    : sumTypes.TryGetValue(typeLookupName, out var sumType)
-                        ? sumType
-                        : TypeSymbol.Error
+                _ => TypeSymbol.Error
             };
+
+            if (resolved != TypeSymbol.Error && typeArguments.Count > 0)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    nameType.Span,
+                    $"Type '{name}' does not accept type arguments."));
+                return TypeSymbol.Error;
+            }
 
             if (resolved == TypeSymbol.Error)
             {
@@ -3694,5 +3809,130 @@ public sealed class Binder
         }
 
         return TypeSymbol.Error;
+    }
+
+    private bool TryBindBuiltinGenericType(
+        string name,
+        IReadOnlyList<TypeSymbol> typeArguments,
+        NameTypeSyntax syntax,
+        out TypeSymbol type)
+    {
+        type = TypeSymbol.Error;
+        if (syntax.TypeArgumentOpenToken is null)
+        {
+            return false;
+        }
+
+        switch (name)
+        {
+            case "List":
+                if (typeArguments.Count == 1)
+                {
+                    type = TypeSymbol.List(typeArguments[0]);
+                    return true;
+                }
+
+                diagnostics.Add(Diagnostic.Error(SourceText, syntax.Span, "Type 'List' expects 1 type argument."));
+                return true;
+            case "Map":
+                if (typeArguments.Count == 1)
+                {
+                    type = TypeSymbol.Map(typeArguments[0]);
+                    return true;
+                }
+
+                diagnostics.Add(Diagnostic.Error(SourceText, syntax.Span, "Type 'Map' expects 1 type argument (value type)."));
+                return true;
+            case "Task":
+                if (typeArguments.Count == 1)
+                {
+                    type = TypeSymbol.Task(typeArguments[0]);
+                    return true;
+                }
+
+                diagnostics.Add(Diagnostic.Error(SourceText, syntax.Span, "Type 'Task' expects 1 type argument."));
+                return true;
+            case "Sender":
+                if (typeArguments.Count == 1)
+                {
+                    type = TypeSymbol.Sender(typeArguments[0]);
+                    return true;
+                }
+
+                diagnostics.Add(Diagnostic.Error(SourceText, syntax.Span, "Type 'Sender' expects 1 type argument."));
+                return true;
+            case "Receiver":
+                if (typeArguments.Count == 1)
+                {
+                    type = TypeSymbol.Receiver(typeArguments[0]);
+                    return true;
+                }
+
+                diagnostics.Add(Diagnostic.Error(SourceText, syntax.Span, "Type 'Receiver' expects 1 type argument."));
+                return true;
+            case "Result":
+                if (typeArguments.Count == 2)
+                {
+                    type = TypeSymbol.Result(typeArguments[0], typeArguments[1]);
+                    return true;
+                }
+
+                diagnostics.Add(Diagnostic.Error(SourceText, syntax.Span, "Type 'Result' expects 2 type arguments."));
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private bool TryValidateAndConstructNamedType(
+        string name,
+        IReadOnlyList<TypeSymbol> typeArguments,
+        IReadOnlyDictionary<string, IReadOnlyList<TypeSymbol>> typeParametersByName,
+        TypeSymbol baseType,
+        NameTypeSyntax syntax,
+        out TypeSymbol type)
+    {
+        type = TypeSymbol.Error;
+        typeParametersByName.TryGetValue(name, out var declaredTypeParameters);
+        declaredTypeParameters ??= Array.Empty<TypeSymbol>();
+
+        if (declaredTypeParameters.Count == 0)
+        {
+            if (typeArguments.Count > 0)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    syntax.Span,
+                    $"Type '{name}' does not accept type arguments."));
+                return false;
+            }
+
+            type = baseType;
+            return true;
+        }
+
+        if (typeArguments.Count == 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                syntax.Span,
+                $"Type '{name}' expects {declaredTypeParameters.Count} type arguments."));
+            return false;
+        }
+
+        if (typeArguments.Count != declaredTypeParameters.Count)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                syntax.Span,
+                $"Type '{name}' expects {declaredTypeParameters.Count} type arguments but got {typeArguments.Count}."));
+            return false;
+        }
+
+        var renderedArgs = string.Join(", ", typeArguments.Select(argument => argument.Name));
+        type = baseType.SumVariants is not null
+            ? TypeSymbol.Sum($"{name}<{renderedArgs}>")
+            : TypeSymbol.Record($"{name}<{renderedArgs}>");
+        return true;
     }
 }
