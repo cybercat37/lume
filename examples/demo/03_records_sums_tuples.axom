@@ -1,0 +1,25 @@
+print "*** records and guarded patterns (when) ***"
+type User { name: String, age: Int }
+let user = User { name: "Ada", age: 36 }
+let older = user with { age: 41 }
+
+print match older {
+  User { name: n1, age: a1 } when a1 > 40 -> f"senior {n1}"
+  User { name: n2, age: a2 } when a2 > 30 -> f"adult {n2}"
+  _ -> "other"
+}
+
+print "*** sum types and match ***"
+type Resp { Ok(Int) Err(String) }
+let response = Ok(42)
+print match response {
+  Ok(v) -> v
+  Err(_) -> 0
+}
+
+print "*** tuples + destructuring ***"
+let (left, right) = (10, 20)
+print left + right
+print match (1, 2) {
+  (a, b) -> a + b
+}

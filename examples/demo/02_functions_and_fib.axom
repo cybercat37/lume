@@ -1,0 +1,13 @@
+print "*** functions and lambdas ***"
+fn add(x: Int, y: Int) -> Int => x + y
+let inc = fn(x: Int) => x + 1
+print add(2, 3)
+print inc(10)
+
+print "*** fibonacci with relational match ***"
+fn fib(n: Int) -> Int => match n {
+  <= 1 -> n
+  _ -> fib(n - 1) + fib(n - 2)
+}
+
+print fib(8)

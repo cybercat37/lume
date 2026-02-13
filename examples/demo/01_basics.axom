@@ -1,0 +1,9 @@
+print "*** variables and mutation ***"
+let mut counter = 1
+print counter
+counter = counter + 2
+print counter
+
+print "*** simple arithmetic and booleans ***"
+print 1 + 2 == 3
+print true || false && true

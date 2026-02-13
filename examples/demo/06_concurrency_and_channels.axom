@@ -1,0 +1,25 @@
+print "*** structured concurrency ***"
+scope {
+  let a = spawn { 1 + 2 }
+  let b = spawn { 3 + 4 }
+  print a.join() + b.join()
+}
+
+print "*** channels ***"
+scope {
+  let (tx, rx) = channel<Int>()
+
+  let sender = spawn {
+    tx.send(42)
+  }
+
+  let worker = spawn {
+    print match rx.recv() {
+      Ok(value) -> value
+      Error(_) -> -1
+    }
+  }
+
+  sender.join()
+  worker.join()
+}
