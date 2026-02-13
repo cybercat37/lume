@@ -8,14 +8,14 @@ let indexed = enumerate(first_three)
 let paired = zip([1, 2, 3], [10, 20])
 let pair_sums = zip_with([1, 2, 3], [10, 20, 30], fn(x: Int, y: Int) => x + y)
 
-print fold(numbers, 0, fn(acc: Int, _: Int) => acc + 1)
-print fold(first_three, 0, fn(acc: Int, _: Int) => acc + 1)
-print fold(tail, 0, fn(acc: Int, _: Int) => acc + 1)
-print fold(prefix, 0, fn(acc: Int, _: Int) => acc + 1)
-print fold(rest, 0, fn(acc: Int, _: Int) => acc + 1)
-print fold(indexed, 0, fn(acc: Int, _: (Int, Int)) => acc + 1)
-print fold(paired, 0, fn(acc: Int, _: (Int, Int)) => acc + 1)
-print fold(pair_sums, 0, fn(acc: Int, x: Int) => acc + x)
+print numbers
+print first_three
+print tail
+print prefix
+print rest
+print indexed
+print paired
+print pair_sums
 
 let total = numbers |> map(fn(x: Int) => x * 2) |> fold(0, fn(acc: Int, x: Int) => acc + x)
 print total

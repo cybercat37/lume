@@ -240,7 +240,7 @@ public sealed class Emitter
         {
             LoweredBlockStatement block => block.Statements.Any(UsesStringify),
             LoweredVariableDeclaration declaration => UsesStringify(declaration.Initializer),
-            LoweredPrintStatement print => UsesStringify(print.Expression),
+            LoweredPrintStatement print => ShouldStringifyForPrint(print.Expression.Type) || UsesStringify(print.Expression),
             LoweredExpressionStatement expressionStatement => UsesStringify(expressionStatement.Expression),
             LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesStringify(returnStatement.Expression),
             LoweredIfStatement ifStatement => UsesStringify(ifStatement.Condition) || UsesStringify(ifStatement.Then) || (ifStatement.Else is not null && UsesStringify(ifStatement.Else)),
@@ -434,6 +434,12 @@ public sealed class Emitter
             LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
                 && function.Function.IsBuiltin
                 && string.Equals(function.Function.Name, "str", StringComparison.Ordinal) => true,
+            LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
+                && function.Function.IsBuiltin
+                && (string.Equals(function.Function.Name, "print", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "println", StringComparison.Ordinal))
+                && call.Arguments.Count > 0
+                && ShouldStringifyForPrint(call.Arguments[0].Type) => true,
             LoweredCallExpression call => UsesStringify(call.Callee) || call.Arguments.Any(UsesStringify),
             LoweredUnaryExpression unary => UsesStringify(unary.Operand),
             LoweredBinaryExpression binary => UsesStringify(binary.Left) || UsesStringify(binary.Right),
@@ -659,7 +665,11 @@ public sealed class Emitter
                 writer.WriteLine($"var {EscapeIdentifier(declaration.Symbol.Name)} = {WriteExpression(declaration.Initializer)};");
                 return;
             case LoweredPrintStatement print:
-                writer.WriteLine($"Console.WriteLine({WriteExpression(print.Expression)});");
+                var printExpression = WriteExpression(print.Expression);
+                var printValue = ShouldStringifyForPrint(print.Expression.Type)
+                    ? $"AxomStringify({printExpression})"
+                    : printExpression;
+                writer.WriteLine($"Console.WriteLine({printValue});");
                 return;
             case LoweredExpressionStatement expressionStatement:
                 writer.WriteLine($"{WriteExpression(expressionStatement.Expression)};");
@@ -996,10 +1006,17 @@ public sealed class Emitter
         var args = string.Join(", ", argumentExpressions);
         if (call.Callee is LoweredFunctionExpression function && function.Function.IsBuiltin)
         {
+            var printArgument = argumentExpressions.Count > 0
+                ? argumentExpressions[0]
+                : string.Empty;
+            var printValue = call.Arguments.Count > 0 && ShouldStringifyForPrint(call.Arguments[0].Type)
+                ? $"AxomStringify({printArgument})"
+                : printArgument;
+
             return function.Function.Name switch
             {
-                "println" => $"Console.WriteLine({args})",
-                "print" => $"Console.WriteLine({args})",
+                "println" => $"Console.WriteLine({printValue})",
+                "print" => $"Console.WriteLine({printValue})",
                 "input" => "Console.ReadLine()",
                 "len" => $"{args}.Length",
                 "abs" => $"Math.Abs({args})",
@@ -1181,11 +1198,55 @@ public sealed class Emitter
         builder.AppendLine("        return value switch");
         builder.AppendLine("        {");
         builder.AppendLine("            null => string.Empty,");
+        builder.AppendLine("            bool b => b ? \"true\" : \"false\",");
         builder.AppendLine("            double d => d.ToString(System.Globalization.CultureInfo.InvariantCulture),");
         builder.AppendLine("            float f => f.ToString(System.Globalization.CultureInfo.InvariantCulture),");
+        builder.AppendLine("            System.Runtime.CompilerServices.ITuple tuple => AxomStringifyTuple(tuple),");
+        builder.AppendLine("            System.Collections.IDictionary map => AxomStringifyMap(map),");
+        builder.AppendLine("            System.Collections.IEnumerable seq when value is not string => AxomStringifyEnumerable(seq),");
         builder.AppendLine("            _ => value.ToString() ?? string.Empty");
         builder.AppendLine("        };");
         builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static string AxomStringifyTuple(System.Runtime.CompilerServices.ITuple tuple)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var items = new List<string>();");
+        builder.AppendLine("        for (var i = 0; i < tuple.Length; i++)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            items.Add(AxomStringify(tuple[i]));");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        return $\"({string.Join(\", \", items)})\";");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static string AxomStringifyMap(System.Collections.IDictionary map)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var entries = new List<string>();");
+        builder.AppendLine("        foreach (System.Collections.DictionaryEntry entry in map)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            entries.Add($\"{AxomStringify(entry.Key)}: {AxomStringify(entry.Value)}\");");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        return $\"{{ {string.Join(\", \", entries)} }}\";");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static string AxomStringifyEnumerable(System.Collections.IEnumerable seq)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var items = new List<string>();");
+        builder.AppendLine("        foreach (var item in seq)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            items.Add(AxomStringify(item));");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        return $\"[{string.Join(\", \", items)}]\";");
+        builder.AppendLine("    }");
+    }
+
+    private static bool ShouldStringifyForPrint(TypeSymbol type)
+    {
+        return type.ListElementType is not null
+            || type.MapValueType is not null
+            || type.TupleElementTypes is not null;
     }
 
     private static void WriteFormatHelper(StringBuilder builder)
