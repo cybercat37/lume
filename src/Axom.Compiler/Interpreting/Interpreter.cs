@@ -1063,6 +1063,39 @@ public sealed class Interpreter
                     }
 
                     return null;
+                case "take":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> takeItems && arguments[1] is int takeCount)
+                    {
+                        if (takeCount <= 0)
+                        {
+                            return new List<object?>();
+                        }
+
+                        return takeItems.Take(takeCount).ToList();
+                    }
+
+                    return new List<object?>();
+                case "skip":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> skipItems && arguments[1] is int skipCount)
+                    {
+                        return skipItems.Skip(Math.Max(0, skipCount)).ToList();
+                    }
+
+                    return new List<object?>();
+                case "zip":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> leftItems && arguments[1] is List<object?> rightItems)
+                    {
+                        var length = Math.Min(leftItems.Count, rightItems.Count);
+                        var zipped = new List<object?>(length);
+                        for (var i = 0; i < length; i++)
+                        {
+                            zipped.Add(new object?[] { leftItems[i], rightItems[i] });
+                        }
+
+                        return zipped;
+                    }
+
+                    return new List<object?>();
                 default:
                     return null;
             }
@@ -1319,6 +1352,7 @@ public sealed class Interpreter
                 null => string.Empty,
                 bool boolValue => boolValue ? "true" : "false",
                 double doubleValue => doubleValue.ToString(CultureInfo.InvariantCulture),
+                object?[] tuple => $"({string.Join(", ", tuple.Select(FormatValue))})",
                 List<object?> list => $"[{string.Join(", ", list.Select(FormatValue))}]",
                 Dictionary<string, object?> map => $"{{ {string.Join(", ", map.Select(pair => $"{pair.Key}: {FormatValue(pair.Value)}"))} }}",
                 RecordValue record => record.ToString(),

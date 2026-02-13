@@ -1,0 +1,5 @@
+let numbers = range(1, 8)
+
+print take(numbers, 3)
+print skip(numbers, 4)
+print zip(take(numbers, 3), ["one", "two", "three", "four"])

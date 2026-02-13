@@ -620,10 +620,16 @@ let sum = fold([1, 2, 3], 0, fn(acc: Int, x: Int) => acc + x)
 
 let evens = filter([1, 2, 3, 4], fn(x: Int) => x % 2 == 0)
 
+let first_two = take([10, 20, 30], 2)
+let after_two = skip([10, 20, 30], 2)
+let pairs = zip([1, 2, 3], ["a", "b"])
+
 let total = [1, 2, 3]
   |> map(fn(x: Int) => x * 2)
   |> fold(0, fn(acc: Int, x: Int) => acc + x)
 ```
+
+`zip` stops when the shorter list ends.
 
 
 ---

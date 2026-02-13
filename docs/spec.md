@@ -68,7 +68,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - Tuples are included; access via destructuring only.
 - String interpolation: `f"...{expr}..."` with `{}` expressions.
 - String helpers (length/split) live in stdlib.
-- Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`, `range`.
+- Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`, `range`, `take`, `skip`, `zip`.
 - Time/random builtins are available: `sleep(ms)`, `rand_float()`, `rand_int(max)`, `rand_seed(seed)`.
 - Dedicated pipeline-combinator expression syntax remains proposed
   (see `docs/proposals/pipeline-combinators.md`).
@@ -81,6 +81,9 @@ Builtin notes:
 - `rand_seed(seed: Int) -> Unit` resets random state for deterministic runs/tests.
 - `range(start: Int, end: Int, step?: Int) -> List<Int>` returns a half-open sequence;
   positive and negative `step` values are supported, and `step = 0` yields `[]`.
+- `take(items: List<T>, count: Int) -> List<T>` returns the first `count` items (`count <= 0` yields `[]`).
+- `skip(items: List<T>, count: Int) -> List<T>` skips the first `count` items (`count <= 0` returns the input as-is).
+- `zip(left: List<T>, right: List<U>) -> List<(T, U)>` pairs elements until the shorter list ends.
 
 Range semantics examples:
 - `range(1, 5)` -> `[1, 2, 3, 4]`

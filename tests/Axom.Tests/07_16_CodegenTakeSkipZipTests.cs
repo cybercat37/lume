@@ -1,0 +1,34 @@
+using Axom.Compiler;
+
+public class CodegenTakeSkipZipTests
+{
+    [Fact]
+    public void Compile_take_emits_linq_take()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print take([1, 2, 3], 2)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("System.Linq.Enumerable.Take", result.GeneratedCode);
+    }
+
+    [Fact]
+    public void Compile_skip_emits_linq_skip()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print skip([1, 2, 3], 1)", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("System.Linq.Enumerable.Skip", result.GeneratedCode);
+    }
+
+    [Fact]
+    public void Compile_zip_emits_linq_zip()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print zip([1, 2], [3, 4])", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("System.Linq.Enumerable.Zip", result.GeneratedCode);
+    }
+}

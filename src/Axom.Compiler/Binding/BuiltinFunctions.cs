@@ -168,6 +168,39 @@ public static class BuiltinFunctions
         TypeSymbol.Unit,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Take = new(
+        "take",
+        new[]
+        {
+            new ParameterSymbol("items", TypeSymbol.List(GenericT)),
+            new ParameterSymbol("count", TypeSymbol.Int)
+        },
+        new[] { GenericT },
+        TypeSymbol.List(GenericT),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol Skip = new(
+        "skip",
+        new[]
+        {
+            new ParameterSymbol("items", TypeSymbol.List(GenericT)),
+            new ParameterSymbol("count", TypeSymbol.Int)
+        },
+        new[] { GenericT },
+        TypeSymbol.List(GenericT),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol Zip = new(
+        "zip",
+        new[]
+        {
+            new ParameterSymbol("left", TypeSymbol.List(GenericT)),
+            new ParameterSymbol("right", TypeSymbol.List(GenericU))
+        },
+        new[] { GenericT, GenericU },
+        TypeSymbol.List(TypeSymbol.Tuple(new[] { GenericT, GenericU })),
+        isBuiltin: true);
+
     private static readonly Dictionary<string, FunctionSymbol> ByName = new(StringComparer.Ordinal)
     {
         [Print.Name] = Print,
@@ -189,7 +222,10 @@ public static class BuiltinFunctions
         [Map.Name] = Map,
         [Filter.Name] = Filter,
         [Fold.Name] = Fold,
-        [Each.Name] = Each
+        [Each.Name] = Each,
+        [Take.Name] = Take,
+        [Skip.Name] = Skip,
+        [Zip.Name] = Zip
     };
 
     public static bool TryLookup(string name, out FunctionSymbol? function) =>

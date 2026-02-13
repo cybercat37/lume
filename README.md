@@ -111,9 +111,15 @@ let doubled = map([1, 2, 3], fn(x: Int) => x * 2)
 let sum = [1, 2, 3]
   |> map(fn(x: Int) => x * 2)
   |> fold(0, fn(acc: Int, x: Int) => acc + x)
+let first_two = take([10, 20, 30], 2)
+let tail = skip([10, 20, 30], 1)
+let pairs = zip([1, 2, 3], ["a", "b"])
 
 print doubled
 print sum
+print first_two
+print tail
+print pairs
 ```
 
 **Range + pipelines**
