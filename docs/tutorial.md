@@ -628,11 +628,22 @@ let total = [1, 2, 3]
 
 ---
 
-### 7.4 Range (Planned)
+### 7.4 Range
 
 ```axom
 each(range(1, 10), fn(i: Int) { println i })
+
+let squares = range(1, 6)
+  |> map(fn(x: Int) => x * x)
+print squares
+
+let sum = range(1, 6)
+  |> fold(0, fn(acc: Int, x: Int) => acc + x)
+print sum
 ```
+
+`range(start, end)` returns a list from `start` (inclusive) to `end` (exclusive).
+If `end <= start`, it returns `[]`.
 
 
 ---

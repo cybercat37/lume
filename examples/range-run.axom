@@ -1,0 +1,11 @@
+print range(1, 6)
+
+let squares = range(1, 6)
+  |> map(fn(x: Int) => x * x)
+print squares
+
+let sum = range(1, 6)
+  |> fold(0, fn(acc: Int, x: Int) => acc + x)
+print sum
+
+print range(5, 5)

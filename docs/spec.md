@@ -68,7 +68,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - Tuples are included; access via destructuring only.
 - String interpolation: `f"...{expr}..."` with `{}` expressions.
 - String helpers (length/split) live in stdlib.
-- Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`.
+- Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`, `range`.
 - Time/random builtins are available: `sleep(ms)`, `rand_float()`, `rand_int(max)`, `rand_seed(seed)`.
 - Dedicated pipeline-combinator expression syntax remains proposed
   (see `docs/proposals/pipeline-combinators.md`).

@@ -937,6 +937,7 @@ public sealed class Emitter
                 "rand_float" => "AxomRandFloat()",
                 "rand_int" => $"AxomRandInt({argumentExpressions[0]})",
                 "rand_seed" => $"((Func<object?>)(() => {{ AxomRandSeed({argumentExpressions[0]}); return null; }}))()",
+                "range" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Range({argumentExpressions[0]}, Math.Max(0, {argumentExpressions[1]} - {argumentExpressions[0]})))",
                 "map" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "filter" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "fold" => $"System.Linq.Enumerable.Aggregate({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",

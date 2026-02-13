@@ -112,6 +112,17 @@ public static class BuiltinFunctions
         TypeSymbol.Unit,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Range = new(
+        "range",
+        new[]
+        {
+            new ParameterSymbol("start", TypeSymbol.Int),
+            new ParameterSymbol("end", TypeSymbol.Int)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.List(TypeSymbol.Int),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Map = new(
         "map",
         new[]
@@ -174,6 +185,7 @@ public static class BuiltinFunctions
         [RandFloat.Name] = RandFloat,
         [RandInt.Name] = RandInt,
         [RandSeed.Name] = RandSeed,
+        [Range.Name] = Range,
         [Map.Name] = Map,
         [Filter.Name] = Filter,
         [Fold.Name] = Fold,

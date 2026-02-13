@@ -975,6 +975,19 @@ public sealed class Interpreter
                     }
 
                     return null;
+                case "range":
+                    if (arguments.Length == 2 && arguments[0] is int start && arguments[1] is int end)
+                    {
+                        var values = new List<object?>();
+                        for (var i = start; i < end; i++)
+                        {
+                            values.Add(i);
+                        }
+
+                        return values;
+                    }
+
+                    return new List<object?>();
                 case "map":
                     if (arguments.Length == 2 && arguments[0] is List<object?> mapItems)
                     {

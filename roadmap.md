@@ -52,7 +52,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Tail-call optimization | Compiler optimizes tail calls | Partial | Interpreter supports TCO; codegen pending |
 | Comments vs intent | No traditional comments; intent is the planned alternative | Implemented | Spec + intent proposal aligned |
 | Result/Option + ? | Explicit error types + propagation | Implemented | `?` and `.unwrap()` available for `Result` and `Option` |
-| Collections + iterators | List/Map + combinators | Partial | List/Map literals plus `map`/`filter`/`fold`/`each` builtins implemented; range and richer iterator APIs remain planned |
+| Collections + iterators | List/Map + combinators | Partial | List/Map literals plus `map`/`filter`/`fold`/`each`/`range` builtins implemented; richer iterator APIs remain planned |
 | Tuples (general) | Tuple literals + destructuring | Partial | Match tuples exist; general tuples planned |
 | Generics | Minimal generics | Partial | Function generics are implemented; type generics remain planned |
 | Records update syntax | One obvious update form | Implemented | `target with { ... }` is the only update syntax; spread literals are copy-only |
@@ -114,7 +114,7 @@ DoD:
 Status:
 - List/map literal support is implemented.
 - Iterator combinators (`map`/`filter`/`fold`/`each`) are implemented.
-- Remaining follow-up: `range` and richer iterator APIs.
+- Remaining follow-up: richer iterator APIs.
 
 ### M4: Error Handling Core (Done)
 Objective: Result/Option and propagation semantics.
