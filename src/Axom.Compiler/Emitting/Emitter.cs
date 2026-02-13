@@ -638,7 +638,8 @@ public sealed class Emitter
         IndentedWriter writer,
         LoweredStatement statement,
         bool logFunctionReturns = false,
-        string? functionName = null)
+        string? functionName = null,
+        TailEmissionContext? tailContext = null)
     {
         switch (statement)
         {
@@ -647,7 +648,7 @@ public sealed class Emitter
                 {
                     foreach (var inner in block.Statements)
                     {
-                        WriteStatement(writer, inner, logFunctionReturns, functionName);
+                        WriteStatement(writer, inner, logFunctionReturns, functionName, tailContext);
                     }
 
                     return;
@@ -657,7 +658,7 @@ public sealed class Emitter
                 writer.Indent();
                 foreach (var inner in block.Statements)
                 {
-                    WriteStatement(writer, inner, logFunctionReturns, functionName);
+                    WriteStatement(writer, inner, logFunctionReturns, functionName, tailContext);
                 }
                 writer.Unindent();
                 writer.WriteLine("}");
@@ -693,6 +694,36 @@ public sealed class Emitter
                     return;
                 }
 
+                if (tailContext is not null
+                    && TryExtractTailSelfCall(returnStatement.Expression, tailContext.Function, out var tailCall, out var prefixStatements))
+                {
+                    writer.WriteLine("{");
+                    writer.Indent();
+
+                    foreach (var prefix in prefixStatements)
+                    {
+                        WriteStatement(writer, prefix, false, functionName, tailContext);
+                    }
+
+                    var tempNames = new List<string>(tailCall.Arguments.Count);
+                    for (var index = 0; index < tailCall.Arguments.Count; index++)
+                    {
+                        var tempName = $"__axomTailArg{tailContext.TempIndex++}";
+                        tempNames.Add(tempName);
+                        writer.WriteLine($"var {tempName} = {WriteExpression(tailCall.Arguments[index])};");
+                    }
+
+                    for (var index = 0; index < tailContext.Parameters.Count && index < tempNames.Count; index++)
+                    {
+                        writer.WriteLine($"{EscapeIdentifier(tailContext.Parameters[index].Name)} = {tempNames[index]};");
+                    }
+
+                    writer.WriteLine("continue;");
+                    writer.Unindent();
+                    writer.WriteLine("}");
+                    return;
+                }
+
                 if (logFunctionReturns && functionName is not null)
                 {
                     writer.WriteLine("{");
@@ -709,11 +740,11 @@ public sealed class Emitter
                 return;
             case LoweredIfStatement ifStatement:
                 writer.WriteLine($"if ({WriteExpression(ifStatement.Condition)})");
-                WriteStatement(writer, ifStatement.Then, logFunctionReturns, functionName);
+                WriteStatement(writer, ifStatement.Then, logFunctionReturns, functionName, tailContext);
                 if (ifStatement.Else is not null)
                 {
                     writer.WriteLine("else");
-                    WriteStatement(writer, ifStatement.Else, logFunctionReturns, functionName);
+                    WriteStatement(writer, ifStatement.Else, logFunctionReturns, functionName, tailContext);
                 }
                 return;
             default:
@@ -1117,6 +1148,9 @@ public sealed class Emitter
         var logFunction = function.Symbol.EnableLogging;
         var timeoutMilliseconds = function.Symbol.TimeoutMilliseconds;
         var hasTimeout = timeoutMilliseconds is not null;
+        var tailContext = ContainsTailSelfCall(function.Body, function.Symbol)
+            ? new TailEmissionContext(function.Symbol, function.Parameters)
+            : null;
         builder.AppendLine($"    static {returnType} {EscapeIdentifier(function.Symbol.Name)}{typeParameters}({parameters})");
         builder.AppendLine("    {");
         var writer = new IndentedWriter(builder, 2);
@@ -1134,10 +1168,7 @@ public sealed class Emitter
             writer.WriteLine($"var __axomResult = ((Func<{returnType}>)(() =>");
             writer.WriteLine("{");
             writer.Indent();
-            foreach (var statement in function.Body.Statements)
-            {
-                WriteStatement(writer, statement, false, function.Symbol.Name);
-            }
+            WriteFunctionBody(writer, function, false, tailContext);
 
             writer.WriteLine($"return default({returnType})!;");
             writer.Unindent();
@@ -1154,10 +1185,7 @@ public sealed class Emitter
             return;
         }
 
-        foreach (var statement in function.Body.Statements)
-        {
-            WriteStatement(writer, statement, logFunction, function.Symbol.Name);
-        }
+        WriteFunctionBody(writer, function, logFunction, tailContext);
 
         if (logFunction && function.Symbol.ReturnType == TypeSymbol.Unit)
         {
@@ -1165,6 +1193,101 @@ public sealed class Emitter
         }
 
         builder.AppendLine("    }");
+    }
+
+    private static void WriteFunctionBody(
+        IndentedWriter writer,
+        LoweredFunctionDeclaration function,
+        bool logFunctionReturns,
+        TailEmissionContext? tailContext)
+    {
+        if (tailContext is null)
+        {
+            foreach (var statement in function.Body.Statements)
+            {
+                WriteStatement(writer, statement, logFunctionReturns, function.Symbol.Name);
+            }
+
+            return;
+        }
+
+        writer.WriteLine("while (true)");
+        writer.WriteLine("{");
+        writer.Indent();
+        foreach (var statement in function.Body.Statements)
+        {
+            WriteStatement(writer, statement, logFunctionReturns, function.Symbol.Name, tailContext);
+        }
+
+        writer.WriteLine("break;");
+        writer.Unindent();
+        writer.WriteLine("}");
+    }
+
+    private static bool ContainsTailSelfCall(LoweredBlockStatement body, FunctionSymbol function)
+    {
+        return body.Statements.Any(statement => ContainsTailSelfCall(statement, function));
+    }
+
+    private static bool ContainsTailSelfCall(LoweredStatement statement, FunctionSymbol function)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(inner => ContainsTailSelfCall(inner, function)),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null
+                && TryExtractTailSelfCall(returnStatement.Expression, function, out _, out _),
+            LoweredIfStatement ifStatement => ContainsTailSelfCall(ifStatement.Then, function)
+                || (ifStatement.Else is not null && ContainsTailSelfCall(ifStatement.Else, function)),
+            _ => false
+        };
+    }
+
+    private static bool TryExtractTailSelfCall(
+        LoweredExpression expression,
+        FunctionSymbol function,
+        out LoweredCallExpression call,
+        out List<LoweredStatement> prefixStatements)
+    {
+        if (expression is LoweredCallExpression directCall
+            && IsSelfCall(directCall, function))
+        {
+            call = directCall;
+            prefixStatements = new List<LoweredStatement>();
+            return true;
+        }
+
+        if (expression is LoweredBlockExpression block
+            && TryExtractTailSelfCall(block.Result, function, out var nestedCall, out var nestedPrefix))
+        {
+            call = nestedCall;
+            prefixStatements = new List<LoweredStatement>(block.Statements.Count + nestedPrefix.Count);
+            prefixStatements.AddRange(block.Statements);
+            prefixStatements.AddRange(nestedPrefix);
+            return true;
+        }
+
+        call = null!;
+        prefixStatements = new List<LoweredStatement>();
+        return false;
+    }
+
+    private static bool IsSelfCall(LoweredCallExpression call, FunctionSymbol function)
+    {
+        return call.Callee is LoweredFunctionExpression functionExpression
+            && functionExpression.Function == function;
+    }
+
+    private sealed class TailEmissionContext
+    {
+        public FunctionSymbol Function { get; }
+        public IReadOnlyList<VariableSymbol> Parameters { get; }
+        public int TempIndex { get; set; }
+
+        public TailEmissionContext(FunctionSymbol function, IReadOnlyList<VariableSymbol> parameters)
+        {
+            Function = function;
+            Parameters = parameters;
+        }
     }
 
     private static void WriteFunctionLoggingHelpers(StringBuilder builder)

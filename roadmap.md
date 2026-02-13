@@ -33,6 +33,7 @@ Language core:
 
 Runtime + tooling:
 - Interpreter and codegen (C# emitter)
+- Tail-call optimization parity in interpreter and codegen for tail-recursive functions
 - Dedicated lowering pass with lowered nodes
 - Concurrency runtime prototype (scope/spawn/join)
 - Aspect runtime v1 (`@logging` on functions, timestamped call/return logs)
@@ -49,7 +50,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | --- | --- | --- | --- |
 | Pattern match v1 | Exhaustive match, diagnostics | Implemented | Prior roadmap listed as pending; now consolidated here |
 | Float type v1 | Float literals + ops | Implemented | Prior roadmap listed as next focus; now consolidated here |
-| Tail-call optimization | Compiler optimizes tail calls | Partial | Interpreter supports TCO; codegen pending |
+| Tail-call optimization | Compiler optimizes tail calls | Implemented | Interpreter and codegen both optimize tail-recursive self calls |
 | Comments vs intent | No traditional comments; intent is the planned alternative | Implemented | Spec + intent proposal aligned |
 | Result/Option + ? | Explicit error types + propagation | Implemented | `?` and `.unwrap()` available for `Result` and `Option` |
 | Collections + iterators | List/Map + combinators | Partial | List/Map literals plus `map`/`filter`/`fold`/`each`/`range`/`take`/`skip`/`take_while`/`skip_while`/`enumerate`/`zip`/`zip_with`/`count`/`sum`/`any`/`all`/`result_map` builtins implemented; richer iterator APIs remain planned |
