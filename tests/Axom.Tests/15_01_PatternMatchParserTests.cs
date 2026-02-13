@@ -78,4 +78,34 @@ let result = match 2 {
 
         Assert.Empty(syntaxTree.Diagnostics);
     }
+
+    [Fact]
+    public void Match_advanced_list_rest_pattern_parses()
+    {
+        var sourceText = new SourceText(@"
+let result = match [1, 2, 3, 4] {
+  [first, ...middle, last] -> first + last
+  _ -> 0
+}
+", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
+    [Fact]
+    public void Match_list_pattern_with_multiple_rest_segments_reports_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+let result = match [1, 2, 3] {
+  [...a, ...b] -> 1
+  _ -> 0
+}
+", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.NotEmpty(syntaxTree.Diagnostics);
+    }
 }

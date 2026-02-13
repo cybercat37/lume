@@ -1284,6 +1284,8 @@ public sealed class Parser
                 return new LiteralPatternSyntax(NextToken());
             case TokenKind.OpenParen:
                 return ParseTuplePattern();
+            case TokenKind.OpenBracket:
+                return ParseListPattern();
             case TokenKind.Identifier:
                 var identifier = NextToken();
                 if (identifier.Text == "_")
@@ -1334,6 +1336,68 @@ public sealed class Parser
 
         var close = MatchToken(TokenKind.CloseParen, ")");
         return new TuplePatternSyntax(openParen, elements, close);
+    }
+
+    private PatternSyntax ParseListPattern()
+    {
+        var openBracket = MatchToken(TokenKind.OpenBracket, "[");
+        var prefixElements = new List<PatternSyntax>();
+        var suffixElements = new List<PatternSyntax>();
+        SyntaxToken? ellipsisToken = null;
+        PatternSyntax? restPattern = null;
+
+        ConsumeSeparators();
+        while (Current().Kind != TokenKind.CloseBracket && Current().Kind != TokenKind.EndOfFile)
+        {
+            if (Current().Kind == TokenKind.Ellipsis)
+            {
+                var ellipsis = NextToken();
+                if (ellipsisToken is not null)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        sourceText,
+                        ellipsis.Span,
+                        "List pattern can contain at most one '...' rest segment."));
+                }
+                else
+                {
+                    ellipsisToken = ellipsis;
+                }
+
+                if (Current().Kind != TokenKind.Comma && Current().Kind != TokenKind.CloseBracket)
+                {
+                    restPattern = ParsePattern();
+                }
+            }
+            else
+            {
+                var pattern = ParsePattern();
+                if (ellipsisToken is null)
+                {
+                    prefixElements.Add(pattern);
+                }
+                else
+                {
+                    suffixElements.Add(pattern);
+                }
+            }
+
+            if (Current().Kind == TokenKind.Comma)
+            {
+                NextToken();
+            }
+
+            ConsumeSeparators();
+        }
+
+        var closeBracket = MatchToken(TokenKind.CloseBracket, "]");
+        return new ListPatternSyntax(
+            openBracket,
+            prefixElements,
+            ellipsisToken,
+            restPattern,
+            suffixElements,
+            closeBracket);
     }
 
     private PatternSyntax ParseVariantPattern(SyntaxToken identifier)

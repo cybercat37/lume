@@ -81,4 +81,40 @@ print match 2 {
         Assert.Equal("two", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Match_advanced_list_rest_pattern_selects_branch_and_binds_segments()
+    {
+        var sourceText = new SourceText(@"
+print match [1, 2, 3, 4] {
+  [first, ...middle, last] -> first + fold(middle, 0, fn(acc: Int, x: Int) => acc + x) + last
+  _ -> 0
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("10", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Match_list_pattern_supports_suffix_only_rest()
+    {
+        var sourceText = new SourceText(@"
+print match [1, 2, 3, 4] {
+  [...prefix, last] -> fold(prefix, 0, fn(acc: Int, x: Int) => acc + x) + last
+  _ -> 0
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("10", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

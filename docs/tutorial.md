@@ -291,11 +291,16 @@ let message = match count {
 }
 ```
 
-Supported patterns (v1): literals, relational patterns, `_`, identifiers, and tuples:
+Supported patterns (v1): literals, relational patterns, `_`, identifiers, tuples, records, and list/rest patterns:
 
 ```axom
 print match (1, 2) {
   (a, b) -> a + b
+  _ -> 0
+}
+
+print match [1, 2, 3, 4] {
+  [first, ...middle, last] -> first + fold(middle, 0, fn(acc: Int, x: Int) => acc + x) + last
   _ -> 0
 }
 ```

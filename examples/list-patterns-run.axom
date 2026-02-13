@@ -1,0 +1,14 @@
+print match [1, 2, 3, 4] {
+  [first, ...middle, last] -> first + fold(middle, 0, fn(acc: Int, x: Int) => acc + x) + last
+  _ -> 0
+}
+
+print match [1, 2, 3, 4] {
+  [...prefix, last] -> fold(prefix, 0, fn(acc: Int, x: Int) => acc + x) + last
+  _ -> 0
+}
+
+print match [1, 2, 3] {
+  [head, ...tail] -> head + fold(tail, 0, fn(acc: Int, x: Int) => acc + x)
+  _ -> 0
+}

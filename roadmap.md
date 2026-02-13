@@ -138,7 +138,8 @@ DoD:
 
 Status:
 - Guards for variants/records are implemented.
-- List/rest patterns and related exhaustiveness work remain pending.
+- List/rest patterns are implemented (including advanced forms like `[first, ...middle, last]`).
+- Remaining follow-up: richer exhaustiveness diagnostics for list/rest combinations.
 
 ### M6: Modules, Imports, Visibility (Done)
 Objective: establish module boundary and namespacing model.

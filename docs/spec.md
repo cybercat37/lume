@@ -121,9 +121,9 @@ Value pipe examples:
 - Additional aspects (`@retry`, webhook/mqtt policies) are planned.
 
 ### Pattern Matching
-- Current implementation supports literal, relational, `_`, identifier, tuple, and record patterns.
+- Current implementation supports literal, relational, `_`, identifier, tuple, record, and list/rest patterns.
 - Non-exhaustive match is an error; `_` is optional but recommended.
-- Guards for record/variant matches are implemented; list/rest patterns are planned.
+- Guards for record/variant matches are implemented.
 
 ### Option/Result
 - Option/Result live in stdlib; `?` applies to both `Result` and `Option`.
@@ -255,8 +255,14 @@ pub fn load(id: Int) -> Result<User, Err> {
 
 - `match` expressions must be exhaustive
 - Non-exhaustive matches are compile-time errors
-- Current implementation supports literals, relational patterns, `_`, identifiers, tuples, and record patterns
+- Current implementation supports literals, relational patterns, `_`, identifiers, tuples, records, and list/rest patterns
 - Guards are available for record/variant patterns
+
+List/rest pattern examples:
+- `[]`
+- `[head, ...tail]`
+- `[first, ...middle, last]`
+- `[..., last]`
 
 Relational patterns use the match expression as the implicit left operand:
 - `<= 1` desugars to `x when x <= 1`

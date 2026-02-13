@@ -1604,6 +1604,8 @@ public sealed class Binder
                 return BindIdentifierPattern(identifier, targetType);
             case TuplePatternSyntax tuple:
                 return BindTuplePattern(tuple, targetType);
+            case ListPatternSyntax list:
+                return BindListPattern(list, targetType);
             case VariantPatternSyntax variant:
                 return BindVariantPattern(variant, targetType);
             case RecordPatternSyntax record:
@@ -1761,6 +1763,38 @@ public sealed class Binder
         }
 
         return new BoundTuplePattern(elements, targetType);
+    }
+
+    private BoundPattern BindListPattern(ListPatternSyntax list, TypeSymbol targetType)
+    {
+        var elementType = targetType.ListElementType;
+        if (elementType is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                list.Span,
+                "List pattern does not match non-list type."));
+
+            var fallbackPrefix = list.PrefixElements.Select(_ => new BoundWildcardPattern(TypeSymbol.Error)).ToList();
+            var fallbackSuffix = list.SuffixElements.Select(_ => new BoundWildcardPattern(TypeSymbol.Error)).ToList();
+            var fallbackRest = list.RestPattern is null
+                ? null
+                : new BoundWildcardPattern(TypeSymbol.Error);
+            return new BoundListPattern(fallbackPrefix, fallbackRest, fallbackSuffix, TypeSymbol.Error);
+        }
+
+        var prefix = list.PrefixElements.Select(pattern => BindPattern(pattern, elementType)).ToList();
+        var suffix = list.SuffixElements.Select(pattern => BindPattern(pattern, elementType)).ToList();
+        BoundPattern? rest = null;
+        if (list.HasRest)
+        {
+            var restType = TypeSymbol.List(elementType);
+            rest = list.RestPattern is null
+                ? new BoundWildcardPattern(restType)
+                : BindPattern(list.RestPattern, restType);
+        }
+
+        return new BoundListPattern(prefix, rest, suffix, targetType);
     }
 
     private BoundExpression BindTupleExpression(TupleExpressionSyntax tuple)
@@ -2006,6 +2040,10 @@ public sealed class Binder
             WildcardPatternSyntax => true,
             IdentifierPatternSyntax => true,
             TuplePatternSyntax tuple => tuple.Elements.All(IsCatchAllPattern),
+            ListPatternSyntax list => list.HasRest
+                && list.PrefixElements.Count == 0
+                && list.SuffixElements.Count == 0
+                && (list.RestPattern is null || IsCatchAllPattern(list.RestPattern)),
             RecordPatternSyntax record => record.Fields.All(field => IsCatchAllPattern(field.Pattern)),
             _ => false
         };

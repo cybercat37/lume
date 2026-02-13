@@ -108,4 +108,38 @@ let result = match ""x"" {
 
         Assert.NotEmpty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Match_advanced_list_rest_pattern_binds()
+    {
+        var sourceText = new SourceText(@"
+let result = match [1, 2, 3, 4] {
+  [first, ...middle, last] -> first + fold(middle, 0, fn(acc: Int, x: Int) => acc + x) + last
+  _ -> 0
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Match_list_pattern_on_non_list_produces_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+let result = match 10 {
+  [a, ...rest] -> a
+  _ -> 0
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics);
+    }
 }

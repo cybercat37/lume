@@ -352,6 +352,8 @@ public sealed class Lowerer
                     });
             case BoundTuplePattern tuple:
                 return LowerTuplePattern(tuple, value);
+            case BoundListPattern list:
+                return LowerListPattern(list, value);
             case BoundVariantPattern variant:
                 return LowerVariantPattern(variant, value);
             case BoundRecordPattern record:
@@ -376,6 +378,105 @@ public sealed class Lowerer
         }
 
         return new PatternLoweringResult(condition, bindings);
+    }
+
+    private PatternLoweringResult LowerListPattern(BoundListPattern list, LoweredExpression value)
+    {
+        var elementType = list.Type.ListElementType;
+        if (elementType is null || list.Type == TypeSymbol.Error)
+        {
+            return new PatternLoweringResult(new LoweredLiteralExpression(false, TypeSymbol.Bool));
+        }
+
+        var countExpression = CreateCountCall(value, list.Type);
+        var minLength = list.PrefixElements.Count + list.SuffixElements.Count;
+        LoweredExpression condition = new LoweredBinaryExpression(
+            countExpression,
+            list.HasRest ? Lexing.TokenKind.GreaterOrEqual : Lexing.TokenKind.EqualEqual,
+            new LoweredLiteralExpression(minLength, TypeSymbol.Int),
+            TypeSymbol.Bool);
+
+        var bindings = new List<LoweredStatement>();
+
+        for (var index = 0; index < list.PrefixElements.Count; index++)
+        {
+            var elementValue = new LoweredIndexExpression(
+                value,
+                new LoweredLiteralExpression(index, TypeSymbol.Int),
+                elementType);
+            var elementResult = LowerPattern(list.PrefixElements[index], elementValue);
+            condition = new LoweredBinaryExpression(condition, Lexing.TokenKind.AmpersandAmpersand, elementResult.Condition, TypeSymbol.Bool);
+            bindings.AddRange(elementResult.Bindings);
+        }
+
+        for (var index = 0; index < list.SuffixElements.Count; index++)
+        {
+            var reverseOffset = list.SuffixElements.Count - index;
+            var elementIndex = new LoweredBinaryExpression(
+                CreateCountCall(value, list.Type),
+                Lexing.TokenKind.Minus,
+                new LoweredLiteralExpression(reverseOffset, TypeSymbol.Int),
+                TypeSymbol.Int);
+            var elementValue = new LoweredIndexExpression(value, elementIndex, elementType);
+            var elementResult = LowerPattern(list.SuffixElements[index], elementValue);
+            condition = new LoweredBinaryExpression(condition, Lexing.TokenKind.AmpersandAmpersand, elementResult.Condition, TypeSymbol.Bool);
+            bindings.AddRange(elementResult.Bindings);
+        }
+
+        if (list.RestPattern is not null)
+        {
+            var restValue = CreateRestSlice(value, list.Type, list.PrefixElements.Count, list.SuffixElements.Count);
+            var restResult = LowerPattern(list.RestPattern, restValue);
+            condition = new LoweredBinaryExpression(condition, Lexing.TokenKind.AmpersandAmpersand, restResult.Condition, TypeSymbol.Bool);
+            bindings.AddRange(restResult.Bindings);
+        }
+
+        return new PatternLoweringResult(condition, bindings);
+    }
+
+    private static LoweredCallExpression CreateCountCall(LoweredExpression value, TypeSymbol listType)
+    {
+        return new LoweredCallExpression(
+            new LoweredFunctionExpression(BuiltinFunctions.Count),
+            new[] { value },
+            TypeSymbol.Int);
+    }
+
+    private static LoweredExpression CreateRestSlice(LoweredExpression value, TypeSymbol listType, int prefixCount, int suffixCount)
+    {
+        LoweredExpression current = value;
+
+        if (prefixCount > 0)
+        {
+            current = new LoweredCallExpression(
+                new LoweredFunctionExpression(BuiltinFunctions.Skip),
+                new LoweredExpression[]
+                {
+                    current,
+                    new LoweredLiteralExpression(prefixCount, TypeSymbol.Int)
+                },
+                listType);
+        }
+
+        if (suffixCount > 0)
+        {
+            var remainingLength = new LoweredBinaryExpression(
+                CreateCountCall(value, listType),
+                Lexing.TokenKind.Minus,
+                new LoweredLiteralExpression(prefixCount + suffixCount, TypeSymbol.Int),
+                TypeSymbol.Int);
+
+            current = new LoweredCallExpression(
+                new LoweredFunctionExpression(BuiltinFunctions.Take),
+                new LoweredExpression[]
+                {
+                    current,
+                    remainingLength
+                },
+                listType);
+        }
+
+        return current;
     }
 
     private PatternLoweringResult LowerVariantPattern(BoundVariantPattern variant, LoweredExpression value)
