@@ -13,6 +13,7 @@ public sealed class Emitter
     public string Emit(LoweredProgram program)
     {
         var requiresFunctionLogging = program.Functions.Any(function => function.Symbol.EnableLogging);
+        var requiresFunctionTimeout = program.Functions.Any(function => function.Symbol.TimeoutMilliseconds is not null);
         var requiresRandomBuiltins = RequiresRandomBuiltins(program);
         var requiresRangeBuiltin = RequiresRangeBuiltin(program);
         var requiresRandomResultRuntime = RequiresRandomResultRuntime(program);
@@ -52,7 +53,11 @@ public sealed class Emitter
             builder.AppendLine();
         }
 
-        if (RequiresChannels(program) || RequiresDotNetInterop(program) || requiresRandomBuiltins || requiresRandomResultRuntime)
+        if (RequiresChannels(program)
+            || RequiresDotNetInterop(program)
+            || requiresRandomBuiltins
+            || requiresRandomResultRuntime
+            || requiresFunctionTimeout)
         {
             WriteAxomResultRuntime(builder);
             builder.AppendLine();
@@ -104,6 +109,12 @@ public sealed class Emitter
         if (requiresFunctionLogging)
         {
             WriteFunctionLoggingHelpers(builder);
+            builder.AppendLine();
+        }
+
+        if (requiresFunctionTimeout)
+        {
+            WriteTimeoutHelper(builder);
             builder.AppendLine();
         }
 
@@ -1064,6 +1075,8 @@ public sealed class Emitter
         var parameters = string.Join(", ", function.Parameters.Select(parameter =>
             $"{TypeToCSharp(parameter.Type)} {EscapeIdentifier(parameter.Name)}"));
         var logFunction = function.Symbol.EnableLogging;
+        var timeoutMilliseconds = function.Symbol.TimeoutMilliseconds;
+        var hasTimeout = timeoutMilliseconds is not null;
         builder.AppendLine($"    static {returnType} {EscapeIdentifier(function.Symbol.Name)}{typeParameters}({parameters})");
         builder.AppendLine("    {");
         var writer = new IndentedWriter(builder, 2);
@@ -1073,6 +1086,32 @@ public sealed class Emitter
                 ? "Array.Empty<object?>()"
                 : $"new object?[] {{ {string.Join(", ", function.Parameters.Select(parameter => EscapeIdentifier(parameter.Name)))} }}";
             writer.WriteLine($"AxomLogInvocation(\"{EscapeString(function.Symbol.Name)}\", {argsArray});");
+        }
+
+        if (hasTimeout)
+        {
+            writer.WriteLine("var __axomTimeoutStart = System.Diagnostics.Stopwatch.GetTimestamp();");
+            writer.WriteLine($"var __axomResult = ((Func<{returnType}>)(() =>");
+            writer.WriteLine("{");
+            writer.Indent();
+            foreach (var statement in function.Body.Statements)
+            {
+                WriteStatement(writer, statement, false, function.Symbol.Name);
+            }
+
+            writer.WriteLine($"return default({returnType})!;");
+            writer.Unindent();
+            writer.WriteLine("}))();");
+            writer.WriteLine("var __axomElapsedMs = (long)((System.Diagnostics.Stopwatch.GetTimestamp() - __axomTimeoutStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);");
+            writer.WriteLine($"var __axomFinal = AxomApplyTimeout(__axomResult, __axomElapsedMs, {timeoutMilliseconds!.Value});");
+            if (logFunction)
+            {
+                writer.WriteLine($"AxomLogReturn(\"{EscapeString(function.Symbol.Name)}\", __axomFinal);");
+            }
+
+            writer.WriteLine("return __axomFinal;");
+            builder.AppendLine("    }");
+            return;
         }
 
         foreach (var statement in function.Body.Statements)
@@ -1101,6 +1140,19 @@ public sealed class Emitter
         builder.AppendLine("    {");
         builder.AppendLine("        var timestamp = DateTimeOffset.Now.ToString(\"yyyy-MM-dd HH:mm:ss\", System.Globalization.CultureInfo.InvariantCulture);");
         builder.AppendLine("        Console.WriteLine($\"{timestamp} [log] return {name} => {AxomStringify(value)}\");");
+        builder.AppendLine("    }");
+    }
+
+    private static void WriteTimeoutHelper(StringBuilder builder)
+    {
+        builder.AppendLine("    static AxomResult<T> AxomApplyTimeout<T>(AxomResult<T> value, long elapsedMs, int timeoutMs)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        if (elapsedMs <= timeoutMs)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return value;");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        return AxomResult<T>.Error($\"timeout after {timeoutMs}ms\");");
         builder.AppendLine("    }");
     }
 

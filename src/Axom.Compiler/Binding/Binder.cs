@@ -325,9 +325,19 @@ public sealed class Binder
             var returnType = declaration.ReturnType is null
                 ? TypeSymbol.Unit
                 : BindType(declaration.ReturnType);
-            var enableLogging = declaration.Aspects.Any(aspect => string.Equals(aspect, "logging", StringComparison.OrdinalIgnoreCase));
+            var (enableLogging, timeoutMilliseconds) = AnalyzeFunctionAspects(
+                declaration.Aspects,
+                returnType,
+                declaration.IdentifierToken.Span,
+                validateTimeoutReturnType: declaration.ReturnType is not null);
 
-            var symbol = new FunctionSymbol(name, parameters, genericParameters, returnType, enableLogging: enableLogging);
+            var symbol = new FunctionSymbol(
+                name,
+                parameters,
+                genericParameters,
+                returnType,
+                enableLogging: enableLogging,
+                timeoutMilliseconds: timeoutMilliseconds);
             var declared = scope.TryDeclareFunction(symbol);
             if (declared is null)
             {
@@ -338,6 +348,96 @@ public sealed class Binder
             }
 
             genericTypeParameters = previousGenericParameters;
+        }
+    }
+
+    private (bool enableLogging, int? timeoutMilliseconds) AnalyzeFunctionAspects(
+        IReadOnlyList<string> aspects,
+        TypeSymbol returnType,
+        TextSpan span,
+        bool validateTimeoutReturnType)
+    {
+        var enableLogging = false;
+        int? timeoutMilliseconds = null;
+
+        foreach (var aspect in aspects)
+        {
+            if (string.Equals(aspect, "logging", StringComparison.OrdinalIgnoreCase))
+            {
+                enableLogging = true;
+                continue;
+            }
+
+            if (TryParseTimeoutAspect(aspect, out var timeout))
+            {
+                if (timeoutMilliseconds is not null)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        span,
+                        "@timeout can only be declared once per function."));
+                    continue;
+                }
+
+                timeoutMilliseconds = timeout;
+                continue;
+            }
+
+            if (string.Equals(aspect, "timeout", StringComparison.OrdinalIgnoreCase))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    span,
+                    "Invalid @timeout usage. Use @timeout(<positive integer milliseconds>)."));
+                continue;
+            }
+
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                span,
+                $"Unknown aspect '@{aspect}'."));
+        }
+
+        if (validateTimeoutReturnType
+            && timeoutMilliseconds is not null
+            && (returnType.ResultValueType is null || returnType.ResultErrorType != TypeSymbol.String))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                span,
+                "@timeout requires function return type Result<T, String>."));
+            timeoutMilliseconds = null;
+        }
+
+        return (enableLogging, timeoutMilliseconds);
+    }
+
+    private static bool TryParseTimeoutAspect(string aspect, out int timeoutMilliseconds)
+    {
+        const string prefix = "timeout:";
+        timeoutMilliseconds = 0;
+        if (!aspect.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var value = aspect.Substring(prefix.Length);
+        return int.TryParse(value, out timeoutMilliseconds) && timeoutMilliseconds > 0;
+    }
+
+    private void ValidateTimeoutAspectReturnType(FunctionSymbol functionSymbol, TextSpan span)
+    {
+        if (functionSymbol.TimeoutMilliseconds is null)
+        {
+            return;
+        }
+
+        if (functionSymbol.ReturnType.ResultValueType is null || functionSymbol.ReturnType.ResultErrorType != TypeSymbol.String)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                span,
+                "@timeout requires function return type Result<T, String>."));
         }
     }
 
@@ -504,12 +604,24 @@ public sealed class Binder
             genericParameters.Add(symbol);
         }
 
-        var functionSymbol = scope.TryLookupFunction(name) ?? new FunctionSymbol(
-            name,
-            declaration.Parameters.Select(parameter => new ParameterSymbol(parameter.IdentifierToken.Text, BindType(parameter.Type))).ToList(),
-            genericParameters,
-            declaration.ReturnType is null ? TypeSymbol.Unit : BindType(declaration.ReturnType),
-            enableLogging: declaration.Aspects.Any(aspect => string.Equals(aspect, "logging", StringComparison.OrdinalIgnoreCase)));
+        var functionSymbol = scope.TryLookupFunction(name);
+        if (functionSymbol is null)
+        {
+            var declaredReturnType = declaration.ReturnType is null ? TypeSymbol.Unit : BindType(declaration.ReturnType);
+            var (enableLogging, timeoutMilliseconds) = AnalyzeFunctionAspects(
+                declaration.Aspects,
+                declaredReturnType,
+                declaration.IdentifierToken.Span,
+                validateTimeoutReturnType: declaration.ReturnType is not null);
+
+            functionSymbol = new FunctionSymbol(
+                name,
+                declaration.Parameters.Select(parameter => new ParameterSymbol(parameter.IdentifierToken.Text, BindType(parameter.Type))).ToList(),
+                genericParameters,
+                declaredReturnType,
+                enableLogging: enableLogging,
+                timeoutMilliseconds: timeoutMilliseconds);
+        }
 
         var previousScope = scope;
         var previousFunction = currentFunction;
@@ -555,6 +667,7 @@ public sealed class Binder
         }
 
         InferAndValidateReturnType(functionSymbol, declaration.ReturnType is not null, body, declaration.IdentifierToken.Span);
+        ValidateTimeoutAspectReturnType(functionSymbol, declaration.IdentifierToken.Span);
 
         currentFunction = previousFunction;
         returnTypes = previousReturnTypes;

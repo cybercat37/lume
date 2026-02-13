@@ -106,7 +106,9 @@ public sealed class Parser
                 return ParseExpressionStatement();
             }
 
-            if (Peek(1).Kind == TokenKind.Identifier && Peek(2).Kind == TokenKind.OpenParen)
+            if (Peek(1).Kind == TokenKind.Identifier
+                && string.Equals(Peek(1).Text, "intent", StringComparison.Ordinal)
+                && Peek(2).Kind == TokenKind.OpenParen)
             {
                 return ParseAspectAnnotatedStatement();
             }
@@ -180,7 +182,50 @@ public sealed class Parser
     {
         _ = MatchToken(TokenKind.At, "@");
         var tagToken = MatchToken(TokenKind.Identifier, "aspect identifier");
-        return tagToken.Text;
+        var tag = tagToken.Text;
+
+        if (Current().Kind == TokenKind.OpenParen)
+        {
+            _ = MatchToken(TokenKind.OpenParen, "(");
+            if (string.Equals(tag, "timeout", StringComparison.OrdinalIgnoreCase))
+            {
+                var valueToken = MatchToken(TokenKind.NumberLiteral, "integer milliseconds");
+                _ = MatchToken(TokenKind.CloseParen, ")");
+
+                if (valueToken.Value is int timeoutMilliseconds && timeoutMilliseconds > 0)
+                {
+                    return $"timeout:{timeoutMilliseconds}";
+                }
+
+                diagnostics.Add(Diagnostic.Error(
+                    sourceText,
+                    valueToken.Span,
+                    "@timeout expects a positive integer milliseconds value."));
+                return "timeout";
+            }
+
+            diagnostics.Add(Diagnostic.Error(
+                sourceText,
+                tagToken.Span,
+                $"@{tag} does not take arguments."));
+            while (Current().Kind != TokenKind.CloseParen && Current().Kind != TokenKind.EndOfFile)
+            {
+                NextToken();
+            }
+
+            _ = MatchToken(TokenKind.CloseParen, ")");
+            return tag;
+        }
+
+        if (string.Equals(tag, "timeout", StringComparison.OrdinalIgnoreCase))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                sourceText,
+                tagToken.Span,
+                "@timeout requires a positive integer argument, for example @timeout(200)."));
+        }
+
+        return tag;
     }
 
     private StatementSyntax ParseInvalidIntentTarget(IntentAnnotationSyntax intentAnnotation)

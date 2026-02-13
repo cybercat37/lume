@@ -1,0 +1,18 @@
+rand_seed(7)
+
+@timeout(50) fn fast(max: Int) {
+  sleep(1)
+  return rand_int(max)
+}
+
+@timeout(1) fn slow(max: Int) {
+  sleep(10)
+  return rand_int(max)
+}
+
+print fast(10)
+print slow(10)
+print match slow(10) {
+  Ok(n) -> f"ok: {n}"
+  Error(msg) -> f"err: {msg}"
+}

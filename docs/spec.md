@@ -111,7 +111,9 @@ Value pipe examples:
 - Builtin aspect tags use identifier syntax on declarations (for example `@logging`).
 - `@logging` on `fn` is implemented in interpreter and codegen.
 - Logging emits timestamped invocation/return lines and includes arguments/return values.
-- Additional aspects (`@retry`, `@timeout`, webhook/mqtt policies) are planned.
+- `@timeout(ms)` on `fn` is implemented for functions returning `Result<T, String>`;
+  if execution exceeds `ms`, it returns `Error("timeout after <ms>ms")`.
+- Additional aspects (`@retry`, webhook/mqtt policies) are planned.
 
 ### Pattern Matching
 - Current implementation supports literal, relational, `_`, identifier, tuple, and record patterns.

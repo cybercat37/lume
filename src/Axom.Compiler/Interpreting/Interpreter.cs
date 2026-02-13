@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Linq;
 using System.Threading;
@@ -1211,6 +1212,13 @@ public sealed class Interpreter
             }
 
             object? result = null;
+            var timeoutMilliseconds = functionSymbol?.TimeoutMilliseconds;
+            Stopwatch? timeoutStopwatch = null;
+            if (timeoutMilliseconds is not null)
+            {
+                timeoutStopwatch = Stopwatch.StartNew();
+            }
+
             if (functionSymbol?.EnableLogging == true)
             {
                 var renderedArguments = string.Join(", ", arguments.Select(FormatValue));
@@ -1252,6 +1260,13 @@ public sealed class Interpreter
             }
             finally
             {
+                if (timeoutMilliseconds is not null
+                    && timeoutStopwatch is not null
+                    && timeoutStopwatch.ElapsedMilliseconds > timeoutMilliseconds.Value)
+                {
+                    result = BuildTimeoutResult(functionSymbol?.ReturnType, timeoutMilliseconds.Value, result);
+                }
+
                 currentFunction = previousFunction;
                 foreach (var symbol in modifiedSymbols)
                 {
@@ -1438,6 +1453,20 @@ public sealed class Interpreter
             }
 
             return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.String), error ?? "random error");
+        }
+
+        private static object? BuildTimeoutResult(TypeSymbol? returnType, int timeoutMilliseconds, object? fallback)
+        {
+            if (returnType is null
+                || returnType.ResultValueType is null
+                || returnType.ResultErrorType != TypeSymbol.String)
+            {
+                return fallback;
+            }
+
+            return new SumValue(
+                new SumVariantSymbol("Error", returnType, TypeSymbol.String),
+                $"timeout after {timeoutMilliseconds}ms");
         }
 
         private static string ApplyFormat(object? value, string formatSpecifier)

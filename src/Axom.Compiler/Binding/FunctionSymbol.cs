@@ -10,6 +10,7 @@ public sealed class FunctionSymbol
     public TypeSymbol ReturnType { get; private set; }
     public bool IsBuiltin { get; }
     public bool EnableLogging { get; }
+    public int? TimeoutMilliseconds { get; }
 
     public FunctionSymbol(
         string name,
@@ -17,7 +18,8 @@ public sealed class FunctionSymbol
         IReadOnlyList<TypeSymbol> genericParameters,
         TypeSymbol returnType,
         bool isBuiltin = false,
-        bool enableLogging = false)
+        bool enableLogging = false,
+        int? timeoutMilliseconds = null)
     {
         Name = name;
         Parameters = parameters;
@@ -25,6 +27,7 @@ public sealed class FunctionSymbol
         ReturnType = returnType;
         IsBuiltin = isBuiltin;
         EnableLogging = enableLogging;
+        TimeoutMilliseconds = timeoutMilliseconds;
     }
 
     public void SetReturnType(TypeSymbol returnType)

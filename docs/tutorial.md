@@ -934,6 +934,18 @@ match result {
 }
 ```
 
+`@timeout(ms)` is available on functions that return `Result<T, String>`.
+
+```axom
+@timeout(20) fn fetch(max: Int) {
+  sleep(5)
+  return rand_int(max)
+}
+
+let value = fetch(10)?
+print value
+```
+
 ---
 
 ### 13.2 Control Flow

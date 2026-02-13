@@ -63,7 +63,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
 | .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with `System.Math` whitelist |
 | Pipeline operator + combinators | \|> and combinators | Partial | Value pipe `|>` implemented; combinator syntax remains proposal-only |
-| Aspects/runtime policies | Builtin aspect tags + runtime behavior | Partial | `@logging` is implemented with keyword syntax and interpreter/codegen parity |
+| Aspects/runtime policies | Builtin aspect tags + runtime behavior | Partial | `@logging` and `@timeout(ms)` are implemented with keyword syntax and interpreter/codegen parity |
 
 ## Milestones (Priority Ordered)
 
@@ -240,8 +240,9 @@ DoD (v1):
 Status:
 - `@logging` is implemented for function declarations.
 - Interpreter and codegen both emit timestamped invocation/return logs.
+- `@timeout(ms)` is implemented for functions returning `Result<T, String>`.
 - Concurrency examples (`spawn` + `sleep`) demonstrate completion-order logging.
-- Follow-up aspects (`@retry`, `@timeout`, webhook/mqtt, etc.) remain planned.
+- Follow-up aspects (`@retry`, webhook/mqtt, etc.) remain planned.
 
 MVP priorities (execution order):
 1. `@logging` (invocation, args, return value, optional duration)
