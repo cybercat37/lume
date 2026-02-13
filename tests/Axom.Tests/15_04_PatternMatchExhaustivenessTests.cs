@@ -88,4 +88,73 @@ let result = match 1 {
 
         Assert.NotEmpty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Match_list_rest_only_missing_empty_list_is_non_exhaustive()
+    {
+        var sourceText = new SourceText(@"
+let result = match [1, 2, 3] {
+  [head, ...tail] -> head
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics.Where(d => d.Message.Contains("Non-exhaustive", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [Fact]
+    public void Match_list_empty_and_rest_is_exhaustive()
+    {
+        var sourceText = new SourceText(@"
+let result = match [1, 2, 3] {
+  [] -> 0
+  [head, ...tail] -> head
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics.Where(d => d.Message.Contains("Non-exhaustive", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [Fact]
+    public void Match_more_specific_list_arm_after_broader_rest_arm_is_unreachable()
+    {
+        var sourceText = new SourceText(@"
+let result = match [1, 2, 3] {
+  [first, ...rest] -> first
+  [x, y, ...z] -> y
+  _ -> 0
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics.Where(d => d.Message.Contains("Unreachable", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [Fact]
+    public void Match_list_literal_specific_arm_after_general_arm_is_unreachable()
+    {
+        var sourceText = new SourceText(@"
+let result = match [1, 2, 3] {
+  [x, ...rest] -> x
+  [1, ...rest] -> 1
+  _ -> 0
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics.Where(d => d.Message.Contains("Unreachable", StringComparison.OrdinalIgnoreCase)));
+    }
 }

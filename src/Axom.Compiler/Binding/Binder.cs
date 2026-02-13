@@ -1955,6 +1955,12 @@ public sealed class Binder
             return;
         }
 
+        if (targetType.ListElementType is not null)
+        {
+            ReportListMatchDiagnostics(match);
+            return;
+        }
+
         var seenLiterals = new HashSet<object?>();
         var seenTrue = false;
         var seenFalse = false;
@@ -2031,6 +2037,271 @@ public sealed class Binder
             SourceText,
             match.MatchKeyword.Span,
             "Non-exhaustive match expression."));
+    }
+
+    private void ReportListMatchDiagnostics(MatchExpressionSyntax match)
+    {
+        var seenCatchAll = false;
+        var analyzedArms = new List<MatchArmSyntax>();
+
+        foreach (var arm in match.Arms)
+        {
+            var pattern = arm.Pattern;
+            if (seenCatchAll)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    pattern.Span,
+                    "Unreachable match arm."));
+                continue;
+            }
+
+            var isCatchAll = IsCatchAllPattern(pattern);
+            if (arm.Guard is not null || pattern is RelationalPatternSyntax)
+            {
+                if (isCatchAll)
+                {
+                    seenCatchAll = true;
+                }
+
+                continue;
+            }
+
+            var unreachable = analyzedArms.Any(previous => IsListPatternSubsumedBy(pattern, previous.Pattern));
+            if (unreachable)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    pattern.Span,
+                    "Unreachable match arm."));
+                continue;
+            }
+
+            analyzedArms.Add(arm);
+            if (isCatchAll)
+            {
+                seenCatchAll = true;
+            }
+        }
+
+        if (seenCatchAll)
+        {
+            return;
+        }
+
+        var sampleLengths = BuildListDiagnosticSampleLengths(match.Arms.Select(arm => arm.Pattern));
+        foreach (var length in sampleLengths)
+        {
+            var coveredForLength = match.Arms.Any(arm =>
+                arm.Guard is null
+                && arm.Pattern is not RelationalPatternSyntax
+                && ListPatternCoversAllValuesAtLength(arm.Pattern, length));
+
+            if (!coveredForLength)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    match.MatchKeyword.Span,
+                    "Non-exhaustive match expression."));
+                return;
+            }
+        }
+    }
+
+    private static bool IsListPatternSubsumedBy(PatternSyntax candidate, PatternSyntax previous)
+    {
+        if (IsCatchAllPattern(previous))
+        {
+            return true;
+        }
+
+        if (candidate is not ListPatternSyntax candidateList || previous is not ListPatternSyntax previousList)
+        {
+            return false;
+        }
+
+        if (!LengthRangeIsSubset(candidateList, previousList))
+        {
+            return false;
+        }
+
+        var sampleLengths = BuildListDiagnosticSampleLengths(new PatternSyntax[] { candidateList, previousList });
+        foreach (var length in sampleLengths)
+        {
+            if (!ListPatternCanMatchLength(candidateList, length))
+            {
+                continue;
+            }
+
+            if (ListPatternCanProduceWitnessOutside(previousList, candidateList, length))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool LengthRangeIsSubset(ListPatternSyntax candidate, ListPatternSyntax previous)
+    {
+        var candidateMin = candidate.PrefixElements.Count + candidate.SuffixElements.Count;
+        var previousMin = previous.PrefixElements.Count + previous.SuffixElements.Count;
+
+        if (candidate.HasRest)
+        {
+            return previous.HasRest && candidateMin >= previousMin;
+        }
+
+        return previous.HasRest
+            ? candidateMin >= previousMin
+            : candidateMin == previousMin;
+    }
+
+    private static IEnumerable<int> BuildListDiagnosticSampleLengths(IEnumerable<PatternSyntax> patterns)
+    {
+        var maxMin = patterns
+            .OfType<ListPatternSyntax>()
+            .Select(pattern => pattern.PrefixElements.Count + pattern.SuffixElements.Count)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        var lengths = new HashSet<int>();
+        for (var i = 0; i <= maxMin + 4; i++)
+        {
+            lengths.Add(i);
+        }
+
+        lengths.Add(maxMin + 10);
+        return lengths.OrderBy(x => x);
+    }
+
+    private static bool ListPatternCanMatchLength(ListPatternSyntax pattern, int length)
+    {
+        var minLength = pattern.PrefixElements.Count + pattern.SuffixElements.Count;
+        return pattern.HasRest ? length >= minLength : length == minLength;
+    }
+
+    private static bool ListPatternCanProduceWitnessOutside(ListPatternSyntax previous, ListPatternSyntax candidate, int length)
+    {
+        if (!ListPatternCanMatchLength(previous, length))
+        {
+            return true;
+        }
+
+        if (!TryGetLiteralConstraints(previous, length, out var previousLiterals, out var previousHasUnknownConstraints))
+        {
+            return true;
+        }
+
+        if (previousHasUnknownConstraints)
+        {
+            return false;
+        }
+
+        if (!TryGetLiteralConstraints(candidate, length, out var candidateLiterals, out _))
+        {
+            return false;
+        }
+
+        foreach (var literalConstraint in previousLiterals)
+        {
+            if (!candidateLiterals.TryGetValue(literalConstraint.Key, out var candidateLiteral))
+            {
+                return true;
+            }
+
+            if (!Equals(candidateLiteral, literalConstraint.Value))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool ListPatternCoversAllValuesAtLength(PatternSyntax pattern, int length)
+    {
+        if (IsCatchAllPattern(pattern))
+        {
+            return true;
+        }
+
+        if (pattern is not ListPatternSyntax listPattern)
+        {
+            return false;
+        }
+
+        if (!ListPatternCanMatchLength(listPattern, length))
+        {
+            return false;
+        }
+
+        if (!TryGetLiteralConstraints(listPattern, length, out var literals, out var hasUnknownConstraints))
+        {
+            return false;
+        }
+
+        return !hasUnknownConstraints && literals.Count == 0;
+    }
+
+    private static bool TryGetLiteralConstraints(
+        ListPatternSyntax pattern,
+        int length,
+        out Dictionary<int, object?> literals,
+        out bool hasUnknownConstraints)
+    {
+        literals = new Dictionary<int, object?>();
+        hasUnknownConstraints = false;
+
+        if (!ListPatternCanMatchLength(pattern, length))
+        {
+            return false;
+        }
+
+        for (var i = 0; i < pattern.PrefixElements.Count; i++)
+        {
+            if (!TryAddPatternLiteralConstraint(pattern.PrefixElements[i], i, literals, ref hasUnknownConstraints))
+            {
+                return false;
+            }
+        }
+
+        for (var i = 0; i < pattern.SuffixElements.Count; i++)
+        {
+            var index = length - pattern.SuffixElements.Count + i;
+            if (!TryAddPatternLiteralConstraint(pattern.SuffixElements[i], index, literals, ref hasUnknownConstraints))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryAddPatternLiteralConstraint(
+        PatternSyntax pattern,
+        int index,
+        Dictionary<int, object?> literals,
+        ref bool hasUnknownConstraints)
+    {
+        switch (pattern)
+        {
+            case LiteralPatternSyntax literalPattern:
+                var value = literalPattern.LiteralToken.Value;
+                if (literals.TryGetValue(index, out var existing) && !Equals(existing, value))
+                {
+                    return false;
+                }
+
+                literals[index] = value;
+                return true;
+            case IdentifierPatternSyntax:
+            case WildcardPatternSyntax:
+                return true;
+            default:
+                hasUnknownConstraints = true;
+                return true;
+        }
     }
 
     private static bool IsCatchAllPattern(PatternSyntax pattern)
