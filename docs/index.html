@@ -36,20 +36,20 @@
             by tests, and crafted for real work.
           </p>
           <div class="cta">
-            <a class="btn primary" href="https://github.com/axom-lang/axom">Get the CLI</a>
-            <a class="btn ghost" href="https://github.com/axom-lang/axom/blob/main/docs/spec.md">Read the Spec</a>
+            <a class="btn primary" href="https://github.com/cybercat37/axom">Get the CLI</a>
+            <a class="btn ghost" href="https://github.com/cybercat37/axom/blob/main/docs/spec.md">Read the Spec</a>
           </div>
         </div>
         <div class="hero-panel">
             <div class="metal-card">
-              <p class="card-title">Hello from the forge</p>
-              <pre><code>fn fib(n: Int) => match n {
-  0 -> 0
-  1 -> 1
-  _ -> fib(n - 1) + fib(n - 2)
-}
+              <p class="card-title">Collection flow in one pass</p>
+              <pre><code>let odds = range(1, 12)
+  |> skip_while(fn(x: Int) => x < 3)
+  |> take_while(fn(x: Int) => x < 10)
 
-println fib(8)</code></pre>
+print odds
+print odds |> fold(0, fn(acc: Int, x: Int) => acc + x)
+</code></pre>
             </div>
           </div>
       </div>
@@ -108,52 +108,53 @@ println fib(8)</code></pre>
           </p>
           <div class="example-grid">
             <div class="example">
-              <p class="label">Sum types + match</p>
-              <pre><code>type Signal { Ready(Int) Busy(String) }
-fn status(code: Int) => match code {
-  200 -> Ready(code)
-  _ -> Busy("retry")
-}
+              <p class="label">Range + pipelines</p>
+              <pre><code>let squares = range(1, 6)
+  |> map(fn(x: Int) => x * x)
 
-print match status(200) {
-  Ready(n) -> n
-  Busy(_) -> 0
+let total = squares
+  |> fold(0, fn(acc: Int, x: Int) => acc + x)
+
+print squares
+print total</code></pre>
+            </div>
+            <div class="example">
+              <p class="label">Windowed list combinators</p>
+              <pre><code>let values = [1, 2, 3, 4, 5]
+
+print take(values, 3)
+print skip(values, 2)
+print take_while(values, fn(x: Int) => x < 4)
+print skip_while(values, fn(x: Int) => x < 4)</code></pre>
+            </div>
+            <div class="example">
+              <p class="label">Enumerate + zip_with</p>
+              <pre><code>let xs = [10, 20, 30]
+let indexed = enumerate(xs)
+
+print indexed
+print zip_with(xs, [1, 2, 3],
+  fn(x: Int, y: Int) => x + y)
+</code></pre>
+            </div>
+            <div class="example">
+              <p class="label">Result + match</p>
+              <pre><code>let value = rand_int(10)
+
+print match value {
+  Ok(n) -> n
+  Error(msg) -> -1
 }</code></pre>
             </div>
             <div class="example">
-              <p class="label">Result pattern</p>
-              <pre><code>type Result { Ok(Int) Error(String) }
-fn safe_div(a: Int, b: Int) => match b {
-  0 -> Error("divide by zero")
-  _ -> Ok(a / b)
-}
-
-print match safe_div(10, 2) {
-  Ok(x) -> x
-  Error(msg) -> 0
-}</code></pre>
-            </div>
-            <div class="example">
-              <p class="label">Option pattern</p>
-              <pre><code>type Option { Some(Int) None }
-fn parse_port(text: String) => match text {
-  "" -> None
-  _ -> Some(int(text))
-}
-
-print match parse_port("8080") {
-  Some(p) -> p
-  None -> 80
-}</code></pre>
-            </div>
-            <div class="example">
-              <p class="label">Records and functions</p>
+              <p class="label">Records and updates</p>
               <pre><code>type User { name: String, age: Int }
-fn is_adult(u: User) => u.age >= 18
 
 let user = User { name: "Ada", age: 36 }
-println is_adult(user)
-println user.name</code></pre>
+let updated = user with { age: 37 }
+
+print user.name
+print updated.age</code></pre>
             </div>
             <div class="example">
               <p class="label">Tuples and match</p>
@@ -161,12 +162,6 @@ println user.name</code></pre>
   (a, b) -> a + b
   _ -> 0
 }</code></pre>
-            </div>
-            <div class="example">
-              <p class="label">Float + conversion</p>
-              <pre><code>println 1.5 + 2.25
-println float(2)
-println int(3.9)</code></pre>
             </div>
           </div>
         </div>
@@ -181,23 +176,24 @@ println int(3.9)</code></pre>
               <ul>
                 <li>Functions + lambdas</li>
                 <li>Records and sum types</li>
-                <li>Interpreter and codegen</li>
+                <li>Interpreter and C# codegen</li>
+                <li>Collections v1 + combinators</li>
               </ul>
             </div>
             <div class="roadmap-card now">
               <h3>Now</h3>
               <ul>
-                <li>Pattern matching polish</li>
-                <li>Generics v1</li>
-                <li>Collections v1</li>
+                <li>Type-level generics follow-up</li>
+                <li>List/rest match patterns</li>
+                <li>.NET interop expansion</li>
               </ul>
             </div>
             <div class="roadmap-card next">
               <h3>Next</h3>
               <ul>
-                <li>Error handling core</li>
-                <li>CLI args</li>
-                <li>Standard library expansion</li>
+                <li>Richer iterator APIs</li>
+                <li>Advanced interpolation formatting</li>
+                <li>Concurrency hardening</li>
               </ul>
             </div>
           </div>
@@ -212,8 +208,8 @@ println int(3.9)</code></pre>
             experiments are the fuel of the forge.
           </p>
           <div class="cta">
-            <a class="btn primary" href="https://github.com/axom-lang/axom">Repository</a>
-            <a class="btn ghost" href="https://github.com/axom-lang/axom/issues">Open an issue</a>
+            <a class="btn primary" href="https://github.com/cybercat37/axom">Repository</a>
+            <a class="btn ghost" href="https://github.com/cybercat37/axom/issues">Open an issue</a>
           </div>
         </div>
       </section>
@@ -223,9 +219,9 @@ println int(3.9)</code></pre>
       <div class="section-inner">
         <p>Axom: forged for clarity and pragmatic power.</p>
         <div class="footer-links">
-          <a href="https://github.com/axom-lang/axom/blob/main/docs/spec.md">Spec</a>
-          <a href="https://github.com/axom-lang/axom/blob/main/docs/tutorial.md">Tutorial</a>
-          <a href="https://github.com/axom-lang/axom">GitHub</a>
+          <a href="https://github.com/cybercat37/axom/blob/main/docs/spec.md">Spec</a>
+          <a href="https://github.com/cybercat37/axom/blob/main/docs/tutorial.md">Tutorial</a>
+          <a href="https://github.com/cybercat37/axom">GitHub</a>
         </div>
         <div class="theme-bar" aria-label="Theme switcher">
           <div class="theme-switch">
