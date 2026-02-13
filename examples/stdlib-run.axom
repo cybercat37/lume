@@ -1,0 +1,11 @@
+rand_seed(7)
+
+let values = [1, 2, 3, 4]
+print count(values)
+print sum(values)
+print sum([1.5, 2.5])
+print any(values, fn(x: Int) => x > 3)
+print all(values, fn(x: Int) => x > 0)
+
+print result_map(rand_int(10), fn(x: Int) => x + 1)
+print result_map(rand_int(0), fn(x: Int) => x + 1)

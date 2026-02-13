@@ -223,6 +223,59 @@ public static class BuiltinFunctions
         TypeSymbol.List(TypeSymbol.Tuple(new[] { TypeSymbol.Int, GenericT })),
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Count = new(
+        "count",
+        new[]
+        {
+            new ParameterSymbol("items", TypeSymbol.List(GenericT))
+        },
+        new[] { GenericT },
+        TypeSymbol.Int,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol Sum = new(
+        "sum",
+        new[]
+        {
+            new ParameterSymbol("items", TypeSymbol.List(GenericT))
+        },
+        new[] { GenericT },
+        GenericT,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol Any = new(
+        "any",
+        new[]
+        {
+            new ParameterSymbol("items", TypeSymbol.List(GenericT)),
+            new ParameterSymbol("predicate", TypeSymbol.Function(new[] { GenericT }, TypeSymbol.Bool))
+        },
+        new[] { GenericT },
+        TypeSymbol.Bool,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol AllItems = new(
+        "all",
+        new[]
+        {
+            new ParameterSymbol("items", TypeSymbol.List(GenericT)),
+            new ParameterSymbol("predicate", TypeSymbol.Function(new[] { GenericT }, TypeSymbol.Bool))
+        },
+        new[] { GenericT },
+        TypeSymbol.Bool,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol ResultMap = new(
+        "result_map",
+        new[]
+        {
+            new ParameterSymbol("value", TypeSymbol.Result(GenericT, GenericU)),
+            new ParameterSymbol("transform", TypeSymbol.Function(new[] { GenericT }, GenericV))
+        },
+        new[] { GenericT, GenericU, GenericV },
+        TypeSymbol.Result(GenericV, GenericU),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Zip = new(
         "zip",
         new[]
@@ -273,6 +326,11 @@ public static class BuiltinFunctions
         [TakeWhile.Name] = TakeWhile,
         [SkipWhile.Name] = SkipWhile,
         [Enumerate.Name] = Enumerate,
+        [Count.Name] = Count,
+        [Sum.Name] = Sum,
+        [Any.Name] = Any,
+        [AllItems.Name] = AllItems,
+        [ResultMap.Name] = ResultMap,
         [Zip.Name] = Zip,
         [ZipWith.Name] = ZipWith
     };

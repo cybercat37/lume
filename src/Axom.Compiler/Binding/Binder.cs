@@ -2561,6 +2561,8 @@ public sealed class Binder
         {
             case "range":
                 return BindBuiltinRange(function, call, arguments);
+            case "sum":
+                return BindBuiltinSum(function, call, arguments);
             case "abs":
                 return BindBuiltinUnary(function, call, arguments, allowFloat: true);
             case "min":
@@ -2642,6 +2644,38 @@ public sealed class Binder
                 SourceText,
                 call.Span,
                 $"Function expects '{expected}' but got '{argumentType}'."));
+        }
+
+        return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+    }
+
+    private BoundExpression BindBuiltinSum(
+        FunctionSymbol function,
+        CallExpressionSyntax call,
+        IReadOnlyList<BoundExpression> arguments)
+    {
+        if (arguments.Count != 1)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                "sum() expects 1 list argument."));
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+        }
+
+        var argumentType = arguments[0].Type;
+        var elementType = argumentType.ListElementType;
+        if (elementType == TypeSymbol.Int || elementType == TypeSymbol.Float)
+        {
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, elementType);
+        }
+
+        if (argumentType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Arguments[0].Span,
+                "sum() expects List<Int> or List<Float>."));
         }
 
         return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);

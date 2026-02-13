@@ -1130,6 +1130,85 @@ public sealed class Interpreter
                     }
 
                     return new List<object?>();
+                case "count":
+                    if (arguments.Length == 1 && arguments[0] is List<object?> countItems)
+                    {
+                        return countItems.Count;
+                    }
+
+                    return 0;
+                case "sum":
+                    if (arguments.Length == 1 && arguments[0] is List<object?> sumItems)
+                    {
+                        if (sumItems.All(item => item is int))
+                        {
+                            return sumItems.Cast<int>().Sum();
+                        }
+
+                        if (sumItems.All(item => item is int or double))
+                        {
+                            return sumItems.Sum(item => item is int i ? i : (double)item!);
+                        }
+                    }
+
+                    return 0;
+                case "any":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> anyItems)
+                    {
+                        foreach (var item in anyItems)
+                        {
+                            if (InvokeCallable(arguments[1], new[] { item }) is bool keep && keep)
+                            {
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+
+                    return false;
+                case "all":
+                    if (arguments.Length == 2 && arguments[0] is List<object?> allItems)
+                    {
+                        foreach (var item in allItems)
+                        {
+                            if (InvokeCallable(arguments[1], new[] { item }) is not bool keep || !keep)
+                            {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    }
+
+                    return false;
+                case "result_map":
+                    if (arguments.Length == 2 && arguments[0] is SumValue sumValue)
+                    {
+                        if (string.Equals(sumValue.Variant.Name, "Ok", StringComparison.Ordinal))
+                        {
+                            var mapped = InvokeCallable(arguments[1], new[] { sumValue.Payload });
+                            return new SumValue(
+                                new SumVariantSymbol(
+                                    "Ok",
+                                    TypeSymbol.Result(TypeSymbol.Error, TypeSymbol.String),
+                                    TypeSymbol.Error),
+                                mapped);
+                        }
+
+                        if (string.Equals(sumValue.Variant.Name, "Error", StringComparison.Ordinal)
+                            || string.Equals(sumValue.Variant.Name, "Err", StringComparison.Ordinal))
+                        {
+                            return new SumValue(
+                                new SumVariantSymbol(
+                                    "Error",
+                                    TypeSymbol.Result(TypeSymbol.Error, TypeSymbol.String),
+                                    TypeSymbol.String),
+                                sumValue.Payload);
+                        }
+                    }
+
+                    return arguments.Length > 0 ? arguments[0] : null;
                 case "zip":
                     if (arguments.Length == 2 && arguments[0] is List<object?> leftItems && arguments[1] is List<object?> rightItems)
                     {

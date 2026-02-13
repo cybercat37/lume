@@ -590,7 +590,8 @@ public sealed class Emitter
         {
             LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
                 && function.Function.IsBuiltin
-                && string.Equals(function.Function.Name, "rand_int", StringComparison.Ordinal) => true,
+                && (string.Equals(function.Function.Name, "rand_int", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "result_map", StringComparison.Ordinal)) => true,
             LoweredCallExpression call => UsesRandomResultBuiltin(call.Callee) || call.Arguments.Any(UsesRandomResultBuiltin),
             LoweredUnaryExpression unary => UsesRandomResultBuiltin(unary.Operand),
             LoweredBinaryExpression binary => UsesRandomResultBuiltin(binary.Left) || UsesRandomResultBuiltin(binary.Right),
@@ -1045,6 +1046,11 @@ public sealed class Emitter
                 "take_while" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.TakeWhile({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "skip_while" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.SkipWhile({argumentExpressions[0]}, {argumentExpressions[1]}))",
                 "enumerate" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select({argumentExpressions[0]}, (item, index) => (index, item)))",
+                "count" => $"System.Linq.Enumerable.Count({argumentExpressions[0]})",
+                "sum" => $"System.Linq.Enumerable.Sum({argumentExpressions[0]})",
+                "any" => $"System.Linq.Enumerable.Any({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "all" => $"System.Linq.Enumerable.All({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "result_map" => WriteResultMapCall(call, argumentExpressions),
                 "zip" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Zip({argumentExpressions[0]}, {argumentExpressions[1]}, (left, right) => (left, right)))",
                 "zip_with" => $"System.Linq.Enumerable.ToList(System.Linq.Enumerable.Zip({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]}))",
                 _ => $"{EscapeIdentifier(function.Function.Name)}({args})"
@@ -1056,6 +1062,23 @@ public sealed class Emitter
             ? calleeText
             : $"({calleeText})";
         return $"{wrapped}({args})";
+    }
+
+    private static string WriteResultMapCall(LoweredCallExpression call, IReadOnlyList<string> argumentExpressions)
+    {
+        var resultType = call.Type.ResultValueType is not null
+            ? TypeToCSharp(call.Type.ResultValueType)
+            : "object";
+        var sourceOkType = call.Arguments[0].Type.ResultValueType is not null
+            ? TypeToCSharp(call.Arguments[0].Type.ResultValueType)
+            : "object";
+        var mapReturnType = call.Type.ResultValueType is not null
+            ? TypeToCSharp(call.Type.ResultValueType)
+            : "object";
+        var source = argumentExpressions[0];
+        var transform = argumentExpressions[1];
+
+        return $"((Func<AxomResult<{resultType}>>)(() => {{ var __axomRes = {source}; return __axomRes.Tag == \"Ok\" ? AxomResult<{resultType}>.Ok(((Func<{sourceOkType}, {mapReturnType}>)({transform}))(({sourceOkType})__axomRes.Value!)) : AxomResult<{resultType}>.Error((string)__axomRes.Value!); }}))()";
     }
 
     private static string WriteLambdaExpression(LoweredLambdaExpression lambda)

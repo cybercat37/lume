@@ -8,12 +8,12 @@ public class InterpreterTailRecursionTests
     public void Tail_recursive_sum_runs_without_stack_overflow()
     {
         var sourceText = new SourceText(@"
-fn sum(n: Int, acc: Int) -> Int => match n {
+fn tail_sum(n: Int, acc: Int) -> Int => match n {
   0 -> acc
-  _ -> sum(n - 1, acc + n)
+  _ -> tail_sum(n - 1, acc + n)
 }
 
-print sum(5000, 0)
+print tail_sum(5000, 0)
 ", "test.axom");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 

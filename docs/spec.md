@@ -68,7 +68,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - Tuples are included; access via destructuring only.
 - String interpolation: `f"...{expr}..."` with `{}` expressions.
 - String helpers (length/split) live in stdlib.
-- Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`, `range`, `take`, `skip`, `take_while`, `skip_while`, `enumerate`, `zip`, `zip_with`.
+- Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`, `range`, `take`, `skip`, `take_while`, `skip_while`, `enumerate`, `zip`, `zip_with`, `count`, `sum`, `any`, `all`, `result_map`.
 - Time/random builtins are available: `sleep(ms)`, `rand_float()`, `rand_int(max)`, `rand_seed(seed)`.
 - Dedicated pipeline-combinator expression syntax remains proposed
   (see `docs/proposals/pipeline-combinators.md`).
@@ -86,6 +86,11 @@ Builtin notes:
 - `take_while(items: List<T>, predicate: fn(T) -> Bool) -> List<T>` returns the longest prefix where predicate is true.
 - `skip_while(items: List<T>, predicate: fn(T) -> Bool) -> List<T>` skips the longest prefix where predicate is true.
 - `enumerate(items: List<T>) -> List<(Int, T)>` returns `(index, item)` pairs using zero-based indices.
+- `count(items: List<T>) -> Int` returns list length.
+- `sum(items: List<Int|Float>) -> Int|Float` sums numeric lists.
+- `any(items: List<T>, predicate: fn(T) -> Bool) -> Bool` returns true if any element matches.
+- `all(items: List<T>, predicate: fn(T) -> Bool) -> Bool` returns true if all elements match.
+- `result_map(value: Result<T, E>, transform: fn(T) -> U) -> Result<U, E>` maps only the `Ok` value.
 - `zip(left: List<T>, right: List<U>) -> List<(T, U)>` pairs elements until the shorter list ends.
 - `zip_with(left: List<T>, right: List<U>, combine: fn(T, U) -> V) -> List<V>` combines paired elements until the shorter list ends.
 

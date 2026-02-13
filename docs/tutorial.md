@@ -627,6 +627,11 @@ let rest = skip_while([1, 2, 3, 1], fn(x: Int) => x < 3)
 let indexed = enumerate([10, 20])
 let pairs = zip([1, 2, 3], ["a", "b"])
 let pair_sums = zip_with([1, 2, 3], [10, 20], fn(x: Int, y: Int) => x + y)
+let c = count([1, 2, 3])
+let s = sum([1.0, 2.5])
+let has_large = any([1, 2, 3], fn(x: Int) => x > 2)
+let all_positive = all([1, 2, 3], fn(x: Int) => x > 0)
+let mapped = result_map(rand_int(10), fn(x: Int) => x + 1)
 
 let total = [1, 2, 3]
   |> map(fn(x: Int) => x * 2)
