@@ -293,7 +293,7 @@ Interop with .NET exceptions is explicit via runtime helpers:
 let x = dotnet.try_call<Int>("System.Math", "Max", 3, 7)?
 ```
 
-Current interop support is partial: `dotnet.call<T>` and `dotnet.try_call<T>` with a whitelist (currently `System.Math`).
+Current interop support is partial: `dotnet.call<T>` and `dotnet.try_call<T>` with a whitelist (`System.Math`, `System.String`, `System.Convert`).
 
 ---
 

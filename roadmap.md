@@ -62,7 +62,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Time/random builtins | sleep + time + random helpers | Implemented | `sleep(ms)`, UTC instant helpers (`time_now_utc`, add/diff/ISO parse+format), `rand_float()`, `rand_int(max) -> Result`, `rand_seed(seed)` are implemented in interpreter+codegen |
 | Intent annotations | @intent metadata on blocks/let | Partial | Parser/binder/lowering metadata exists; effect-mismatch warnings are currently disabled |
 | Concurrency model | scope/spawn/join/cancel + channels | Partial | Runtime prototype exists for spawn/join; channel v1 send/recv + strict `recv -> Result` + scope-close unblock + bounded capacity + baseline cancel propagation are implemented |
-| .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with `System.Math` whitelist |
+| .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with whitelist for `System.Math`, `System.String`, and `System.Convert` |
 | Pipeline operator + combinators | \|> and combinators | Partial | Value pipe `|>` implemented; combinator syntax remains proposal-only |
 | Aspects/runtime policies | Builtin aspect tags + runtime behavior | Partial | `@logging` and `@timeout(ms)` are implemented with keyword syntax and interpreter/codegen parity |
 

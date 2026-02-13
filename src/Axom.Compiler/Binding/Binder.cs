@@ -1,5 +1,6 @@
 using System.Linq;
 using Axom.Compiler.Diagnostics;
+using Axom.Compiler.Interop;
 using Axom.Compiler.Lexing;
 using Axom.Compiler.Parsing;
 using Axom.Compiler.Syntax;
@@ -2825,6 +2826,31 @@ public sealed class Binder
                 SourceText,
                 call.Arguments[1].Span,
                 "dotnet method name must be a String."));
+        }
+
+        if (typeNameExpression is BoundLiteralExpression { Value: string literalTypeName })
+        {
+            if (!DotNetInteropWhitelist.IsTypeAllowed(literalTypeName))
+            {
+                var allowedTypes = string.Join(", ", DotNetInteropWhitelist.GetAllowedTypes());
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    call.Arguments[0].Span,
+                    $"dotnet type '{literalTypeName}' is not allowed. Allowed types: {allowedTypes}."));
+            }
+            else if (methodNameExpression is BoundLiteralExpression { Value: string literalMethodName })
+            {
+                if (!DotNetInteropWhitelist.IsMethodAllowed(literalTypeName, literalMethodName))
+                {
+                    var allowedMethods = DotNetInteropWhitelist.GetAllowedMethods().TryGetValue(literalTypeName, out var allowedMethodNames)
+                        ? string.Join(", ", allowedMethodNames)
+                        : string.Empty;
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        call.Arguments[1].Span,
+                        $"dotnet method '{literalTypeName}.{literalMethodName}' is not allowed. Allowed methods: {allowedMethods}."));
+                }
+            }
         }
 
         var supportsReturnType = returnType == TypeSymbol.Int

@@ -339,4 +339,32 @@ scope {
             diagnostic.Message.Contains("arguments must be Int, Float, Bool, or String", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void Dotnet_call_supports_system_string_and_convert_whitelist()
+    {
+        var sourceText = new SourceText(@"
+let a = dotnet.call<Bool>(""System.String"", ""Contains"", ""axom"", ""xo"")
+let b = dotnet.call<Int>(""System.Convert"", ""ToInt32"", ""42"")
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Dotnet_call_with_disallowed_literal_type_reports_allowed_types()
+    {
+        var sourceText = new SourceText("let x = dotnet.call<Int>(\"System.IO.File\", \"Exists\", \"x\")", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("Allowed types", StringComparison.OrdinalIgnoreCase));
+    }
+
 }

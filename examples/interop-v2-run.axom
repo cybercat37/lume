@@ -1,0 +1,8 @@
+print dotnet.call<Int>("System.Math", "Max", 3, 7)
+print dotnet.call<Bool>("System.String", "Contains", "axom", "xo")
+print dotnet.call<Int>("System.Convert", "ToInt32", "42")
+
+print match dotnet.try_call<String>("System.String", "Substring", "axom", 1) {
+  Ok(v) -> v
+  Error(msg) -> msg
+}

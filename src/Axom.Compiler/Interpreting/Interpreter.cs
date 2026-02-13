@@ -453,13 +453,17 @@ public sealed class Interpreter
 
             if (!DotNetInteropWhitelist.IsTypeAllowed(typeName))
             {
-                error = $"dotnet type '{typeName}' is not allowed.";
+                var allowed = string.Join(", ", DotNetInteropWhitelist.GetAllowedTypes());
+                error = $"dotnet type '{typeName}' is not allowed. Allowed types: {allowed}.";
                 return false;
             }
 
             if (!DotNetInteropWhitelist.IsMethodAllowed(typeName, methodName))
             {
-                error = $"dotnet method '{typeName}.{methodName}' is not allowed.";
+                var allowedMethods = DotNetInteropWhitelist.GetAllowedMethods().TryGetValue(typeName, out var allowedMethodNames)
+                    ? string.Join(", ", allowedMethodNames)
+                    : string.Empty;
+                error = $"dotnet method '{typeName}.{methodName}' is not allowed. Allowed methods: {allowedMethods}.";
                 return false;
             }
 
@@ -470,21 +474,45 @@ public sealed class Interpreter
             }
 
             var methods = type
-                .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-                .Where(method => string.Equals(method.Name, methodName, StringComparison.Ordinal)
-                    && method.GetParameters().Length == args.Length)
+                .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance)
+                .Where(method => string.Equals(method.Name, methodName, StringComparison.Ordinal))
                 .ToList();
 
             foreach (var method in methods)
             {
-                if (!TryConvertArguments(args, method.GetParameters(), out var convertedArgs))
+                var parameters = method.GetParameters();
+                var isStatic = method.IsStatic;
+                var expectedParameterCount = isStatic ? args.Length : Math.Max(0, args.Length - 1);
+                if (parameters.Length != expectedParameterCount)
+                {
+                    continue;
+                }
+
+                object? instance = null;
+                var argumentOffset = 0;
+                if (!isStatic)
+                {
+                    if (args.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    if (!TryConvertArgument(args[0], type, out instance))
+                    {
+                        continue;
+                    }
+
+                    argumentOffset = 1;
+                }
+
+                if (!TryConvertArguments(args, argumentOffset, parameters, out var convertedArgs))
                 {
                     continue;
                 }
 
                 try
                 {
-                    var raw = method.Invoke(null, convertedArgs);
+                    var raw = method.Invoke(instance, convertedArgs);
                     if (!TryConvertReturnValue(raw, returnType, out value))
                     {
                         error = $"dotnet return type mismatch for '{typeName}.{methodName}'.";
@@ -504,12 +532,12 @@ public sealed class Interpreter
             return false;
         }
 
-        private static bool TryConvertArguments(object?[] args, System.Reflection.ParameterInfo[] parameters, out object?[] converted)
+        private static bool TryConvertArguments(object?[] args, int argumentOffset, System.Reflection.ParameterInfo[] parameters, out object?[] converted)
         {
-            converted = new object?[args.Length];
-            for (var i = 0; i < args.Length; i++)
+            converted = new object?[parameters.Length];
+            for (var i = 0; i < parameters.Length; i++)
             {
-                if (!TryConvertArgument(args[i], parameters[i].ParameterType, out var value))
+                if (!TryConvertArgument(args[i + argumentOffset], parameters[i].ParameterType, out var value))
                 {
                     return false;
                 }
@@ -523,6 +551,29 @@ public sealed class Interpreter
         private static bool TryConvertArgument(object? argument, Type targetType, out object? converted)
         {
             converted = null;
+            if (targetType == typeof(object))
+            {
+                converted = argument;
+                return true;
+            }
+
+            if (targetType == typeof(int))
+            {
+                if (argument is int i32)
+                {
+                    converted = i32;
+                    return true;
+                }
+
+                if (argument is long l32 && l32 >= int.MinValue && l32 <= int.MaxValue)
+                {
+                    converted = (int)l32;
+                    return true;
+                }
+
+                return false;
+            }
+
             if (targetType == typeof(long))
             {
                 if (argument is long l)

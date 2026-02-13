@@ -580,7 +580,14 @@ Axom does not expose try/catch in the core language. Interop with .NET exception
 let x = dotnet.try_call<Int>("System.Math", "Max", 3, 7)?
 ```
 
-Current support is limited to `dotnet.call<T>` and `dotnet.try_call<T>` with a `System.Math` whitelist.
+Current support is limited to `dotnet.call<T>` and `dotnet.try_call<T>` with a whitelist (`System.Math`, `System.String`, `System.Convert`).
+
+```axom
+let has_xo = dotnet.call<Bool>("System.String", "Contains", "axom", "xo")
+let number = dotnet.call<Int>("System.Convert", "ToInt32", "42")
+print has_xo
+print number
+```
 
 
 ---
