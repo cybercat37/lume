@@ -213,6 +213,16 @@ public static class BuiltinFunctions
         TypeSymbol.List(GenericT),
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Enumerate = new(
+        "enumerate",
+        new[]
+        {
+            new ParameterSymbol("items", TypeSymbol.List(GenericT))
+        },
+        new[] { GenericT },
+        TypeSymbol.List(TypeSymbol.Tuple(new[] { TypeSymbol.Int, GenericT })),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Zip = new(
         "zip",
         new[]
@@ -262,6 +272,7 @@ public static class BuiltinFunctions
         [Skip.Name] = Skip,
         [TakeWhile.Name] = TakeWhile,
         [SkipWhile.Name] = SkipWhile,
+        [Enumerate.Name] = Enumerate,
         [Zip.Name] = Zip,
         [ZipWith.Name] = ZipWith
     };

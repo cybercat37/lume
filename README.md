@@ -115,6 +115,7 @@ let first_two = take([10, 20, 30], 2)
 let tail = skip([10, 20, 30], 1)
 let prefix = take_while([1, 2, 3, 1], fn(x: Int) => x < 3)
 let rest = skip_while([1, 2, 3, 1], fn(x: Int) => x < 3)
+let indexed = enumerate([10, 20])
 let pairs = zip([1, 2, 3], ["a", "b"])
 let pair_sums = zip_with([1, 2, 3], [10, 20], fn(x: Int, y: Int) => x + y)
 
@@ -124,6 +125,7 @@ print first_two
 print tail
 print prefix
 print rest
+print indexed
 print pairs
 print pair_sums
 ```

@@ -1116,6 +1116,19 @@ public sealed class Interpreter
                     }
 
                     return new List<object?>();
+                case "enumerate":
+                    if (arguments.Length == 1 && arguments[0] is List<object?> enumerateItems)
+                    {
+                        var indexed = new List<object?>(enumerateItems.Count);
+                        for (var i = 0; i < enumerateItems.Count; i++)
+                        {
+                            indexed.Add(new object?[] { i, enumerateItems[i] });
+                        }
+
+                        return indexed;
+                    }
+
+                    return new List<object?>();
                 case "zip":
                     if (arguments.Length == 2 && arguments[0] is List<object?> leftItems && arguments[1] is List<object?> rightItems)
                     {

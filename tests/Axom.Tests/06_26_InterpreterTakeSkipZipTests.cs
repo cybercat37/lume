@@ -57,6 +57,32 @@ public class InterpreterTakeSkipZipTests
     }
 
     [Fact]
+    public void Enumerate_adds_zero_based_indices()
+    {
+        var sourceText = new SourceText("print enumerate([10, 20])", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("[(0, 10), (1, 20)]", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Enumerate_on_empty_list_returns_empty_list()
+    {
+        var sourceText = new SourceText("print enumerate(range(1, 1))", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("[]", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public void Zip_pairs_items_until_shortest_list_ends()
     {
         var sourceText = new SourceText("print zip([1, 2, 3], [10, 20])", "test.axom");

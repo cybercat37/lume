@@ -43,6 +43,17 @@ public class CodegenTakeSkipZipTests
     }
 
     [Fact]
+    public void Compile_enumerate_emits_indexed_select()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile("print enumerate([10, 20])", "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("System.Linq.Enumerable.Select", result.GeneratedCode);
+        Assert.Contains("(item, index) => (index, item)", result.GeneratedCode);
+    }
+
+    [Fact]
     public void Compile_zip_emits_linq_zip()
     {
         var compiler = new CompilerDriver();
