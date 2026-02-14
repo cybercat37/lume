@@ -131,6 +131,8 @@ Follow the existing conventions visible in the C# files.
 - No `.github/copilot-instructions.md` file present.
 - Do not commit generated build artifacts (`bin/`, `obj/`, `out/`).
 - Keep changes scoped; avoid unrelated refactors unless required by the task.
+- Keep `axom init` scaffold output up to date as language/runtime features evolve
+  (generated files, README, Docker assets, and route examples should reflect current behavior).
 ## Compiler modularity (guidance)
 - Keep compiler phases explicit and isolated: Parse → Bind → Lower → Interpret/Emit.
 - Introduce a dedicated lowering pass (`Lowerer`) that transforms `BoundProgram`

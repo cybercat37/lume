@@ -32,9 +32,16 @@ public class CliInitTests
             Assert.True(File.Exists(Path.Combine(projectPath, "routes", "missing_get.axom")));
             Assert.True(File.Exists(Path.Combine(projectPath, "Dockerfile")));
             Assert.True(File.Exists(Path.Combine(projectPath, "docker-compose.yml")));
+            Assert.True(File.Exists(Path.Combine(projectPath, "Makefile")));
+            Assert.True(File.Exists(Path.Combine(projectPath, "api.http")));
+            Assert.True(File.Exists(Path.Combine(projectPath, "scripts", "document-endpoints.ps1")));
+            Assert.True(File.Exists(Path.Combine(projectPath, "ENDPOINTS.md")));
             Assert.True(File.Exists(Path.Combine(projectPath, ".gitignore")));
             Assert.True(File.Exists(Path.Combine(projectPath, "README.md")));
             Assert.Contains("Run Without Web", File.ReadAllText(Path.Combine(projectPath, "README.md")));
+            Assert.Contains("Endpoint Documentation", File.ReadAllText(Path.Combine(projectPath, "README.md")));
+            Assert.Contains("api.http", File.ReadAllText(Path.Combine(projectPath, "README.md")));
+            Assert.Contains("dotnet tool install -g axom.cli", File.ReadAllText(Path.Combine(projectPath, "Dockerfile")));
 
             var checkExitCode = Axom.Cli.Program.Main(new[] { "check", Path.Combine(projectPath, "main.axom") });
             Assert.Equal(0, checkExitCode);

@@ -23,7 +23,9 @@ internal static class ProjectScaffolder
 
         Directory.CreateDirectory(projectPath);
         var routesPath = Path.Combine(projectPath, "routes");
+        var scriptsPath = Path.Combine(projectPath, "scripts");
         Directory.CreateDirectory(routesPath);
+        Directory.CreateDirectory(scriptsPath);
 
         var projectName = new DirectoryInfo(projectPath).Name;
 
@@ -36,6 +38,10 @@ internal static class ProjectScaffolder
         WriteFile(Path.Combine(projectPath, ".gitignore"), GitIgnore);
         WriteFile(Path.Combine(projectPath, "Dockerfile"), Dockerfile);
         WriteFile(Path.Combine(projectPath, "docker-compose.yml"), DockerCompose);
+        WriteFile(Path.Combine(projectPath, "Makefile"), Makefile);
+        WriteFile(Path.Combine(projectPath, "api.http"), ApiHttp);
+        WriteFile(Path.Combine(scriptsPath, "document-endpoints.ps1"), DocumentEndpointsPowerShell);
+        WriteFile(Path.Combine(projectPath, "ENDPOINTS.md"), EndpointsDoc);
         WriteFile(Path.Combine(projectPath, "README.md"), BuildReadme(projectName));
         return true;
     }
@@ -89,6 +95,26 @@ docker compose up --build
 
 Then call endpoints at `http://127.0.0.1:8080`.
 
+## Endpoint Documentation
+
+Quick manual smoke test file:
+
+- `api.http` (works in VS Code REST Client / JetBrains HTTP Client)
+
+Regenerate endpoint docs (macOS/Linux):
+
+```bash
+make endpoints-docs
+```
+
+Regenerate endpoint docs (Windows PowerShell):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\document-endpoints.ps1
+```
+
+Both commands update `ENDPOINTS.md`.
+
 ## What This Scaffold Shows
 
 - route params: `route_param_int("id")`
@@ -141,10 +167,122 @@ bin/
 obj/
 """;
 
+    private const string Makefile = """
+.PHONY: serve check run endpoints-docs
+
+serve:
+	axom serve main.axom --host 127.0.0.1 --port 8080
+
+check:
+	axom check main.axom
+
+run:
+	axom run main.axom
+
+endpoints-docs:
+	cat > ENDPOINTS.md <<'EOF'
+	# Endpoints
+
+	## GET /health
+	- Source: `routes/health_get.axom`
+	- Behavior: returns health route text.
+
+	## GET /users/:id<int>
+	- Source: `routes/users__id_int_get.axom`
+	- Behavior: demonstrates route params via `route_param_int("id")`.
+
+	## GET /search
+	- Source: `routes/search_get.axom`
+	- Query: `q` (String), `page` (Int)
+	- Behavior: demonstrates query params via `query_param*`.
+
+	## GET /request/info
+	- Source: `routes/request_info_get.axom`
+	- Behavior: prints request method/path.
+
+	## GET /missing
+	- Source: `routes/missing_get.axom`
+	- Behavior: explicit `404` via `respond(404, ...)`.
+	EOF
+	@echo "Wrote ENDPOINTS.md"
+""";
+
+    private const string EndpointsDoc = """
+# Endpoints
+
+## GET /health
+- Source: `routes/health_get.axom`
+- Behavior: returns health route text.
+
+## GET /users/:id<int>
+- Source: `routes/users__id_int_get.axom`
+- Behavior: demonstrates route params via `route_param_int("id")`.
+
+## GET /search
+- Source: `routes/search_get.axom`
+- Query: `q` (String), `page` (Int)
+- Behavior: demonstrates query params via `query_param*`.
+
+## GET /request/info
+- Source: `routes/request_info_get.axom`
+- Behavior: prints request method/path.
+
+## GET /missing
+- Source: `routes/missing_get.axom`
+- Behavior: explicit `404` via `respond(404, ...)`.
+""";
+
+    private const string ApiHttp = """
+### health
+GET http://127.0.0.1:8080/health
+
+### user by id
+GET http://127.0.0.1:8080/users/42
+
+### query params
+GET http://127.0.0.1:8080/search?q=axom&page=2
+
+### request context
+GET http://127.0.0.1:8080/request/info
+
+### explicit 404
+GET http://127.0.0.1:8080/missing
+""";
+
+    private const string DocumentEndpointsPowerShell = """
+$content = @'
+# Endpoints
+
+## GET /health
+- Source: `routes/health_get.axom`
+- Behavior: returns health route text.
+
+## GET /users/:id<int>
+- Source: `routes/users__id_int_get.axom`
+- Behavior: demonstrates route params via `route_param_int("id")`.
+
+## GET /search
+- Source: `routes/search_get.axom`
+- Query: `q` (String), `page` (Int)
+- Behavior: demonstrates query params via `query_param*`.
+
+## GET /request/info
+- Source: `routes/request_info_get.axom`
+- Behavior: prints request method/path.
+
+## GET /missing
+- Source: `routes/missing_get.axom`
+- Behavior: explicit `404` via `respond(404, ...)`.
+'@
+
+Set-Content -Path "ENDPOINTS.md" -Value $content -NoNewline
+Write-Host "Wrote ENDPOINTS.md"
+""";
+
     private const string Dockerfile = """
 FROM mcr.microsoft.com/dotnet/sdk:8.0
 
-RUN dotnet tool install -g axom --version 0.4.0-alpha.4
+RUN dotnet tool install -g axom.cli --version 0.4.0-alpha.4
 ENV PATH="$PATH:/root/.dotnet/tools"
 
 WORKDIR /app

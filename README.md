@@ -315,7 +315,8 @@ axom init myapp
 ```
 
 This creates an API-first scaffold (`main.axom`, `routes/`, `.gitignore`,
-`Dockerfile`, `docker-compose.yml`, and a project README).
+`Dockerfile`, `docker-compose.yml`, `Makefile`, `api.http`, a Windows
+PowerShell helper, and a project README).
 
 If the target directory already exists and is not empty, use:
 
