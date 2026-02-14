@@ -22,7 +22,7 @@ public class CliExitCodeTests
 
             Assert.Equal(1, exitCode);
             Assert.Equal(string.Empty, output.ToString());
-            Assert.Contains("Usage: axom <build|run|check>", error.ToString());
+            Assert.Contains("Usage: axom <build|run|check|serve>", error.ToString());
         }
         finally
         {
@@ -79,7 +79,7 @@ public class CliExitCodeTests
 
             Assert.Equal(1, exitCode);
             Assert.Equal(string.Empty, output.ToString());
-            Assert.Contains("Usage: axom <build|run|check>", error.ToString());
+            Assert.Contains("Usage: axom <build|run|check|serve>", error.ToString());
         }
         finally
         {
@@ -114,7 +114,7 @@ public class CliExitCodeTests
 
             Assert.Equal(1, exitCode);
             Assert.Equal(string.Empty, output.ToString());
-            Assert.Contains("Usage: axom <build|run|check>", error.ToString());
+            Assert.Contains("Usage: axom <build|run|check|serve>", error.ToString());
         }
         finally
         {

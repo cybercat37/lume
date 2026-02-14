@@ -1,4 +1,5 @@
-﻿using Axom.Compiler;
+using Axom.Compiler;
+using Axom.Runtime.Http;
 using System.Diagnostics;
 
 namespace Axom.Cli;
@@ -8,10 +9,12 @@ public class Program
     public static int Main(string[] args)
     {
         const string usage =
-            "Usage: axom <build|run|check> <file.axom> [options]\n" +
+            "Usage: axom <build|run|check|serve> <file.axom> [options]\n" +
             "\n" +
             "Options:\n" +
             "  --out <dir>   Override output directory (default: out)\n" +
+            "  --host <addr> Bind host for serve (default: 127.0.0.1)\n" +
+            "  --port <n>    Bind port for serve (default: 8080)\n" +
             "  --quiet       Suppress non-error output\n" +
             "  --verbose     Include extra context\n" +
             "  --cache       Enable compilation cache\n" +
@@ -21,7 +24,8 @@ public class Program
             "Examples:\n" +
             "  axom check hello.axom\n" +
             "  axom build hello.axom --out out\n" +
-            "  axom run hello.axom --cache\n";
+            "  axom run hello.axom --cache\n" +
+            "  axom serve hello.axom --host 127.0.0.1 --port 8080\n";
 
         if (args.Length == 1)
         {
@@ -48,7 +52,7 @@ public class Program
         var command = args[0];
         var inputPath = args[1];
 
-        if (command != "build" && command != "run" && command != "check")
+        if (command != "build" && command != "run" && command != "check" && command != "serve")
         {
             Console.Error.WriteLine(usage);
             return 1;
@@ -58,6 +62,8 @@ public class Program
         var quiet = false;
         var verbose = false;
         var useCache = false;
+        var host = "127.0.0.1";
+        var port = 8080;
 
         for (var i = 2; i < args.Length; i++)
         {
@@ -72,6 +78,43 @@ public class Program
 
                 outputDir = args[i + 1];
                 if (string.IsNullOrWhiteSpace(outputDir))
+                {
+                    Console.Error.WriteLine(usage);
+                    return 1;
+                }
+
+                i++;
+                continue;
+            }
+
+            if (argument == "--host")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    Console.Error.WriteLine(usage);
+                    return 1;
+                }
+
+                host = args[i + 1];
+                if (string.IsNullOrWhiteSpace(host))
+                {
+                    Console.Error.WriteLine(usage);
+                    return 1;
+                }
+
+                i++;
+                continue;
+            }
+
+            if (argument == "--port")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    Console.Error.WriteLine(usage);
+                    return 1;
+                }
+
+                if (!int.TryParse(args[i + 1], out port) || port is < 1 or > 65535)
                 {
                     Console.Error.WriteLine(usage);
                     return 1;
@@ -109,6 +152,12 @@ public class Program
             return 1;
         }
 
+        if (command == "serve" && !string.IsNullOrWhiteSpace(outputDir) && outputDir != "out")
+        {
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
         if (!File.Exists(inputPath))
         {
             Console.Error.WriteLine($"File not found: {inputPath}");
@@ -135,6 +184,11 @@ public class Program
             return 0;
         }
 
+        if (command == "serve")
+        {
+            return ServeProgram(inputPath, host, port, quiet, verbose);
+        }
+
         Directory.CreateDirectory(outputDir);
         var outputPath = Path.Combine(outputDir, "Program.cs");
         File.WriteAllText(outputPath, result.GeneratedCode);
@@ -155,6 +209,50 @@ public class Program
 
         // run command: compile and execute
         return RunGeneratedCode(outputDir);
+    }
+
+    private static int ServeProgram(string inputPath, string host, int port, bool quiet, bool verbose)
+    {
+        using var cancellationTokenSource = new CancellationTokenSource();
+        ConsoleCancelEventHandler handler = (_, eventArgs) =>
+        {
+            eventArgs.Cancel = true;
+            cancellationTokenSource.Cancel();
+        };
+
+        Console.CancelKeyPress += handler;
+
+        try
+        {
+            var httpHost = new AxomHttpHost();
+
+            if (!quiet)
+            {
+                if (verbose)
+                {
+                    Console.WriteLine($"Serving source: {inputPath}");
+                }
+
+                Console.WriteLine($"Listening on http://{host}:{port}");
+                Console.WriteLine("Press Ctrl+C to stop.");
+            }
+
+            httpHost.RunAsync(host, port, cancellationTokenSource.Token).GetAwaiter().GetResult();
+            return 0;
+        }
+        catch (OperationCanceledException)
+        {
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error serving code: {ex.Message}");
+            return 1;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= handler;
+        }
     }
 
     static int RunGeneratedCode(string outputDir)
