@@ -93,6 +93,7 @@ clear()
 - `rand_int(max)` returns `Ok(n)` or `Error("max must be > 0")`
 - `route_param(name)`, `route_param_int(name)`, `route_param_float(name)` return `Ok(value)` or `Error(...)` in `serve` route handlers
 - `respond(status, body)` sets explicit HTTP status/body in `serve` route handlers
+- `request_method()` and `request_path()` expose request context in `serve` route handlers
 
 **Value pipe**
 
@@ -283,6 +284,7 @@ Current HTTP + DB track status (Early/Partial):
 - Route conflict diagnostics run before server start.
 - Discovered routes execute Axom route files and return their output as `text/plain`.
 - Route handlers can return explicit HTTP responses via `respond(status, body)`.
+- Route handlers can read request method/path via `request_method()` and `request_path()`.
 - HTTP client, DB runtime, typed SQL interpolation, and auth/security DSL are planned in the M13-M21 track.
 
 Design references:
@@ -338,6 +340,7 @@ myapp/
   routes/
     health_get.axom
     missing_get.axom
+    request_info_get.axom
     users__id_int_get.axom
 ```
 
@@ -369,6 +372,13 @@ print "user route"
 respond(404, "missing route example")
 ```
 
+`myapp/routes/request_info_get.axom`:
+
+```axom
+print request_method()
+print request_path()
+```
+
 Run and test:
 
 ```bash
@@ -376,6 +386,7 @@ axom serve myapp/main.axom --host 127.0.0.1 --port 8080
 curl -i http://127.0.0.1:8080/health
 curl -i http://127.0.0.1:8080/users/42
 curl -i http://127.0.0.1:8080/missing
+curl -i http://127.0.0.1:8080/request/info
 ```
 
 ### Check a Axom Program

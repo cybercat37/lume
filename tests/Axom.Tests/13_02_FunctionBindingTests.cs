@@ -246,6 +246,25 @@ handler()
     }
 
     [Fact]
+    public void Request_context_builtins_bind_without_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+fn handler() {
+  print request_method()
+  print request_path()
+}
+
+handler()
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public void Channel_send_recv_bind_without_diagnostic()
     {
         var sourceText = new SourceText(@"

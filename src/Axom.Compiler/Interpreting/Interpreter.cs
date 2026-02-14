@@ -18,6 +18,8 @@ public sealed class Interpreter
 {
     private readonly Queue<string> inputBuffer = new();
     private readonly Dictionary<string, string> routeParameters = new(StringComparer.Ordinal);
+    private string? requestMethod;
+    private string? requestPath;
 
     public void SetInput(params string[] inputs)
     {
@@ -42,7 +44,7 @@ public sealed class Interpreter
 
         var lowerer = new Lowerer();
         var loweredProgram = lowerer.Lower(bindResult.Program);
-        var evaluator = new Evaluator(loweredProgram, inputBuffer, routeParameters);
+        var evaluator = new Evaluator(loweredProgram, inputBuffer, routeParameters, requestMethod, requestPath);
         var evaluationResult = evaluator.Evaluate();
         var mergedDiagnostics = bindResult.Diagnostics
             .Concat(evaluationResult.Diagnostics)
@@ -59,6 +61,12 @@ public sealed class Interpreter
         }
     }
 
+    public void SetRequestContext(string method, string path)
+    {
+        requestMethod = method;
+        requestPath = path;
+    }
+
     private sealed class Evaluator
     {
         private readonly LoweredProgram program;
@@ -68,6 +76,8 @@ public sealed class Interpreter
         private readonly List<Diagnostic> diagnostics;
         private readonly Queue<string> inputBuffer;
         private readonly IReadOnlyDictionary<string, string> routeParameters;
+        private readonly string? requestMethod;
+        private readonly string? requestPath;
         private readonly object inputLock;
         private readonly object randomLock;
         private readonly Stack<ScopeFrame> scopeFrames;
@@ -80,6 +90,8 @@ public sealed class Interpreter
             LoweredProgram program,
             Queue<string> inputBuffer,
             IReadOnlyDictionary<string, string> routeParameters,
+            string? requestMethod,
+            string? requestPath,
             Dictionary<VariableSymbol, object?>? initialValues = null,
             object? sharedInputLock = null,
             Random? sharedRandom = null,
@@ -95,6 +107,8 @@ public sealed class Interpreter
             diagnostics = new List<Diagnostic>();
             this.inputBuffer = inputBuffer;
             this.routeParameters = routeParameters;
+            this.requestMethod = requestMethod;
+            this.requestPath = requestPath;
             inputLock = sharedInputLock ?? new object();
             random = sharedRandom ?? new Random();
             randomLock = sharedRandomLock ?? new object();
@@ -712,7 +726,7 @@ public sealed class Interpreter
             var token = ownerScope?.CancellationToken ?? cancellationToken;
             var task = Task.Run(() =>
             {
-                var evaluator = new Evaluator(program, inputBuffer, routeParameters, snapshot, inputLock, random, randomLock, token);
+                var evaluator = new Evaluator(program, inputBuffer, routeParameters, requestMethod, requestPath, snapshot, inputLock, random, randomLock, token);
                 return evaluator.EvaluateSpawnBody(spawn.Body);
             }, token);
 
@@ -1022,6 +1036,10 @@ public sealed class Interpreter
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "respond expects (Int status, body)."));
                     return null;
+                case "request_method":
+                    return requestMethod ?? "request_method is only available in serve route handlers";
+                case "request_path":
+                    return requestPath ?? "request_path is only available in serve route handlers";
                 case "len":
                     return arguments[0] switch
                     {

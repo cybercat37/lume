@@ -1,0 +1,2 @@
+print request_method()
+print request_path()

@@ -23,12 +23,14 @@ Current `serve` behavior includes route discovery + Axom route execution: files 
 Dynamic segment values are available in handlers via `route_param("name")`,
 `route_param_int("name")`, and `route_param_float("name")`.
 Handlers can also set explicit status/body via `respond(status, body)`.
+Request metadata is available via `request_method()` and `request_path()`.
 
 Try:
 
 ```bash
 curl -i http://127.0.0.1:8080/users/42
 curl -i http://127.0.0.1:8080/missing
+curl -i http://127.0.0.1:8080/request/info
 ```
 
 Expected body:
@@ -45,4 +47,11 @@ HTTP/1.1 404 Not Found
 ...
 
 missing route example
+```
+
+Expected `request/info` body:
+
+```text
+GET
+/request/info
 ```

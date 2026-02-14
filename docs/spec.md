@@ -168,6 +168,7 @@ LetStmt := "let" Identifier IntentAnnotation? "=" Expression
 - Discovered routes execute Axom route files and return plain-text responses.
 - Route handlers can read dynamic params using `route_param(name)`, `route_param_int(name)`, and `route_param_float(name)`.
 - Route handlers can override status/body with `respond(status, body)`.
+- Route handlers can read request context with `request_method()` and `request_path()`.
 - HTTP client builtins, DB runtime APIs, typed SQL interpolation, and auth/security DSL are planned.
 - Reference docs: `docs/roadmap/http-db-plan.md`, `docs/proposals/http-db-reference.md`.
 

@@ -1101,6 +1101,8 @@ public sealed class Emitter
                 "route_param_int" => $"AxomResult<int>.Error(\"route_param_int is only available in serve route handlers\")",
                 "route_param_float" => $"AxomResult<double>.Error(\"route_param_float is only available in serve route handlers\")",
                 "respond" => $"((Func<object?>)(() => {{ Console.WriteLine(AxomStringify({argumentExpressions[1]})); return null; }}))()",
+                "request_method" => "\"request_method is only available in serve route handlers\"",
+                "request_path" => "\"request_path is only available in serve route handlers\"",
                 "len" => $"{args}.Length",
                 "abs" => $"Math.Abs({args})",
                 "min" => $"Math.Min({args})",

@@ -61,6 +61,20 @@ public static class BuiltinFunctions
         TypeSymbol.Unit,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol RequestMethod = new(
+        "request_method",
+        Array.Empty<ParameterSymbol>(),
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.String,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol RequestPath = new(
+        "request_path",
+        Array.Empty<ParameterSymbol>(),
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.String,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Len = new(
         "len",
         new[] { new ParameterSymbol("text", TypeSymbol.String) },
@@ -397,6 +411,8 @@ public static class BuiltinFunctions
         [RouteParamInt.Name] = RouteParamInt,
         [RouteParamFloat.Name] = RouteParamFloat,
         [Respond.Name] = Respond,
+        [RequestMethod.Name] = RequestMethod,
+        [RequestPath.Name] = RequestPath,
         [Len.Name] = Len,
         [Abs.Name] = Abs,
         [Min.Name] = Min,

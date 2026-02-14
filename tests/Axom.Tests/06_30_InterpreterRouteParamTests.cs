@@ -102,4 +102,21 @@ respond(404, ""missing user"")
         Assert.Equal("missing user", result.Response.Body);
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Request_context_builtins_return_method_and_path()
+    {
+        var sourceText = new SourceText(@"
+print request_method()
+print request_path()
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        interpreter.SetRequestContext("GET", "/users/42");
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("GET\n/users/42", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }
