@@ -54,8 +54,13 @@ public sealed class AxomHttpHost
         foreach (var route in routes)
         {
             var aspPattern = ToAspNetRoutePattern(route.Template);
-            app.MapMethods(aspPattern, new[] { route.Method }, (HttpContext context) =>
+            app.MapMethods(aspPattern, new[] { route.Method }, async (HttpContext context) =>
             {
+                if (route.Handler is not null)
+                {
+                    return await route.Handler(context, context.RequestAborted);
+                }
+
                 var routeValues = context.Request.RouteValues
                     .Where(entry => entry.Value is not null)
                     .Select(entry => $"{entry.Key}={entry.Value}")

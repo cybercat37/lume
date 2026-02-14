@@ -71,7 +71,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with whitelist for `System.Math`, `System.String`, and `System.Convert` |
 | Pipeline operator + combinators | \|> and combinators | Partial | Value pipe `|>` implemented; combinator syntax remains proposal-only |
 | Aspects/runtime policies | Builtin aspect tags + runtime behavior | Partial | `@logging` and `@timeout(ms)` are implemented with keyword syntax and interpreter/codegen parity |
-| HTTP server + route discovery | `serve` + file-based route model | Partial | `axom serve` implemented with health endpoint, route discovery (`index`, method suffixes, dynamic params), conflict diagnostics with overlap reasons, and runtime route stubs |
+| HTTP server + route discovery | `serve` + file-based route model | Partial | `axom serve` implemented with health endpoint, route discovery (`index`, method suffixes, dynamic params), conflict diagnostics with overlap reasons, and Axom route-file execution |
 | Scoped cleanup (`defer`) | Scope-exit cleanup with predictable ordering | Implemented | `defer <expr>` and `defer { ... }` run on scope exit in LIFO order, including early returns |
 
 ## Milestones (Priority Ordered)
@@ -280,7 +280,7 @@ Proposal backlog:
 Current HTTP+DB progress:
 - M13 (Partial): `axom serve` and runtime host are implemented; `/health` endpoint is live; graceful stop via Ctrl+C is supported.
 - M14 (Partial): route discovery/normalization and pre-boot conflict diagnostics are implemented, including overlap-reason details and dynamic filename validation.
-- M14 runtime bridge (Partial): discovered routes are mounted as runtime stubs (handler execution from Axom route files is follow-up).
+- M14 runtime bridge (Implemented): discovered routes execute Axom route files and return plain-text output.
 
 See `docs/roadmap/http-db-plan.md` for objectives, DoD, implementation tasks,
 test strategy, sprint cadence, and risk mitigations.

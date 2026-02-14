@@ -228,7 +228,7 @@ public class Program
 
         using var cancellationTokenSource = new CancellationTokenSource();
         var runtimeRoutes = routeResult.Routes
-            .Select(route => new RouteEndpoint(route.Method, route.Template, route.FilePath))
+            .Select(RouteHandlerFactory.CreateEndpoint)
             .ToList();
 
         ConsoleCancelEventHandler handler = (_, eventArgs) =>

@@ -49,7 +49,7 @@ curl -i http://127.0.0.1:8080/health
 Current `serve` behavior is intentionally incremental:
 - route files are discovered from `routes/**/*.axom`
 - route conflicts are diagnosed before boot
-- discovered routes are mounted as runtime stubs
+- discovered routes execute Axom handlers and return plain-text output
 
 ### Install via NuGet (dotnet tool)
 

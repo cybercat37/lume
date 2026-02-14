@@ -279,7 +279,7 @@ Current HTTP + DB track status (Early/Partial):
 - `axom serve <file.axom>` is available with a runtime health endpoint (`GET /health`).
 - File-based route discovery is available from `routes/**/*.axom` (method suffixes, `index`, dynamic params like `__id_int`).
 - Route conflict diagnostics run before server start.
-- Discovered routes are currently served as runtime stubs; Axom handler execution is next.
+- Discovered routes execute Axom route files and return their output as `text/plain`.
 - HTTP client, DB runtime, typed SQL interpolation, and auth/security DSL are planned in the M13-M21 track.
 
 Design references:
@@ -325,7 +325,7 @@ Quick check:
 curl -i http://127.0.0.1:8080/health
 ```
 
-Route files under `routes/**/*.axom` are discovered and mounted as stub endpoints.
+Route files under `routes/**/*.axom` are discovered and executed as handlers.
 
 Minimal route bootstrap example:
 
@@ -352,6 +352,7 @@ print "health route"
 `myapp/routes/users__id_int_get.axom`:
 
 ```axom
+print input()
 print "user route"
 ```
 

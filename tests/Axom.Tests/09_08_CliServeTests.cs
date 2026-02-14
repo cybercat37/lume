@@ -1,3 +1,5 @@
+using Axom.Compiler.Http.Routing;
+using Axom.Cli;
 using Axom.Runtime.Http;
 using System.Globalization;
 using System.Net;
@@ -30,28 +32,47 @@ public class CliServeTests
     }
 
     [Fact]
-    public async Task Http_host_serves_discovered_route_stub()
+    public async Task Http_host_executes_axom_route_handler()
     {
         var host = new AxomHttpHost();
         using var cancellation = new CancellationTokenSource();
         var port = GetFreePort();
-        var routes = new[]
+        var tempDir = CreateTempDirectory();
+
+        try
         {
-            new RouteEndpoint("GET", "/users/:id<int>", "routes/users__id_int_get.axom")
-        };
+            var routeFile = Path.Combine(tempDir, "users__id_int_get.axom");
+            File.WriteAllText(routeFile, "print input()\nprint \"user by id route\"");
+            var routeDefinition = new RouteDefinition(
+                "GET",
+                "/users/:id<int>",
+                routeFile,
+                new[]
+                {
+                    RouteSegment.Static("users"),
+                    RouteSegment.Dynamic("id", "int")
+                });
+            var routes = new[]
+            {
+                RouteHandlerFactory.CreateEndpoint(routeDefinition)
+            };
 
-        var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+            var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
 
-        using var client = new HttpClient();
-        var response = await WaitForAsync(client, $"http://127.0.0.1:{port}/users/42");
-        var body = await response.Content.ReadAsStringAsync();
+            using var client = new HttpClient();
+            var response = await WaitForAsync(client, $"http://127.0.0.1:{port}/users/42");
+            var body = await response.Content.ReadAsStringAsync();
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("GET /users/:id<int>", body, StringComparison.Ordinal);
-        Assert.Contains("params{id=42}", body, StringComparison.Ordinal);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("42\nuser by id route", body);
 
-        cancellation.Cancel();
-        await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+            cancellation.Cancel();
+            await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
     }
 
     [Fact]

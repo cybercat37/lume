@@ -1,1 +1,2 @@
+print input()
 print "user by id route"
