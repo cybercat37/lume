@@ -29,6 +29,13 @@ public static class BuiltinFunctions
         TypeSymbol.String,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol RouteParam = new(
+        "route_param",
+        new[] { new ParameterSymbol("name", TypeSymbol.String) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Len = new(
         "len",
         new[] { new ParameterSymbol("text", TypeSymbol.String) },
@@ -361,6 +368,7 @@ public static class BuiltinFunctions
         [Print.Name] = Print,
         [Println.Name] = Println,
         [Input.Name] = Input,
+        [RouteParam.Name] = RouteParam,
         [Len.Name] = Len,
         [Abs.Name] = Abs,
         [Min.Name] = Min,

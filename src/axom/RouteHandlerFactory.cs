@@ -1,4 +1,3 @@
-using System.Globalization;
 using Axom.Compiler.Http.Routing;
 using Axom.Compiler.Interpreting;
 using Axom.Compiler.Parsing;
@@ -35,12 +34,12 @@ public static class RouteHandlerFactory
             var interpreter = new Interpreter();
             if (dynamicSegmentNames.Length > 0)
             {
-                var routeInputs = dynamicSegmentNames
+                var routeValues = dynamicSegmentNames
                     .Select(name => context.Request.RouteValues.TryGetValue(name, out var value)
-                        ? Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
-                        : string.Empty)
-                    .ToArray();
-                interpreter.SetInput(routeInputs);
+                        ? (name, value: Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)
+                        : (name, value: string.Empty))
+                    .ToDictionary(entry => entry.name, entry => entry.value, StringComparer.Ordinal);
+                interpreter.SetRouteParameters(routeValues);
             }
 
             var result = interpreter.Run(syntaxTree);

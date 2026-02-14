@@ -50,6 +50,7 @@ Current `serve` behavior is intentionally incremental:
 - route files are discovered from `routes/**/*.axom`
 - route conflicts are diagnosed before boot
 - discovered routes execute Axom handlers and return plain-text output
+- route handlers can read dynamic segments with `route_param("name")`
 
 ### Install via NuGet (dotnet tool)
 

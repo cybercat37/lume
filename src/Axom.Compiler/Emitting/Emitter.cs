@@ -592,6 +592,7 @@ public sealed class Emitter
                 && function.Function.IsBuiltin
                 && (string.Equals(function.Function.Name, "rand_int", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "time_from_iso", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "route_param", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "result_map", StringComparison.Ordinal)) => true,
             LoweredCallExpression call => UsesRandomResultBuiltin(call.Callee) || call.Arguments.Any(UsesRandomResultBuiltin),
             LoweredUnaryExpression unary => UsesRandomResultBuiltin(unary.Operand),
@@ -1093,6 +1094,7 @@ public sealed class Emitter
                 "println" => $"Console.WriteLine({printValue})",
                 "print" => $"Console.WriteLine({printValue})",
                 "input" => "Console.ReadLine()",
+                "route_param" => $"AxomResult<string>.Error(\"route_param is only available in serve route handlers\")",
                 "len" => $"{args}.Length",
                 "abs" => $"Math.Abs({args})",
                 "min" => $"Math.Min({args})",

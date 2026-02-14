@@ -178,6 +178,27 @@ print work()
     }
 
     [Fact]
+    public void Route_param_builtin_binds_without_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+fn resolve() -> String {
+  return match route_param(""id"") {
+    Ok(value) -> value
+    Error(_) -> ""unknown""
+  }
+}
+
+print resolve()
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public void Channel_send_recv_bind_without_diagnostic()
     {
         var sourceText = new SourceText(@"

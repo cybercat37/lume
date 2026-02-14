@@ -17,6 +17,7 @@ namespace Axom.Compiler.Interpreting;
 public sealed class Interpreter
 {
     private readonly Queue<string> inputBuffer = new();
+    private readonly Dictionary<string, string> routeParameters = new(StringComparer.Ordinal);
 
     public void SetInput(params string[] inputs)
     {
@@ -41,12 +42,21 @@ public sealed class Interpreter
 
         var lowerer = new Lowerer();
         var loweredProgram = lowerer.Lower(bindResult.Program);
-        var evaluator = new Evaluator(loweredProgram, inputBuffer);
+        var evaluator = new Evaluator(loweredProgram, inputBuffer, routeParameters);
         var evaluationResult = evaluator.Evaluate();
         var mergedDiagnostics = bindResult.Diagnostics
             .Concat(evaluationResult.Diagnostics)
             .ToList();
         return new InterpreterResult(evaluationResult.Output, mergedDiagnostics);
+    }
+
+    public void SetRouteParameters(IReadOnlyDictionary<string, string> parameters)
+    {
+        routeParameters.Clear();
+        foreach (var parameter in parameters)
+        {
+            routeParameters[parameter.Key] = parameter.Value;
+        }
     }
 
     private sealed class Evaluator
@@ -57,6 +67,7 @@ public sealed class Interpreter
         private readonly StringBuilder output;
         private readonly List<Diagnostic> diagnostics;
         private readonly Queue<string> inputBuffer;
+        private readonly IReadOnlyDictionary<string, string> routeParameters;
         private readonly object inputLock;
         private readonly object randomLock;
         private readonly Stack<ScopeFrame> scopeFrames;
@@ -67,6 +78,7 @@ public sealed class Interpreter
         public Evaluator(
             LoweredProgram program,
             Queue<string> inputBuffer,
+            IReadOnlyDictionary<string, string> routeParameters,
             Dictionary<VariableSymbol, object?>? initialValues = null,
             object? sharedInputLock = null,
             Random? sharedRandom = null,
@@ -81,6 +93,7 @@ public sealed class Interpreter
             output = new StringBuilder();
             diagnostics = new List<Diagnostic>();
             this.inputBuffer = inputBuffer;
+            this.routeParameters = routeParameters;
             inputLock = sharedInputLock ?? new object();
             random = sharedRandom ?? new Random();
             randomLock = sharedRandomLock ?? new object();
@@ -698,7 +711,7 @@ public sealed class Interpreter
             var token = ownerScope?.CancellationToken ?? cancellationToken;
             var task = Task.Run(() =>
             {
-                var evaluator = new Evaluator(program, inputBuffer, snapshot, inputLock, random, randomLock, token);
+                var evaluator = new Evaluator(program, inputBuffer, routeParameters, snapshot, inputLock, random, randomLock, token);
                 return evaluator.EvaluateSpawnBody(spawn.Body);
             }, token);
 
@@ -953,6 +966,24 @@ public sealed class Interpreter
                     return null;
                 case "input":
                     return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
+                case "route_param":
+                    if (arguments.Length == 1 && arguments[0] is string routeParamName)
+                    {
+                        if (routeParameters.TryGetValue(routeParamName, out var routeParamValue))
+                        {
+                            return new SumValue(
+                                new SumVariantSymbol("Ok", TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String), TypeSymbol.String),
+                                routeParamValue);
+                        }
+
+                        return new SumValue(
+                            new SumVariantSymbol("Error", TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String), TypeSymbol.String),
+                            $"route parameter '{routeParamName}' not found");
+                    }
+
+                    return new SumValue(
+                        new SumVariantSymbol("Error", TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String), TypeSymbol.String),
+                        "route parameter name must be a string");
                 case "len":
                     return arguments[0] switch
                     {

@@ -20,6 +20,7 @@ ok
 
 Current `serve` behavior includes route discovery + Axom route execution: files under
 `examples/http/routes` are discovered and executed when their path matches.
+Dynamic segment values are available in handlers via `route_param("name")`.
 
 Try:
 

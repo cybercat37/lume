@@ -166,6 +166,7 @@ LetStmt := "let" Identifier IntentAnnotation? "=" Expression
 - CLI `serve` mode is available (`axom serve <file.axom> --host <addr> --port <n>`).
 - Route discovery from `routes/**/*.axom` is available with compile-time conflict diagnostics.
 - Discovered routes execute Axom route files and return plain-text responses.
+- Route handlers can read dynamic params using `route_param(name) -> Result<String, String>`.
 - HTTP client builtins, DB runtime APIs, typed SQL interpolation, and auth/security DSL are planned.
 - Reference docs: `docs/roadmap/http-db-plan.md`, `docs/proposals/http-db-reference.md`.
 
