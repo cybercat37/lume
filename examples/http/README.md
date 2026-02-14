@@ -22,6 +22,7 @@ Current `serve` behavior includes route discovery + Axom route execution: files 
 `examples/http/routes` are discovered and executed when their path matches.
 Dynamic segment values are available in handlers via `route_param("name")`,
 `route_param_int("name")`, and `route_param_float("name")`.
+Handlers can also set explicit status/body via `respond(status, body)`.
 
 Try:
 

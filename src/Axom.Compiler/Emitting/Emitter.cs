@@ -437,9 +437,10 @@ public sealed class Emitter
             LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
                 && function.Function.IsBuiltin
                 && (string.Equals(function.Function.Name, "print", StringComparison.Ordinal)
-                    || string.Equals(function.Function.Name, "println", StringComparison.Ordinal))
+                    || string.Equals(function.Function.Name, "println", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "respond", StringComparison.Ordinal))
                 && call.Arguments.Count > 0
-                && ShouldStringifyForPrint(call.Arguments[0].Type) => true,
+                && ShouldStringifyForPrint(call.Arguments[^1].Type) => true,
             LoweredCallExpression call => UsesStringify(call.Callee) || call.Arguments.Any(UsesStringify),
             LoweredUnaryExpression unary => UsesStringify(unary.Operand),
             LoweredBinaryExpression binary => UsesStringify(binary.Left) || UsesStringify(binary.Right),
@@ -1099,6 +1100,7 @@ public sealed class Emitter
                 "route_param" => $"AxomResult<string>.Error(\"route_param is only available in serve route handlers\")",
                 "route_param_int" => $"AxomResult<int>.Error(\"route_param_int is only available in serve route handlers\")",
                 "route_param_float" => $"AxomResult<double>.Error(\"route_param_float is only available in serve route handlers\")",
+                "respond" => $"((Func<object?>)(() => {{ Console.WriteLine(AxomStringify({argumentExpressions[1]})); return null; }}))()",
                 "len" => $"{args}.Length",
                 "abs" => $"Math.Abs({args})",
                 "min" => $"Math.Min({args})",

@@ -47,7 +47,7 @@ public sealed class Interpreter
         var mergedDiagnostics = bindResult.Diagnostics
             .Concat(evaluationResult.Diagnostics)
             .ToList();
-        return new InterpreterResult(evaluationResult.Output, mergedDiagnostics);
+        return new InterpreterResult(evaluationResult.Output, mergedDiagnostics, evaluationResult.Response);
     }
 
     public void SetRouteParameters(IReadOnlyDictionary<string, string> parameters)
@@ -74,6 +74,7 @@ public sealed class Interpreter
         private readonly CancellationToken cancellationToken;
         private Random random;
         private FunctionSymbol? currentFunction;
+        private InterpreterHttpResponse? response;
 
         public Evaluator(
             LoweredProgram program,
@@ -112,7 +113,7 @@ public sealed class Interpreter
                 }
             }
 
-            return new InterpreterResult(output.ToString().TrimEnd('\n', '\r'), diagnostics);
+            return new InterpreterResult(output.ToString().TrimEnd('\n', '\r'), diagnostics, response);
         }
 
         private void EvaluateStatement(LoweredStatement statement)
@@ -1012,6 +1013,15 @@ public sealed class Interpreter
                     }
 
                     return BuildFloatResult(isSuccess: false, null, "route parameter name must be a string");
+                case "respond":
+                    if (arguments.Length == 2 && arguments[0] is int status)
+                    {
+                        response = new InterpreterHttpResponse(status, FormatValue(arguments[1]));
+                        return null;
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "respond expects (Int status, body)."));
+                    return null;
                 case "len":
                     return arguments[0] switch
                     {

@@ -85,4 +85,21 @@ print route_param_float(""score"")
         Assert.Equal("Error(route parameter 'score' is not a valid Float)", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Respond_sets_http_response_payload()
+    {
+        var sourceText = new SourceText(@"
+respond(404, ""missing user"")
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.NotNull(result.Response);
+        Assert.Equal(404, result.Response!.StatusCode);
+        Assert.Equal("missing user", result.Response.Body);
+        Assert.Empty(result.Diagnostics);
+    }
 }

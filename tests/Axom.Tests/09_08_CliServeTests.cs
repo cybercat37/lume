@@ -58,13 +58,102 @@ public class CliServeTests
             };
 
             var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+            await Task.Delay(100);
+            if (runTask.IsFaulted)
+            {
+                throw runTask.Exception;
+            }
 
             using var client = new HttpClient();
-            var response = await WaitForAsync(client, $"http://127.0.0.1:{port}/users/42");
-            var body = await response.Content.ReadAsStringAsync();
+            var timeoutAt = DateTime.UtcNow.AddSeconds(5);
+            HttpResponseMessage? response = null;
+            while (DateTime.UtcNow < timeoutAt)
+            {
+                try
+                {
+                    response = await client.GetAsync($"http://127.0.0.1:{port}/users/42");
+                    break;
+                }
+                catch (HttpRequestException)
+                {
+                    if (runTask.IsFaulted)
+                    {
+                        throw runTask.Exception;
+                    }
+
+                    await Task.Delay(50);
+                }
+            }
+
+            Assert.NotNull(response);
+            var body = await response!.Content.ReadAsStringAsync();
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("42\nuser by id route", body);
+
+            cancellation.Cancel();
+            await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Http_host_uses_respond_status_and_body_from_handler()
+    {
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var routeFile = Path.Combine(tempDir, "users__id_int_get.axom");
+            File.WriteAllText(routeFile, "respond(404, \"user not found\")");
+            var routeDefinition = new RouteDefinition(
+                "GET",
+                "/users/:id<int>",
+                routeFile,
+                new[]
+                {
+                    RouteSegment.Static("users"),
+                    RouteSegment.Dynamic("id", "int")
+                });
+            var routes = new[]
+            {
+                RouteHandlerFactory.CreateEndpoint(routeDefinition)
+            };
+
+            var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+
+            using var client = new HttpClient();
+            var timeoutAt = DateTime.UtcNow.AddSeconds(5);
+            HttpResponseMessage? response = null;
+            while (DateTime.UtcNow < timeoutAt)
+            {
+                try
+                {
+                    response = await client.GetAsync($"http://127.0.0.1:{port}/users/42");
+                    break;
+                }
+                catch (HttpRequestException)
+                {
+                    if (runTask.IsFaulted)
+                    {
+                        throw runTask.Exception;
+                    }
+
+                    await Task.Delay(50);
+                }
+            }
+
+            Assert.NotNull(response);
+            var body = await response!.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal("user not found", body);
 
             cancellation.Cancel();
             await runTask.WaitAsync(TimeSpan.FromSeconds(5));

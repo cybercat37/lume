@@ -92,6 +92,7 @@ clear()
 - `time_from_iso(text)` returns `Ok(instant)` or `Error("invalid ISO-8601 instant")`
 - `rand_int(max)` returns `Ok(n)` or `Error("max must be > 0")`
 - `route_param(name)`, `route_param_int(name)`, `route_param_float(name)` return `Ok(value)` or `Error(...)` in `serve` route handlers
+- `respond(status, body)` sets explicit HTTP status/body in `serve` route handlers
 
 **Value pipe**
 
@@ -281,6 +282,7 @@ Current HTTP + DB track status (Early/Partial):
 - File-based route discovery is available from `routes/**/*.axom` (method suffixes, `index`, dynamic params like `__id_int`).
 - Route conflict diagnostics run before server start.
 - Discovered routes execute Axom route files and return their output as `text/plain`.
+- Route handlers can return explicit HTTP responses via `respond(status, body)`.
 - HTTP client, DB runtime, typed SQL interpolation, and auth/security DSL are planned in the M13-M21 track.
 
 Design references:

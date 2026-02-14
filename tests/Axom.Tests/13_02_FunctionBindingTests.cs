@@ -228,6 +228,24 @@ print resolve_score()
     }
 
     [Fact]
+    public void Respond_builtin_binds_without_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+fn handler() {
+  respond(404, ""missing"")
+}
+
+handler()
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public void Channel_send_recv_bind_without_diagnostic()
     {
         var sourceText = new SourceText(@"

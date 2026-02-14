@@ -51,6 +51,7 @@ Current `serve` behavior is intentionally incremental:
 - route conflicts are diagnosed before boot
 - discovered routes execute Axom handlers and return plain-text output
 - route handlers can read dynamic segments with `route_param("name")`, `route_param_int("name")`, and `route_param_float("name")`
+- route handlers can set explicit status/body with `respond(status, body)`
 
 ### Install via NuGet (dotnet tool)
 

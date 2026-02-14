@@ -280,7 +280,7 @@ Proposal backlog:
 Current HTTP+DB progress:
 - M13 (Partial): `axom serve` and runtime host are implemented; `/health` endpoint is live; graceful stop via Ctrl+C is supported.
 - M14 (Partial): route discovery/normalization and pre-boot conflict diagnostics are implemented, including overlap-reason details and dynamic filename validation.
-- M14 runtime bridge (Implemented): discovered routes execute Axom route files, expose dynamic params via `route_param*` helpers, and return plain-text output.
+- M14 runtime bridge (Implemented): discovered routes execute Axom route files, expose dynamic params via `route_param*` helpers, support explicit `respond(status, body)`, and return plain-text output.
 
 See `docs/roadmap/http-db-plan.md` for objectives, DoD, implementation tasks,
 test strategy, sprint cadence, and risk mitigations.

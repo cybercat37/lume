@@ -50,6 +50,17 @@ public static class BuiltinFunctions
         TypeSymbol.Result(TypeSymbol.Float, TypeSymbol.String),
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Respond = new(
+        "respond",
+        new[]
+        {
+            new ParameterSymbol("status", TypeSymbol.Int),
+            new ParameterSymbol("body", GenericT)
+        },
+        new[] { GenericT },
+        TypeSymbol.Unit,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Len = new(
         "len",
         new[] { new ParameterSymbol("text", TypeSymbol.String) },
@@ -385,6 +396,7 @@ public static class BuiltinFunctions
         [RouteParam.Name] = RouteParam,
         [RouteParamInt.Name] = RouteParamInt,
         [RouteParamFloat.Name] = RouteParamFloat,
+        [Respond.Name] = Respond,
         [Len.Name] = Len,
         [Abs.Name] = Abs,
         [Min.Name] = Min,

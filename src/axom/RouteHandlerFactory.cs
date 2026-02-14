@@ -53,6 +53,12 @@ public static class RouteHandlerFactory
                     Results.Text(message, "text/plain; charset=utf-8", statusCode: StatusCodes.Status500InternalServerError));
             }
 
+            if (result.Response is not null)
+            {
+                return Task.FromResult<IResult>(
+                    Results.Text(result.Response.Body, "text/plain; charset=utf-8", statusCode: result.Response.StatusCode));
+            }
+
             return Task.FromResult<IResult>(
                 Results.Text(result.Output, "text/plain; charset=utf-8", statusCode: StatusCodes.Status200OK));
         });
