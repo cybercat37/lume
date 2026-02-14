@@ -282,7 +282,7 @@ Write-Host "Wrote ENDPOINTS.md"
     private const string Dockerfile = """
 FROM mcr.microsoft.com/dotnet/sdk:8.0
 
-RUN dotnet tool install -g axom.cli --version 0.4.0-alpha.5
+RUN dotnet tool install -g axom.cli --version 0.4.0-alpha.6
 ENV PATH="$PATH:/root/.dotnet/tools"
 
 WORKDIR /app

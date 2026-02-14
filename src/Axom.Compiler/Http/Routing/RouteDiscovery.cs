@@ -53,7 +53,8 @@ public sealed class RouteDiscovery
 
     private static string? FindRoutesRoot(string entryFilePath)
     {
-        var startDirectory = Path.GetDirectoryName(entryFilePath);
+        var absoluteEntryPath = Path.GetFullPath(entryFilePath);
+        var startDirectory = Path.GetDirectoryName(absoluteEntryPath);
         if (string.IsNullOrWhiteSpace(startDirectory))
         {
             return null;

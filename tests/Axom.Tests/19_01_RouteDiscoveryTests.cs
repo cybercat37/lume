@@ -224,6 +224,36 @@ public class RouteDiscoveryTests
         }
     }
 
+    [Fact]
+    public void Discover_resolves_routes_when_entry_file_is_relative()
+    {
+        var tempDir = CreateTempDirectory();
+        var originalCurrentDirectory = Environment.CurrentDirectory;
+
+        try
+        {
+            var appDir = Path.Combine(tempDir, "app");
+            var routesDir = Path.Combine(appDir, "routes");
+            Directory.CreateDirectory(routesDir);
+
+            File.WriteAllText(Path.Combine(appDir, "main.axom"), "print 1");
+            File.WriteAllText(Path.Combine(routesDir, "users__id_int_get.axom"), "print 1");
+
+            Environment.CurrentDirectory = appDir;
+
+            var discovery = new RouteDiscovery();
+            var result = discovery.Discover("main.axom");
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Routes, route => route.Method == "GET" && route.Template == "/users/:id<int>");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = originalCurrentDirectory;
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_routes_{Guid.NewGuid():N}");
