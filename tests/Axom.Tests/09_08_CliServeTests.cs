@@ -42,7 +42,7 @@ public class CliServeTests
         try
         {
             var routeFile = Path.Combine(tempDir, "users__id_int_get.axom");
-            File.WriteAllText(routeFile, "print match route_param(\"id\") {\n  Ok(id) -> id\n  Error(_) -> \"unknown\"\n}\nprint \"user by id route\"");
+            File.WriteAllText(routeFile, "print match route_param_int(\"id\") {\n  Ok(id) -> id\n  Error(_) -> -1\n}\nprint \"user by id route\"");
             var routeDefinition = new RouteDefinition(
                 "GET",
                 "/users/:id<int>",

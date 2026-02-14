@@ -91,7 +91,7 @@ clear()
 - `clear()` clears the current console screen
 - `time_from_iso(text)` returns `Ok(instant)` or `Error("invalid ISO-8601 instant")`
 - `rand_int(max)` returns `Ok(n)` or `Error("max must be > 0")`
-- `route_param(name)` returns `Ok(value)` or `Error(...)` (available in `serve` route handlers)
+- `route_param(name)`, `route_param_int(name)`, `route_param_float(name)` return `Ok(value)` or `Error(...)` in `serve` route handlers
 
 **Value pipe**
 
@@ -353,9 +353,9 @@ print "health route"
 `myapp/routes/users__id_int_get.axom`:
 
 ```axom
-print match route_param("id") {
+print match route_param_int("id") {
   Ok(id) -> id
-  Error(_) -> "unknown"
+  Error(_) -> -1
 }
 print "user route"
 ```

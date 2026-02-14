@@ -199,6 +199,35 @@ print resolve()
     }
 
     [Fact]
+    public void Route_param_numeric_builtins_bind_without_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+fn resolve_id() -> Int {
+  return match route_param_int(""id"") {
+    Ok(value) -> value
+    Error(_) -> 0
+  }
+}
+
+fn resolve_score() -> Float {
+  return match route_param_float(""score"") {
+    Ok(value) -> value
+    Error(_) -> 0.0
+  }
+}
+
+print resolve_id()
+print resolve_score()
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public void Channel_send_recv_bind_without_diagnostic()
     {
         var sourceText = new SourceText(@"

@@ -1,5 +1,5 @@
-print match route_param("id") {
+print match route_param_int("id") {
   Ok(id) -> id
-  Error(_) -> "unknown"
+  Error(_) -> -1
 }
 print "user by id route"

@@ -971,19 +971,47 @@ public sealed class Interpreter
                     {
                         if (routeParameters.TryGetValue(routeParamName, out var routeParamValue))
                         {
-                            return new SumValue(
-                                new SumVariantSymbol("Ok", TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String), TypeSymbol.String),
-                                routeParamValue);
+                            return BuildStringResult(isSuccess: true, routeParamValue, null);
                         }
 
-                        return new SumValue(
-                            new SumVariantSymbol("Error", TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String), TypeSymbol.String),
-                            $"route parameter '{routeParamName}' not found");
+                        return BuildStringResult(isSuccess: false, null, $"route parameter '{routeParamName}' not found");
                     }
 
-                    return new SumValue(
-                        new SumVariantSymbol("Error", TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String), TypeSymbol.String),
-                        "route parameter name must be a string");
+                    return BuildStringResult(isSuccess: false, null, "route parameter name must be a string");
+                case "route_param_int":
+                    if (arguments.Length == 1 && arguments[0] is string routeParamIntName)
+                    {
+                        if (!routeParameters.TryGetValue(routeParamIntName, out var routeParamIntValue))
+                        {
+                            return BuildIntResult(isSuccess: false, null, $"route parameter '{routeParamIntName}' not found");
+                        }
+
+                        if (int.TryParse(routeParamIntValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedInt))
+                        {
+                            return BuildIntResult(isSuccess: true, parsedInt, null);
+                        }
+
+                        return BuildIntResult(isSuccess: false, null, $"route parameter '{routeParamIntName}' is not a valid Int");
+                    }
+
+                    return BuildIntResult(isSuccess: false, null, "route parameter name must be a string");
+                case "route_param_float":
+                    if (arguments.Length == 1 && arguments[0] is string routeParamFloatName)
+                    {
+                        if (!routeParameters.TryGetValue(routeParamFloatName, out var routeParamFloatValue))
+                        {
+                            return BuildFloatResult(isSuccess: false, null, $"route parameter '{routeParamFloatName}' not found");
+                        }
+
+                        if (double.TryParse(routeParamFloatValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedFloat))
+                        {
+                            return BuildFloatResult(isSuccess: true, parsedFloat, null);
+                        }
+
+                        return BuildFloatResult(isSuccess: false, null, $"route parameter '{routeParamFloatName}' is not a valid Float");
+                    }
+
+                    return BuildFloatResult(isSuccess: false, null, "route parameter name must be a string");
                 case "len":
                     return arguments[0] switch
                     {
@@ -1672,6 +1700,32 @@ public sealed class Interpreter
             }
 
             return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.String), error ?? "random error");
+        }
+
+        private static object BuildStringResult(bool isSuccess, string? value, string? error)
+        {
+            var resultType = TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String);
+            var okVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
+            var errorVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Error", StringComparison.Ordinal));
+            if (isSuccess)
+            {
+                return new SumValue(okVariant ?? new SumVariantSymbol("Ok", resultType, TypeSymbol.String), value ?? string.Empty);
+            }
+
+            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.String), error ?? "route error");
+        }
+
+        private static object BuildFloatResult(bool isSuccess, double? value, string? error)
+        {
+            var resultType = TypeSymbol.Result(TypeSymbol.Float, TypeSymbol.String);
+            var okVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
+            var errorVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Error", StringComparison.Ordinal));
+            if (isSuccess)
+            {
+                return new SumValue(okVariant ?? new SumVariantSymbol("Ok", resultType, TypeSymbol.Float), value ?? 0.0);
+            }
+
+            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.String), error ?? "route error");
         }
 
         private static object? BuildTimeoutResult(TypeSymbol? returnType, int timeoutMilliseconds, object? fallback)
