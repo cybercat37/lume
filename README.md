@@ -291,6 +291,42 @@ curl -i http://127.0.0.1:8080/health
 
 Route files under `routes/**/*.axom` are discovered and mounted as stub endpoints.
 
+Minimal route bootstrap example:
+
+```text
+myapp/
+  main.axom
+  routes/
+    health_get.axom
+    users__id_int_get.axom
+```
+
+`myapp/main.axom`:
+
+```axom
+print "axom http bootstrap"
+```
+
+`myapp/routes/health_get.axom`:
+
+```axom
+print "health route"
+```
+
+`myapp/routes/users__id_int_get.axom`:
+
+```axom
+print "user route"
+```
+
+Run and test:
+
+```bash
+axom serve myapp/main.axom --host 127.0.0.1 --port 8080
+curl -i http://127.0.0.1:8080/health
+curl -i http://127.0.0.1:8080/users/42
+```
+
 ### Check a Axom Program
 
 ```bash

@@ -80,6 +80,36 @@ public class RouteDiscoveryTests
             Assert.False(result.Success);
             Assert.Contains(result.Diagnostics, diagnostic =>
                 diagnostic.Message.Contains("Route conflict", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Message.Contains("reason:", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void Discover_conflict_diagnostic_includes_overlap_reason_detail()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var appDir = Path.Combine(tempDir, "app");
+            var routesDir = Path.Combine(appDir, "routes");
+            Directory.CreateDirectory(routesDir);
+
+            var entry = Path.Combine(appDir, "main.axom");
+            File.WriteAllText(entry, "print 1");
+            File.WriteAllText(Path.Combine(routesDir, "users_me_get.axom"), "print 1");
+            File.WriteAllText(Path.Combine(routesDir, "users__id_get.axom"), "print 1");
+
+            var discovery = new RouteDiscovery();
+            var result = discovery.Discover(entry);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Message.Contains("accepted by dynamic", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {

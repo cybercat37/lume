@@ -189,7 +189,7 @@ public sealed class RouteDiscovery
                     continue;
                 }
 
-                if (!TemplatesOverlap(left.Segments, right.Segments))
+                if (!TryGetOverlapReason(left.Segments, right.Segments, out var reason))
                 {
                     continue;
                 }
@@ -198,44 +198,72 @@ public sealed class RouteDiscovery
                     left.FilePath,
                     1,
                     1,
-                    $"Route conflict: {left.Method} {left.Template} ({left.FilePath}) overlaps {right.Method} {right.Template} ({right.FilePath})."));
+                    $"Route conflict: {left.Method} {left.Template} ({left.FilePath}) overlaps {right.Method} {right.Template} ({right.FilePath}); reason: {reason}."));
             }
         }
 
         return diagnostics;
     }
 
-    private static bool TemplatesOverlap(IReadOnlyList<RouteSegment> left, IReadOnlyList<RouteSegment> right)
+    private static bool TryGetOverlapReason(
+        IReadOnlyList<RouteSegment> left,
+        IReadOnlyList<RouteSegment> right,
+        out string reason)
     {
+        reason = string.Empty;
+
         for (var i = 0; i < left.Count; i++)
         {
-            if (!SegmentsOverlap(left[i], right[i]))
+            if (!TryGetSegmentOverlapReason(left[i], right[i], out var segmentReason))
             {
+                reason = string.Empty;
                 return false;
+            }
+
+            if (i == left.Count - 1)
+            {
+                reason = segmentReason;
             }
         }
 
+        reason = string.IsNullOrWhiteSpace(reason) ? "all segments overlap" : reason;
         return true;
     }
 
-    private static bool SegmentsOverlap(RouteSegment left, RouteSegment right)
+    private static bool TryGetSegmentOverlapReason(RouteSegment left, RouteSegment right, out string reason)
     {
         if (!left.IsDynamic && !right.IsDynamic)
         {
-            return string.Equals(left.Value, right.Value, StringComparison.OrdinalIgnoreCase);
+            var overlap = string.Equals(left.Value, right.Value, StringComparison.OrdinalIgnoreCase);
+            reason = overlap
+                ? $"static segment '{left.Value}' equals '{right.Value}'"
+                : string.Empty;
+            return overlap;
         }
 
         if (!left.IsDynamic && right.IsDynamic)
         {
-            return IsValueAllowedByConstraint(left.Value, right.Constraint);
+            var overlap = IsValueAllowedByConstraint(left.Value, right.Constraint);
+            reason = overlap
+                ? $"static segment '{left.Value}' is accepted by dynamic ':{right.Value}<{right.Constraint}>'"
+                : string.Empty;
+            return overlap;
         }
 
         if (left.IsDynamic && !right.IsDynamic)
         {
-            return IsValueAllowedByConstraint(right.Value, left.Constraint);
+            var overlap = IsValueAllowedByConstraint(right.Value, left.Constraint);
+            reason = overlap
+                ? $"static segment '{right.Value}' is accepted by dynamic ':{left.Value}<{left.Constraint}>'"
+                : string.Empty;
+            return overlap;
         }
 
-        return ConstraintsOverlap(left.Constraint, right.Constraint);
+        var constraintsOverlap = ConstraintsOverlap(left.Constraint, right.Constraint);
+        reason = constraintsOverlap
+            ? $"dynamic constraints overlap ('{left.Constraint}' with '{right.Constraint}')"
+            : string.Empty;
+        return constraintsOverlap;
     }
 
     private static bool ConstraintsOverlap(string left, string right)
