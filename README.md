@@ -337,6 +337,7 @@ myapp/
   main.axom
   routes/
     health_get.axom
+    missing_get.axom
     users__id_int_get.axom
 ```
 
@@ -362,12 +363,19 @@ print match route_param_int("id") {
 print "user route"
 ```
 
+`myapp/routes/missing_get.axom`:
+
+```axom
+respond(404, "missing route example")
+```
+
 Run and test:
 
 ```bash
 axom serve myapp/main.axom --host 127.0.0.1 --port 8080
 curl -i http://127.0.0.1:8080/health
 curl -i http://127.0.0.1:8080/users/42
+curl -i http://127.0.0.1:8080/missing
 ```
 
 ### Check a Axom Program

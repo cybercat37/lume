@@ -28,6 +28,7 @@ Try:
 
 ```bash
 curl -i http://127.0.0.1:8080/users/42
+curl -i http://127.0.0.1:8080/missing
 ```
 
 Expected body:
@@ -35,4 +36,13 @@ Expected body:
 ```
 42
 user by id route
+```
+
+Expected `missing` response:
+
+```text
+HTTP/1.1 404 Not Found
+...
+
+missing route example
 ```
