@@ -101,6 +101,69 @@ public class CliServeTests
     }
 
     [Fact]
+    public async Task Http_host_allows_custom_health_route_without_ambiguity()
+    {
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var routeFile = Path.Combine(tempDir, "health_get.axom");
+            File.WriteAllText(routeFile, "print \"health route\"");
+            var routeDefinition = new RouteDefinition(
+                "GET",
+                "/health",
+                routeFile,
+                new[]
+                {
+                    RouteSegment.Static("health")
+                });
+            var routes = new[]
+            {
+                RouteHandlerFactory.CreateEndpoint(routeDefinition)
+            };
+
+            var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+
+            using var client = new HttpClient();
+            var timeoutAt = DateTime.UtcNow.AddSeconds(5);
+            HttpResponseMessage? response = null;
+            while (DateTime.UtcNow < timeoutAt)
+            {
+                try
+                {
+                    response = await client.GetAsync($"http://127.0.0.1:{port}/health");
+                    break;
+                }
+                catch (HttpRequestException)
+                {
+                    if (runTask.IsFaulted)
+                    {
+                        throw runTask.Exception;
+                    }
+
+                    await Task.Delay(50);
+                }
+            }
+
+            Assert.NotNull(response);
+            var body = await response!.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("health route", body);
+
+            cancellation.Cancel();
+            await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
     public async Task Http_host_uses_respond_status_and_body_from_handler()
     {
         var host = new AxomHttpHost();

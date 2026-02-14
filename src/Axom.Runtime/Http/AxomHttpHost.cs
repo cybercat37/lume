@@ -46,10 +46,17 @@ public sealed class AxomHttpHost
 
         var app = builder.Build();
 
-        app.MapGet("/health", () =>
+        var hasCustomHealthRoute = routes.Any(route =>
+            string.Equals(route.Method, "GET", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(route.Template, "/health", StringComparison.Ordinal));
+
+        if (!hasCustomHealthRoute)
         {
-            return Results.Text("ok", "text/plain; charset=utf-8", statusCode: StatusCodes.Status200OK);
-        });
+            app.MapGet("/health", () =>
+            {
+                return Results.Text("ok", "text/plain; charset=utf-8", statusCode: StatusCodes.Status200OK);
+            });
+        }
 
         foreach (var route in routes)
         {

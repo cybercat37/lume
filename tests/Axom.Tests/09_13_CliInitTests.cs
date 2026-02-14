@@ -41,7 +41,9 @@ public class CliInitTests
             Assert.Contains("Run Without Web", File.ReadAllText(Path.Combine(projectPath, "README.md")));
             Assert.Contains("Endpoint Documentation", File.ReadAllText(Path.Combine(projectPath, "README.md")));
             Assert.Contains("api.http", File.ReadAllText(Path.Combine(projectPath, "README.md")));
-            Assert.Contains("dotnet tool install -g axom.cli", File.ReadAllText(Path.Combine(projectPath, "Dockerfile")));
+            var dockerfile = File.ReadAllText(Path.Combine(projectPath, "Dockerfile"));
+            Assert.Contains("dotnet nuget locals all --clear", dockerfile);
+            Assert.Contains("dotnet tool install -g Axom.CLI --version 0.4.0-alpha.7 --add-source https://api.nuget.org/v3/index.json", dockerfile);
 
             var checkExitCode = Axom.Cli.Program.Main(new[] { "check", Path.Combine(projectPath, "main.axom") });
             Assert.Equal(0, checkExitCode);

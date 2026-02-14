@@ -12,7 +12,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>axom</ToolCommandName>
     <PackageId>Axom.CLI</PackageId>
-    <Version>0.4.0-alpha.6</Version>
+    <Version>0.4.0-alpha.7</Version>
     <Authors>cybercat37</Authors>
     <Description>Axom compiler and CLI tool.</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
