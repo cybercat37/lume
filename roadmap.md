@@ -9,6 +9,10 @@ Sources used for consolidation:
 - docs/tutorial.md
 - README.md
 - AGENTS.md
+- docs/proposals/http-db-reference.md
+
+Detailed implementation plan for HTTP/DB expansion:
+- docs/roadmap/http-db-plan.md
 
 ## Current Baseline (Implemented)
 
@@ -257,6 +261,20 @@ MVP priorities (execution order):
 4. `@mqtt_publish` / `@mqtt_subscribe` for messaging workflows
 
 Proposal backlog:
+
+### M13-M21: HTTP + DB Delivery Track
+- M13: HTTP server runtime core
+- M14: file-based routing v1 + conflict diagnostics
+- M15: HTTP client stdlib v1
+- M16: auth foundation (`@public`, `@auth`) + 401/403 contract
+- M17: DB runtime v1 (parameterized query/exec)
+- M18: typed SQL interpolation v1 (`sql"..."`, typed params)
+- M19: security DSL (`security {}` + provider binding)
+- M20: customer docs bundle + protected `/docs`
+- M21: hardening/performance/DX/release
+
+See `docs/roadmap/http-db-plan.md` for objectives, DoD, implementation tasks,
+test strategy, sprint cadence, and risk mitigations.
 
 ### Aspect syntax and model
 - Promote aspect tags to builtin identifiers (e.g. `@logging`, `@metrics`) instead of free-form strings.
