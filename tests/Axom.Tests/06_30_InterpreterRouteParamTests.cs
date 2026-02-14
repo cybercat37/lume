@@ -119,4 +119,36 @@ print request_path()
         Assert.Equal("GET\n/users/42", result.Output.Trim());
         Assert.Empty(result.Diagnostics);
     }
+
+    [Fact]
+    public void Query_param_builtins_return_values()
+    {
+        var sourceText = new SourceText(@"
+print match query_param(""q"") {
+  Ok(value) -> value
+  Error(_) -> ""missing""
+}
+print match query_param_int(""page"") {
+  Ok(value) -> value
+  Error(_) -> -1
+}
+print match query_param_float(""score"") {
+  Ok(value) -> value
+  Error(_) -> -1.0
+}
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        interpreter.SetQueryParameters(new Dictionary<string, string>
+        {
+            ["q"] = "axom",
+            ["page"] = "3",
+            ["score"] = "2.5"
+        });
+        var result = interpreter.Run(syntaxTree);
+
+        Assert.Equal("axom\n3\n2.5", result.Output.Trim());
+        Assert.Empty(result.Diagnostics);
+    }
 }

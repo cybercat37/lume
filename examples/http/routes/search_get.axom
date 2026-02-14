@@ -1,0 +1,9 @@
+print match query_param("q") {
+  Ok(value) -> value
+  Error(_) -> "missing"
+}
+
+print match query_param_int("page") {
+  Ok(value) -> value
+  Error(_) -> -1
+}

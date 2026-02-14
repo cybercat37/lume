@@ -48,7 +48,7 @@ Status: Partial (implemented slices)
 - `index`, method suffixes, and dynamic params (`__id`, `__id_int`, etc.) are implemented.
 - Compile-time conflict diagnostics are implemented, including overlap reason details.
 - Dynamic route filename validation is implemented (invalid markers/identifiers are rejected).
-- Discovered routes execute Axom route files, expose dynamic params via `route_param*` helpers, support `respond(status, body)`, expose request context (`request_method`, `request_path`), and return plain-text responses.
+- Discovered routes execute Axom route files, expose dynamic/query params via `route_param*` and `query_param*` helpers, support `respond(status, body)`, expose request context (`request_method`, `request_path`), and return plain-text responses.
 
 DoD:
 - `routes/**/*.axom` scan produces route table.

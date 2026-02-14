@@ -18,6 +18,7 @@ public sealed class Interpreter
 {
     private readonly Queue<string> inputBuffer = new();
     private readonly Dictionary<string, string> routeParameters = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> queryParameters = new(StringComparer.Ordinal);
     private string? requestMethod;
     private string? requestPath;
 
@@ -44,7 +45,7 @@ public sealed class Interpreter
 
         var lowerer = new Lowerer();
         var loweredProgram = lowerer.Lower(bindResult.Program);
-        var evaluator = new Evaluator(loweredProgram, inputBuffer, routeParameters, requestMethod, requestPath);
+        var evaluator = new Evaluator(loweredProgram, inputBuffer, routeParameters, queryParameters, requestMethod, requestPath);
         var evaluationResult = evaluator.Evaluate();
         var mergedDiagnostics = bindResult.Diagnostics
             .Concat(evaluationResult.Diagnostics)
@@ -67,6 +68,15 @@ public sealed class Interpreter
         requestPath = path;
     }
 
+    public void SetQueryParameters(IReadOnlyDictionary<string, string> parameters)
+    {
+        queryParameters.Clear();
+        foreach (var parameter in parameters)
+        {
+            queryParameters[parameter.Key] = parameter.Value;
+        }
+    }
+
     private sealed class Evaluator
     {
         private readonly LoweredProgram program;
@@ -76,6 +86,7 @@ public sealed class Interpreter
         private readonly List<Diagnostic> diagnostics;
         private readonly Queue<string> inputBuffer;
         private readonly IReadOnlyDictionary<string, string> routeParameters;
+        private readonly IReadOnlyDictionary<string, string> queryParameters;
         private readonly string? requestMethod;
         private readonly string? requestPath;
         private readonly object inputLock;
@@ -90,6 +101,7 @@ public sealed class Interpreter
             LoweredProgram program,
             Queue<string> inputBuffer,
             IReadOnlyDictionary<string, string> routeParameters,
+            IReadOnlyDictionary<string, string> queryParameters,
             string? requestMethod,
             string? requestPath,
             Dictionary<VariableSymbol, object?>? initialValues = null,
@@ -107,6 +119,7 @@ public sealed class Interpreter
             diagnostics = new List<Diagnostic>();
             this.inputBuffer = inputBuffer;
             this.routeParameters = routeParameters;
+            this.queryParameters = queryParameters;
             this.requestMethod = requestMethod;
             this.requestPath = requestPath;
             inputLock = sharedInputLock ?? new object();
@@ -726,7 +739,7 @@ public sealed class Interpreter
             var token = ownerScope?.CancellationToken ?? cancellationToken;
             var task = Task.Run(() =>
             {
-                var evaluator = new Evaluator(program, inputBuffer, routeParameters, requestMethod, requestPath, snapshot, inputLock, random, randomLock, token);
+                var evaluator = new Evaluator(program, inputBuffer, routeParameters, queryParameters, requestMethod, requestPath, snapshot, inputLock, random, randomLock, token);
                 return evaluator.EvaluateSpawnBody(spawn.Body);
             }, token);
 
@@ -1040,6 +1053,52 @@ public sealed class Interpreter
                     return requestMethod ?? "request_method is only available in serve route handlers";
                 case "request_path":
                     return requestPath ?? "request_path is only available in serve route handlers";
+                case "query_param":
+                    if (arguments.Length == 1 && arguments[0] is string queryParamName)
+                    {
+                        if (queryParameters.TryGetValue(queryParamName, out var queryParamValue))
+                        {
+                            return BuildStringResult(isSuccess: true, queryParamValue, null);
+                        }
+
+                        return BuildStringResult(isSuccess: false, null, $"query parameter '{queryParamName}' not found");
+                    }
+
+                    return BuildStringResult(isSuccess: false, null, "query parameter name must be a string");
+                case "query_param_int":
+                    if (arguments.Length == 1 && arguments[0] is string queryParamIntName)
+                    {
+                        if (!queryParameters.TryGetValue(queryParamIntName, out var queryParamIntValue))
+                        {
+                            return BuildIntResult(isSuccess: false, null, $"query parameter '{queryParamIntName}' not found");
+                        }
+
+                        if (int.TryParse(queryParamIntValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedInt))
+                        {
+                            return BuildIntResult(isSuccess: true, parsedInt, null);
+                        }
+
+                        return BuildIntResult(isSuccess: false, null, $"query parameter '{queryParamIntName}' is not a valid Int");
+                    }
+
+                    return BuildIntResult(isSuccess: false, null, "query parameter name must be a string");
+                case "query_param_float":
+                    if (arguments.Length == 1 && arguments[0] is string queryParamFloatName)
+                    {
+                        if (!queryParameters.TryGetValue(queryParamFloatName, out var queryParamFloatValue))
+                        {
+                            return BuildFloatResult(isSuccess: false, null, $"query parameter '{queryParamFloatName}' not found");
+                        }
+
+                        if (double.TryParse(queryParamFloatValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedFloat))
+                        {
+                            return BuildFloatResult(isSuccess: true, parsedFloat, null);
+                        }
+
+                        return BuildFloatResult(isSuccess: false, null, $"query parameter '{queryParamFloatName}' is not a valid Float");
+                    }
+
+                    return BuildFloatResult(isSuccess: false, null, "query parameter name must be a string");
                 case "len":
                     return arguments[0] switch
                     {

@@ -229,6 +229,69 @@ public class CliServeTests
     }
 
     [Fact]
+    public async Task Http_host_exposes_query_params_to_handler()
+    {
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var routeFile = Path.Combine(tempDir, "search_get.axom");
+            File.WriteAllText(routeFile, "print match query_param(\"q\") {\n  Ok(v) -> v\n  Error(_) -> \"missing\"\n}\nprint match query_param_int(\"page\") {\n  Ok(v) -> v\n  Error(_) -> -1\n}");
+            var routeDefinition = new RouteDefinition(
+                "GET",
+                "/search",
+                routeFile,
+                new[]
+                {
+                    RouteSegment.Static("search")
+                });
+            var routes = new[]
+            {
+                RouteHandlerFactory.CreateEndpoint(routeDefinition)
+            };
+
+            var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+
+            using var client = new HttpClient();
+            var timeoutAt = DateTime.UtcNow.AddSeconds(5);
+            HttpResponseMessage? response = null;
+            while (DateTime.UtcNow < timeoutAt)
+            {
+                try
+                {
+                    response = await client.GetAsync($"http://127.0.0.1:{port}/search?q=axom&page=2");
+                    break;
+                }
+                catch (HttpRequestException)
+                {
+                    if (runTask.IsFaulted)
+                    {
+                        throw runTask.Exception;
+                    }
+
+                    await Task.Delay(50);
+                }
+            }
+
+            Assert.NotNull(response);
+            var body = await response!.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("axom\n2", body);
+
+            cancellation.Cancel();
+            await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
     public void Serve_with_invalid_port_fails()
     {
         var tempDir = CreateTempDirectory();

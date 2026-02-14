@@ -265,6 +265,26 @@ handler()
     }
 
     [Fact]
+    public void Query_param_builtins_bind_without_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+fn handler() {
+  print query_param(""q"")
+  print query_param_int(""page"")
+  print query_param_float(""score"")
+}
+
+handler()
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public void Channel_send_recv_bind_without_diagnostic()
     {
         var sourceText = new SourceText(@"

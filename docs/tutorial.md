@@ -51,6 +51,7 @@ Current `serve` behavior is intentionally incremental:
 - route conflicts are diagnosed before boot
 - discovered routes execute Axom handlers and return plain-text output
 - route handlers can read dynamic segments with `route_param("name")`, `route_param_int("name")`, and `route_param_float("name")`
+- route handlers can read query values with `query_param("name")`, `query_param_int("name")`, and `query_param_float("name")`
 - route handlers can set explicit status/body with `respond(status, body)`
 - route handlers can read request metadata with `request_method()` and `request_path()`
 

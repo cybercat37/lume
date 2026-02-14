@@ -33,6 +33,9 @@ public static class RouteHandlerFactory
 
             var interpreter = new Interpreter();
             interpreter.SetRequestContext(context.Request.Method, context.Request.Path.ToString());
+            var queryValues = context.Request.Query
+                .ToDictionary(pair => pair.Key, pair => pair.Value.ToString(), StringComparer.Ordinal);
+            interpreter.SetQueryParameters(queryValues);
             if (dynamicSegmentNames.Length > 0)
             {
                 var routeValues = dynamicSegmentNames

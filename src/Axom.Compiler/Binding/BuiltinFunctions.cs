@@ -75,6 +75,27 @@ public static class BuiltinFunctions
         TypeSymbol.String,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol QueryParam = new(
+        "query_param",
+        new[] { new ParameterSymbol("name", TypeSymbol.String) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol QueryParamInt = new(
+        "query_param_int",
+        new[] { new ParameterSymbol("name", TypeSymbol.String) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol QueryParamFloat = new(
+        "query_param_float",
+        new[] { new ParameterSymbol("name", TypeSymbol.String) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.Float, TypeSymbol.String),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol Len = new(
         "len",
         new[] { new ParameterSymbol("text", TypeSymbol.String) },
@@ -413,6 +434,9 @@ public static class BuiltinFunctions
         [Respond.Name] = Respond,
         [RequestMethod.Name] = RequestMethod,
         [RequestPath.Name] = RequestPath,
+        [QueryParam.Name] = QueryParam,
+        [QueryParamInt.Name] = QueryParamInt,
+        [QueryParamFloat.Name] = QueryParamFloat,
         [Len.Name] = Len,
         [Abs.Name] = Abs,
         [Min.Name] = Min,

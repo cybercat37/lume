@@ -94,6 +94,7 @@ clear()
 - `route_param(name)`, `route_param_int(name)`, `route_param_float(name)` return `Ok(value)` or `Error(...)` in `serve` route handlers
 - `respond(status, body)` sets explicit HTTP status/body in `serve` route handlers
 - `request_method()` and `request_path()` expose request context in `serve` route handlers
+- `query_param(name)`, `query_param_int(name)`, `query_param_float(name)` read query values in `serve` route handlers
 
 **Value pipe**
 
@@ -285,6 +286,7 @@ Current HTTP + DB track status (Early/Partial):
 - Discovered routes execute Axom route files and return their output as `text/plain`.
 - Route handlers can return explicit HTTP responses via `respond(status, body)`.
 - Route handlers can read request method/path via `request_method()` and `request_path()`.
+- Route handlers can read query values via `query_param*` helpers.
 - HTTP client, DB runtime, typed SQL interpolation, and auth/security DSL are planned in the M13-M21 track.
 
 Design references:
@@ -341,6 +343,7 @@ myapp/
     health_get.axom
     missing_get.axom
     request_info_get.axom
+    search_get.axom
     users__id_int_get.axom
 ```
 
@@ -379,6 +382,19 @@ print request_method()
 print request_path()
 ```
 
+`myapp/routes/search_get.axom`:
+
+```axom
+print match query_param("q") {
+  Ok(v) -> v
+  Error(_) -> "missing"
+}
+print match query_param_int("page") {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+```
+
 Run and test:
 
 ```bash
@@ -387,6 +403,7 @@ curl -i http://127.0.0.1:8080/health
 curl -i http://127.0.0.1:8080/users/42
 curl -i http://127.0.0.1:8080/missing
 curl -i http://127.0.0.1:8080/request/info
+curl -i "http://127.0.0.1:8080/search?q=axom&page=2"
 ```
 
 ### Check a Axom Program
