@@ -138,7 +138,7 @@ Value pipe examples:
 - Result error variant is `Error`; default error type is `String` for now.
 
 ### Comments & Docs
-- Traditional comments are not supported; intent annotations are the planned alternative.
+- Traditional comments are not supported; intent annotations are the current structured alternative.
 
 ### Intent Annotations (Partial)
 - Intent annotations are structured metadata, not general-purpose comments.

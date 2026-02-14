@@ -232,7 +232,8 @@ Current concurrency status (Partial):
 Current aspects status (Partial):
 - `@logging` is implemented for function declarations (`@logging fn ...`).
 - Interpreter and codegen both emit timestamped invocation/return logs.
-- Additional aspects (`@retry`, `@timeout`, webhook/mqtt policies) are planned.
+- `@timeout(ms)` is implemented for functions returning `Result<T, String>`.
+- Additional aspects (`@retry`, webhook/mqtt policies) are planned.
 
 Current intent status (Partial):
 - `@intent("...")` metadata on `let` and blocks is implemented.

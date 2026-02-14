@@ -240,7 +240,7 @@ let x = 10
 
 ---
 
-### 2.5 Intent Annotations (Planned)
+### 2.5 Intent Annotations (Partial)
 
 Intent annotations are built-in attributes used for diagnostics and documentation.
 
@@ -254,7 +254,7 @@ Intent annotations are built-in attributes used for diagnostics and documentatio
 let user_id @intent("Lookup user id") = input()
 ```
 
-Annotations have no runtime effect. Tooling may warn if intent does not match inferred effects.
+Annotations have no runtime effect. Metadata currently flows through parser/binder/lowering. Intent/effect mismatch warnings are temporarily disabled while intent UX is refined.
 
 
 ---
@@ -720,7 +720,7 @@ fn private_function() { }
 
 ---
 
-## 9. Concurrency and Parallelism (Planned/Prototype)
+## 9. Concurrency and Parallelism (Partial)
 
 ### 9.1 Effects and Suspension
 
@@ -928,12 +928,20 @@ Generated code compiles to standard .NET assemblies.
 
 ---
 
-## 12. String Interpolation (Planned)
+## 12. String Interpolation (Partial)
 
 ```axom
 let name = "Alice"
 let age = 30
 let msg = f"Hello, {name}! You are {age} years old."
+```
+
+Baseline formatting is available with specifiers, and escaped braces are supported:
+
+```axom
+let n = 7
+print f"n={n:000}"
+print f"literal braces: {{ok}}"
 ```
 
 

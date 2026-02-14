@@ -179,6 +179,10 @@ Status:
 ### M8: Intent Annotations + Effect Metadata
 Objective: structured intent metadata for docs/tooling and future policy checks.
 
+Status:
+- Parser/binder/lowering metadata flow is implemented.
+- Intent/effect mismatch warnings are currently disabled.
+
 DoD:
 - @intent on blocks and let bindings.
 - Intent metadata available through parser -> binder -> lowering.
