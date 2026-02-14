@@ -116,6 +116,42 @@ public class CliServeTests
         }
     }
 
+    [Fact]
+    public void Serve_with_route_conflict_fails_before_starting_host()
+    {
+        var tempDir = CreateTempDirectory();
+        var appDir = Path.Combine(tempDir, "app");
+        var routesDir = Path.Combine(appDir, "routes");
+        Directory.CreateDirectory(routesDir);
+
+        var filePath = Path.Combine(appDir, "main.axom");
+        File.WriteAllText(filePath, "print 1");
+        File.WriteAllText(Path.Combine(routesDir, "users_me_get.axom"), "print 1");
+        File.WriteAllText(Path.Combine(routesDir, "users__id_get.axom"), "print 1");
+
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "serve", filePath });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Route conflict", error.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
     private static async Task<HttpResponseMessage> WaitForHealthAsync(HttpClient client, int port)
     {
         var url = $"http://127.0.0.1:{port}/health";

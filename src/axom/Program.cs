@@ -1,4 +1,5 @@
 using Axom.Compiler;
+using Axom.Compiler.Http.Routing;
 using Axom.Runtime.Http;
 using System.Diagnostics;
 
@@ -213,6 +214,18 @@ public class Program
 
     private static int ServeProgram(string inputPath, string host, int port, bool quiet, bool verbose)
     {
+        var routeDiscovery = new RouteDiscovery();
+        var routeResult = routeDiscovery.Discover(inputPath);
+        if (!routeResult.Success)
+        {
+            foreach (var diagnostic in routeResult.Diagnostics)
+            {
+                Console.Error.WriteLine(diagnostic);
+            }
+
+            return 1;
+        }
+
         using var cancellationTokenSource = new CancellationTokenSource();
         ConsoleCancelEventHandler handler = (_, eventArgs) =>
         {
@@ -231,6 +244,7 @@ public class Program
                 if (verbose)
                 {
                     Console.WriteLine($"Serving source: {inputPath}");
+                    Console.WriteLine($"Discovered routes: {routeResult.Routes.Count}");
                 }
 
                 Console.WriteLine($"Listening on http://{host}:{port}");
