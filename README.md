@@ -239,6 +239,17 @@ Current intent status (Partial):
 - `@intent("...")` metadata on `let` and blocks is implemented.
 - Intent effect-mismatch warnings are currently disabled.
 
+Current HTTP + DB track status (Early/Partial):
+- `axom serve <file.axom>` is available with a runtime health endpoint (`GET /health`).
+- File-based route discovery is available from `routes/**/*.axom` (method suffixes, `index`, dynamic params like `__id_int`).
+- Route conflict diagnostics run before server start.
+- Discovered routes are currently served as runtime stubs; Axom handler execution is next.
+- HTTP client, DB runtime, typed SQL interpolation, and auth/security DSL are planned in the M13-M21 track.
+
+Design references:
+- `docs/proposals/http-db-reference.md` (vision/reference)
+- `docs/roadmap/http-db-plan.md` (implementation plan)
+
 ## Building and Running
 
 ### Prerequisites
@@ -264,6 +275,22 @@ dotnet run --project src/axom -- run path/to/file.axom
 make demo-example
 ```
 
+### Serve HTTP (Bootstrap)
+
+```bash
+axom serve path/to/file.axom --host 127.0.0.1 --port 8080
+# or (from source)
+dotnet run --project src/axom -- serve path/to/file.axom --host 127.0.0.1 --port 8080
+```
+
+Quick check:
+
+```bash
+curl -i http://127.0.0.1:8080/health
+```
+
+Route files under `routes/**/*.axom` are discovered and mounted as stub endpoints.
+
 ### Check a Axom Program
 
 ```bash
@@ -285,6 +312,8 @@ dotnet run --project src/axom -- build path/to/file.axom
 ### CLI Options
 
 - `--out <dir>` — Override output directory (default: `out`)
+- `--host <addr>` — Bind host for `serve` (default: `127.0.0.1`)
+- `--port <n>` — Bind port for `serve` (default: `8080`)
 - `--quiet` — Suppress non-error output
 - `--verbose` — Include extra context
 - `--cache` — Enable compilation cache for repeated builds
