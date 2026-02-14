@@ -41,10 +41,11 @@ Runtime + tooling:
 - Dedicated lowering pass with lowered nodes
 - Concurrency runtime prototype (scope/spawn/join)
 - Aspect runtime v1 (`@logging` on functions, timestamped call/return logs)
-- CLI: check, build, run (+ out/verbosity flags)
+- CLI: check, build, run, serve (+ out/verbosity/host/port flags)
 - Golden + snapshot tests and fuzz harness
 - Compilation cache and large input guardrail
 - NuGet tool packaging + CI + shell completions
+- HTTP bootstrap runtime (`GET /health`) and file-based route discovery (`routes/**/*.axom`) with conflict diagnostics
 
 ## Gap Analysis (Spec vs Implementation)
 
@@ -69,6 +70,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with whitelist for `System.Math`, `System.String`, and `System.Convert` |
 | Pipeline operator + combinators | \|> and combinators | Partial | Value pipe `|>` implemented; combinator syntax remains proposal-only |
 | Aspects/runtime policies | Builtin aspect tags + runtime behavior | Partial | `@logging` and `@timeout(ms)` are implemented with keyword syntax and interpreter/codegen parity |
+| HTTP server + route discovery | `serve` + file-based route model | Partial | `axom serve` implemented with health endpoint, route discovery (`index`, method suffixes, dynamic params), conflict diagnostics with overlap reasons, and runtime route stubs |
 
 ## Milestones (Priority Ordered)
 
@@ -272,6 +274,11 @@ Proposal backlog:
 - M19: security DSL (`security {}` + provider binding)
 - M20: customer docs bundle + protected `/docs`
 - M21: hardening/performance/DX/release
+
+Current HTTP+DB progress:
+- M13 (Partial): `axom serve` and runtime host are implemented; `/health` endpoint is live; graceful stop via Ctrl+C is supported.
+- M14 (Partial): route discovery/normalization and pre-boot conflict diagnostics are implemented, including overlap-reason details and dynamic filename validation.
+- M14 runtime bridge (Partial): discovered routes are mounted as runtime stubs (handler execution from Axom route files is follow-up).
 
 See `docs/roadmap/http-db-plan.md` for objectives, DoD, implementation tasks,
 test strategy, sprint cadence, and risk mitigations.

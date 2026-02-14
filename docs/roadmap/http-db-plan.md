@@ -16,6 +16,12 @@ Planning horizon: 12-20 weeks depending on team size and scope discipline.
 
 Objective: serve HTTP requests from Axom handlers without file-based routing yet.
 
+Status: Partial (implemented slices)
+- `axom serve <file.axom>` is available.
+- Runtime host boots and serves `GET /health`.
+- Serve validates source compilation before host startup.
+- Graceful shutdown via Ctrl+C is implemented.
+
 DoD:
 - Runtime HTTP host abstraction exists and can boot from CLI.
 - Request/response core types are available (`HttpRequest`, `HttpResponse`).
@@ -26,7 +32,7 @@ Implementation tasks:
 - Add HTTP runtime module in `src/Axom.Runtime` using ASP.NET Core primitives.
 - Add compiler/runtime bridge for handler invocation.
 - Add minimal serialization helpers for plain text and JSON responses.
-- Add CLI command surface for local server run (`axom run` integration path).
+- Add CLI command surface for local server run (`axom serve` integration path).
 
 Tests:
 - Unit tests for request parsing and response mapping.
@@ -36,6 +42,13 @@ Tests:
 ## M14: File-Based Routing v1
 
 Objective: implement route discovery from filesystem according to the new spec.
+
+Status: Partial (implemented slices)
+- `routes/**/*.axom` route scan/normalization is implemented.
+- `index`, method suffixes, and dynamic params (`__id`, `__id_int`, etc.) are implemented.
+- Compile-time conflict diagnostics are implemented, including overlap reason details.
+- Dynamic route filename validation is implemented (invalid markers/identifiers are rejected).
+- Discovered routes are mounted as runtime stubs; Axom route handler execution is pending.
 
 DoD:
 - `routes/**/*.axom` scan produces route table.
