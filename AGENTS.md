@@ -62,8 +62,8 @@ If you add one, document it here and in the Makefile.
 - **Source of truth** for the tool package version is `src/axom/axom.csproj` (`<Version>`).
 - Git tags must follow `v<Version>` and should match the package version when cutting a release.
 - Record the current values here to avoid ambiguity:
-  - CLI package version: `0.4.0-alpha.4` (`src/axom/axom.csproj`)
-  - Latest tag: `v0.4.0-alpha.4`
+  - CLI package version: `0.4.0-alpha.5` (`src/axom/axom.csproj`)
+  - Latest tag: `v0.4.0-alpha.5`
 ## Code style guidelines
 Follow the existing conventions visible in the C# files.
 ### Language specification
