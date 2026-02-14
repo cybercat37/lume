@@ -151,10 +151,12 @@ public sealed class Interpreter
                 case LoweredReturnStatement returnStatement:
                     if (returnStatement.Expression is null)
                     {
+                        ExecuteDeferredStatements(returnStatement.DeferredStatements);
                         throw new ReturnSignal(null);
                     }
 
                     var returnValue = EvaluateTailExpression(returnStatement.Expression);
+                    ExecuteDeferredStatements(returnStatement.DeferredStatements);
                     throw new ReturnSignal(returnValue);
                 case LoweredIfStatement ifStatement:
                     var conditionValue = EvaluateExpression(ifStatement.Condition);
@@ -170,6 +172,14 @@ public sealed class Interpreter
                     return;
                 default:
                     throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}");
+            }
+        }
+
+        private void ExecuteDeferredStatements(IReadOnlyList<LoweredStatement> statements)
+        {
+            foreach (var statement in statements)
+            {
+                EvaluateStatement(statement);
             }
         }
 

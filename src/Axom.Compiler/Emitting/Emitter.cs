@@ -680,6 +680,26 @@ public sealed class Emitter
             case LoweredReturnStatement returnStatement:
                 if (returnStatement.Expression is null)
                 {
+                    if (returnStatement.DeferredStatements.Count > 0)
+                    {
+                        writer.WriteLine("{");
+                        writer.Indent();
+                        foreach (var deferredStatement in returnStatement.DeferredStatements)
+                        {
+                            WriteStatement(writer, deferredStatement, false, functionName);
+                        }
+
+                        if (logFunctionReturns && functionName is not null)
+                        {
+                            writer.WriteLine($"AxomLogReturn(\"{EscapeString(functionName)}\", null);");
+                        }
+
+                        writer.WriteLine("return;");
+                        writer.Unindent();
+                        writer.WriteLine("}");
+                        return;
+                    }
+
                     if (logFunctionReturns && functionName is not null)
                     {
                         writer.WriteLine("{");
@@ -695,7 +715,8 @@ public sealed class Emitter
                     return;
                 }
 
-                if (tailContext is not null
+                if (returnStatement.DeferredStatements.Count == 0
+                    && tailContext is not null
                     && TryExtractTailSelfCall(returnStatement.Expression, tailContext.Function, out var tailCall, out var prefixStatements))
                 {
                     writer.WriteLine("{");
@@ -720,6 +741,27 @@ public sealed class Emitter
                     }
 
                     writer.WriteLine("continue;");
+                    writer.Unindent();
+                    writer.WriteLine("}");
+                    return;
+                }
+
+                if (returnStatement.DeferredStatements.Count > 0)
+                {
+                    writer.WriteLine("{");
+                    writer.Indent();
+                    writer.WriteLine($"var __axomReturn = {WriteExpression(returnStatement.Expression)};");
+                    foreach (var deferredStatement in returnStatement.DeferredStatements)
+                    {
+                        WriteStatement(writer, deferredStatement, false, functionName);
+                    }
+
+                    if (logFunctionReturns && functionName is not null)
+                    {
+                        writer.WriteLine($"AxomLogReturn(\"{EscapeString(functionName)}\", __axomReturn);");
+                    }
+
+                    writer.WriteLine("return __axomReturn;");
                     writer.Unindent();
                     writer.WriteLine("}");
                     return;

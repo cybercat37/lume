@@ -101,6 +101,38 @@ print score
 
 `value |> f` is shorthand for `f(value)`.
 
+**Scoped cleanup with `defer`**
+
+```axom
+scope {
+  defer {
+    print "defer: scope cleanup"
+  }
+
+  let fast = spawn {
+    sleep(40)
+    print "fast task done"
+    1
+  }
+
+  let slow = spawn {
+    sleep(120)
+    print "slow task done"
+    2
+  }
+
+  print "waiting joins"
+  print fast.join()
+  print slow.join()
+  print "about to exit scope"
+}
+
+print "after scope"
+```
+
+`defer` schedules expression/block cleanup at scope exit (LIFO), including early `return`.
+See runnable example: `examples/defer-scope-spawn-run.axom`.
+
 **Aspects (`@logging`)**
 
 ```axom
@@ -228,6 +260,10 @@ Current concurrency status (Partial):
 - Bounded channel capacity is available (`channel<T>(N)`, default `64`).
 - Scope cancellation propagation is implemented (`Error("cancelled")` on interrupted channel ops).
 - Advanced backpressure policies are follow-up work.
+
+Current defer status (Implemented):
+- `defer <expr>` and `defer { ... }` run at scope exit in LIFO order.
+- Deferred actions run on normal exit and early `return`.
 
 Current aspects status (Partial):
 - `@logging` is implemented for function declarations (`@logging fn ...`).

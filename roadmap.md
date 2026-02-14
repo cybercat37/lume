@@ -34,6 +34,7 @@ Language core:
 - Option/Result patterns with ? and unwrap()
 - Generics v1 (functions + initial type-generic syntax)
 - Builtins: print, println, input, len, abs, min, max, sleep, clear, rand_float, rand_int, rand_seed
+- Scoped cleanup with `defer` (`defer <expr>`, `defer { ... }`, LIFO)
 
 Runtime + tooling:
 - Interpreter and codegen (C# emitter)
@@ -71,6 +72,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | Pipeline operator + combinators | \|> and combinators | Partial | Value pipe `|>` implemented; combinator syntax remains proposal-only |
 | Aspects/runtime policies | Builtin aspect tags + runtime behavior | Partial | `@logging` and `@timeout(ms)` are implemented with keyword syntax and interpreter/codegen parity |
 | HTTP server + route discovery | `serve` + file-based route model | Partial | `axom serve` implemented with health endpoint, route discovery (`index`, method suffixes, dynamic params), conflict diagnostics with overlap reasons, and runtime route stubs |
+| Scoped cleanup (`defer`) | Scope-exit cleanup with predictable ordering | Implemented | `defer <expr>` and `defer { ... }` run on scope exit in LIFO order, including early returns |
 
 ## Milestones (Priority Ordered)
 

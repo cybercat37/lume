@@ -52,6 +52,39 @@ fn id(x: Int) {
     }
 
     [Fact]
+    public void Defer_statement_parses()
+    {
+        var sourceText = new SourceText(@"
+fn cleanup() {
+}
+
+fn work() {
+  defer cleanup()
+}
+", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
+    [Fact]
+    public void Defer_block_statement_parses()
+    {
+        var sourceText = new SourceText(@"
+fn work() {
+  defer {
+    print 1
+  }
+}
+", "test.axom");
+
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        Assert.Empty(syntaxTree.Diagnostics);
+    }
+
+    [Fact]
     public void Missing_parameter_type_produces_diagnostic()
     {
         var sourceText = new SourceText("fn add(x, y: Int) { x + y }", "test.axom");

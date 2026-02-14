@@ -20,6 +20,7 @@ public sealed class Parser
         TokenKind.PrintlnKeyword,
         TokenKind.FnKeyword,
         TokenKind.ReturnKeyword,
+        TokenKind.DeferKeyword,
         TokenKind.TypeKeyword,
         TokenKind.PubKeyword,
         TokenKind.ImportKeyword,
@@ -129,6 +130,7 @@ public sealed class Parser
             TokenKind.PrintKeyword => ParsePrintStatement(),
             TokenKind.PrintlnKeyword => ParsePrintStatement(),
             TokenKind.ReturnKeyword => ParseReturnStatement(),
+            TokenKind.DeferKeyword => ParseDeferStatement(),
             TokenKind.TypeKeyword => ParseTypeDeclaration(),
             TokenKind.PubKeyword => ParsePubStatement(),
             TokenKind.ImportKeyword => ParseImportStatement(),
@@ -527,6 +529,34 @@ public sealed class Parser
         }
 
         return new ReturnStatementSyntax(returnKeyword, expression);
+    }
+
+    private StatementSyntax ParseDeferStatement()
+    {
+        var deferKeyword = MatchToken(TokenKind.DeferKeyword, "defer");
+        if (Current().Kind == TokenKind.OpenBrace)
+        {
+            var block = (BlockStatementSyntax)ParseBlockStatement();
+            return new DeferStatementSyntax(deferKeyword, null, block);
+        }
+
+        ExpressionSyntax? expression = null;
+        if (!IsStatementTerminator(Current().Kind))
+        {
+            expression = ParseExpression();
+        }
+
+        if (expression is null)
+        {
+            diagnostics.Add(Diagnostic.Error(sourceText, deferKeyword.Span, "defer requires an expression or block."));
+        }
+
+        if (Current().Kind == TokenKind.Semicolon)
+        {
+            NextToken();
+        }
+
+        return new DeferStatementSyntax(deferKeyword, expression, null);
     }
 
     private StatementSyntax ParsePrintStatement()

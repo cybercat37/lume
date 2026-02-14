@@ -157,6 +157,27 @@ scope {
     }
 
     [Fact]
+    public void Defer_inside_function_binds_without_diagnostic()
+    {
+        var sourceText = new SourceText(@"
+fn work() -> Int {
+  defer {
+    print 1
+  }
+  return 2
+}
+
+print work()
+", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public void Channel_send_recv_bind_without_diagnostic()
     {
         var sourceText = new SourceText(@"

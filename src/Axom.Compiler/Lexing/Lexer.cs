@@ -359,6 +359,7 @@ public sealed class Lexer
             "mut" => TokenKind.MutKeyword,
             "fn" => TokenKind.FnKeyword,
             "return" => TokenKind.ReturnKeyword,
+            "defer" => TokenKind.DeferKeyword,
             "type" => TokenKind.TypeKeyword,
             "match" => TokenKind.MatchKeyword,
             "when" => TokenKind.WhenKeyword,

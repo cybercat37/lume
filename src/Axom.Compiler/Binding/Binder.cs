@@ -516,6 +516,8 @@ public sealed class Binder
                 return new BoundPrintStatement(BindExpression(print.Expression));
             case ReturnStatementSyntax returnStatement:
                 return BindReturnStatement(returnStatement);
+            case DeferStatementSyntax deferStatement:
+                return BindDeferStatement(deferStatement);
             case FunctionDeclarationSyntax:
                 diagnostics.Add(Diagnostic.Error(
                     SourceText,
@@ -3301,6 +3303,30 @@ public sealed class Binder
         }
 
         return new BoundReturnStatement(expression);
+    }
+
+    private BoundStatement BindDeferStatement(DeferStatementSyntax deferStatement)
+    {
+        if (deferStatement.Block is not null)
+        {
+            return new BoundDeferStatement(BindBlockStatement(deferStatement.Block));
+        }
+
+        if (deferStatement.Expression is null)
+        {
+            return new BoundExpressionStatement(new BoundLiteralExpression(null, TypeSymbol.Unit));
+        }
+
+        var expression = BindExpression(deferStatement.Expression);
+        if (expression.Type.ResultValueType is not null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                deferStatement.Span,
+                "Result value must be handled with '?' or 'match'."));
+        }
+
+        return new BoundDeferStatement(new BoundExpressionStatement(expression));
     }
 
     private BoundExpression BindLambdaExpression(LambdaExpressionSyntax lambda)

@@ -255,9 +255,27 @@ let x = 10
 ```
 
 
+### 2.5 Scoped Cleanup with `defer`
+
+Use `defer` to schedule cleanup at the end of the current scope.
+
+```axom
+fn work() -> Int {
+  defer {
+    print "cleanup"
+  }
+  return 7
+}
+
+print work()
+```
+
+Deferred actions run in LIFO order and still run on early `return`.
+
+
 ---
 
-### 2.5 Intent Annotations (Partial)
+### 2.6 Intent Annotations (Partial)
 
 Intent annotations are built-in attributes used for diagnostics and documentation.
 
@@ -276,7 +294,7 @@ Annotations have no runtime effect. Metadata currently flows through parser/bind
 
 ---
 
-### 2.6 String Literals and Escape Sequences
+### 2.7 String Literals and Escape Sequences
 
 ```axom
 let newline = "line1\nline2"

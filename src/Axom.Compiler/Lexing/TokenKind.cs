@@ -13,6 +13,7 @@ public enum TokenKind
     MutKeyword,
     FnKeyword,
     ReturnKeyword,
+    DeferKeyword,
     TypeKeyword,
     MatchKeyword,
     WhenKeyword,

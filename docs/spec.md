@@ -40,6 +40,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 ### Functions
 - Parameters require type annotations: `fn add(x: Int, y: Int) -> Int { x + y }`.
 - Return is implicit from the last expression; `return` is allowed for early exit.
+- `defer` schedules cleanup at scope exit; deferred actions run in LIFO order.
 - Functions without an explicit return type have type `Unit`.
 - No optional/default params or named arguments (for now).
 - Lambdas: `fn(x: Int) => x * 2` for single-expression; captures by value only; no `mut` capture.
@@ -177,6 +178,17 @@ LetStmt := "let" Identifier IntentAnnotation? "=" Expression
 - Identifiers may include underscores (`_`) and may start with `_`.
 - Statement terminators are optional; newlines end statements by default.
 - Semicolons are permitted as explicit separators (useful inside blocks).
+
+`defer` forms:
+
+```axom
+defer close(handle)
+defer {
+  print "cleanup"
+}
+```
+
+Both forms execute when the current scope exits.
 
 ---
 

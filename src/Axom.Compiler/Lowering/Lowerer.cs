@@ -8,11 +8,12 @@ namespace Axom.Compiler.Lowering;
 public sealed class Lowerer
 {
     private int tempIndex;
+    private readonly Stack<List<LoweredStatement>> deferredStatements = new();
 
     public LoweredProgram Lower(BoundProgram program)
     {
         var functions = program.Functions.Select(LowerFunction).ToList();
-        var statements = program.Statements.Select(LowerStatement).ToList();
+        var statements = LowerStatementsWithDefers(program.Statements);
         return new LoweredProgram(
             program,
             program.RecordTypes,
@@ -41,14 +42,46 @@ public sealed class Lowerer
             BoundExpressionStatement expressionStatement => new LoweredExpressionStatement(
                 LowerExpression(expressionStatement.Expression)),
             BoundReturnStatement returnStatement => LowerReturnStatement(returnStatement),
+            BoundDeferStatement => throw new InvalidOperationException("Unexpected deferred statement outside block lowering."),
             _ => throw new InvalidOperationException($"Unexpected statement: {statement.GetType().Name}")
         };
     }
 
     private LoweredBlockStatement LowerBlockStatement(BoundBlockStatement block)
     {
-        var lowered = block.Statements.Select(LowerStatement).ToList();
+        var lowered = LowerStatementsWithDefers(block.Statements);
         return new LoweredBlockStatement(lowered, block.IsScopeBlock, false, LowerIntentAnnotation(block.IntentAnnotation));
+    }
+
+    private List<LoweredStatement> LowerStatementsWithDefers(IReadOnlyList<BoundStatement> statements)
+    {
+        var lowered = new List<LoweredStatement>();
+        var scopeDeferred = new List<LoweredStatement>();
+        deferredStatements.Push(scopeDeferred);
+        try
+        {
+            foreach (var statement in statements)
+            {
+                if (statement is BoundDeferStatement defer)
+                {
+                    scopeDeferred.Add(LowerStatement(defer.Statement));
+                    continue;
+                }
+
+                lowered.Add(LowerStatement(statement));
+            }
+        }
+        finally
+        {
+            deferredStatements.Pop();
+        }
+
+        for (var index = scopeDeferred.Count - 1; index >= 0; index--)
+        {
+            lowered.Add(scopeDeferred[index]);
+        }
+
+        return lowered;
     }
 
     private static LoweredIntentAnnotation? LowerIntentAnnotation(BoundIntentAnnotation? intentAnnotation)
@@ -64,6 +97,7 @@ public sealed class Lowerer
     private LoweredBlockExpression LowerSpawnBlock(BoundBlockStatement block)
     {
         var statements = new List<LoweredStatement>();
+        var spawnDeferred = new List<LoweredStatement>();
         LoweredExpression result = new LoweredDefaultExpression(TypeSymbol.Unit);
         if (block.Statements.Count == 0)
         {
@@ -73,6 +107,12 @@ public sealed class Lowerer
         for (var i = 0; i < block.Statements.Count; i++)
         {
             var statement = block.Statements[i];
+            if (statement is BoundDeferStatement defer)
+            {
+                spawnDeferred.Add(LowerStatement(defer.Statement));
+                continue;
+            }
+
             if (i == block.Statements.Count - 1 && statement is BoundReturnStatement returnStatement)
             {
                 result = returnStatement.Expression is null
@@ -88,6 +128,11 @@ public sealed class Lowerer
             {
                 statements.Add(LowerStatement(statement));
             }
+        }
+
+        for (var index = spawnDeferred.Count - 1; index >= 0; index--)
+        {
+            statements.Add(spawnDeferred[index]);
         }
 
         return new LoweredBlockExpression(statements, result);
@@ -115,9 +160,23 @@ public sealed class Lowerer
             return LowerMatchReturnStatement(match);
         }
 
-        return new LoweredReturnStatement(returnStatement.Expression is null
+        return CreateReturnStatement(returnStatement.Expression is null
             ? null
             : LowerExpression(returnStatement.Expression));
+    }
+
+    private LoweredReturnStatement CreateReturnStatement(LoweredExpression? expression)
+    {
+        var activeDeferred = new List<LoweredStatement>();
+        foreach (var scopeDeferred in deferredStatements)
+        {
+            for (var index = scopeDeferred.Count - 1; index >= 0; index--)
+            {
+                activeDeferred.Add(scopeDeferred[index]);
+            }
+        }
+
+        return new LoweredReturnStatement(expression, activeDeferred);
     }
 
     private LoweredExpression LowerExpression(BoundExpression expression)
@@ -270,7 +329,7 @@ public sealed class Lowerer
             ? null
             : new LoweredSumValueExpression(tempName, question.FailureVariant.PayloadType);
 
-        var failureReturn = new LoweredReturnStatement(new LoweredSumConstructorExpression(
+        var failureReturn = CreateReturnStatement(new LoweredSumConstructorExpression(
             question.FailureVariant,
             failurePayload));
 
@@ -293,7 +352,7 @@ public sealed class Lowerer
 
         LoweredStatement elseStatement = new LoweredBlockStatement(new List<LoweredStatement>
         {
-            new LoweredReturnStatement(new LoweredMatchFailureExpression(match.Type))
+            CreateReturnStatement(new LoweredMatchFailureExpression(match.Type))
         });
 
         for (var i = match.Arms.Count - 1; i >= 0; i--)
@@ -311,7 +370,7 @@ public sealed class Lowerer
             }
             else
             {
-                armBody = new LoweredReturnStatement(LowerExpression(arm.Expression));
+                armBody = CreateReturnStatement(LowerExpression(arm.Expression));
             }
 
             if (arm.Guard is not null)

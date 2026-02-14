@@ -226,7 +226,7 @@ Implementation tasks:
 - CI instability from network/DB integration tests if isolation is weak.
 
 Mitigations:
-- Keep strict milestone gates and defer sugar until runtime baseline is stable.
+- Keep strict milestone gates and defer broader syntax sugar until runtime baseline is stable.
 - Add parity tests for each new builtin/feature before broad rollout.
 - Use deterministic local fixtures for JWT and DB integration lanes.
 

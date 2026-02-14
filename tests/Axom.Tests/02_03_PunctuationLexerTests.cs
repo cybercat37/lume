@@ -6,7 +6,7 @@ public class PunctuationLexerTests
     [Fact]
     public void Punctuation_tokens_are_lexed()
     {
-        var sourceText = new SourceText("let mut x = (1 + 2) * 3\nprint user.name", "test.axom");
+        var sourceText = new SourceText("let mut x = (1 + 2) * 3\ndefer print x\nprint user.name", "test.axom");
         var lexer = new Lexer(sourceText);
 
         var tokens = new List<TokenKind>();
@@ -29,6 +29,7 @@ public class PunctuationLexerTests
         Assert.Contains(TokenKind.Plus, tokens);
         Assert.Contains(TokenKind.Star, tokens);
         Assert.Contains(TokenKind.Dot, tokens);
+        Assert.Contains(TokenKind.DeferKeyword, tokens);
     }
 
     [Fact]
