@@ -87,6 +87,59 @@ public class RouteDiscoveryTests
         }
     }
 
+    [Fact]
+    public void Discover_allows_static_vs_int_when_no_overlap()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var appDir = Path.Combine(tempDir, "app");
+            var routesDir = Path.Combine(appDir, "routes");
+            Directory.CreateDirectory(routesDir);
+
+            var entry = Path.Combine(appDir, "main.axom");
+            File.WriteAllText(entry, "print 1");
+            File.WriteAllText(Path.Combine(routesDir, "users_me_get.axom"), "print 1");
+            File.WriteAllText(Path.Combine(routesDir, "users__id_int_get.axom"), "print 1");
+
+            var discovery = new RouteDiscovery();
+            var result = discovery.Discover(entry);
+
+            Assert.True(result.Success);
+            Assert.Empty(result.Diagnostics);
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void Discover_supports_flat_underscore_routes()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var appDir = Path.Combine(tempDir, "app");
+            var routesDir = Path.Combine(appDir, "routes");
+            Directory.CreateDirectory(routesDir);
+
+            var entry = Path.Combine(appDir, "main.axom");
+            File.WriteAllText(entry, "print 1");
+            File.WriteAllText(Path.Combine(routesDir, "admin_users_list_get.axom"), "print 1");
+
+            var discovery = new RouteDiscovery();
+            var result = discovery.Discover(entry);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Routes, route => route.Method == "GET" && route.Template == "/admin/users/list");
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_routes_{Guid.NewGuid():N}");

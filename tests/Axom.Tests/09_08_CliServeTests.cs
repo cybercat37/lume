@@ -30,6 +30,31 @@ public class CliServeTests
     }
 
     [Fact]
+    public async Task Http_host_serves_discovered_route_stub()
+    {
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+        var routes = new[]
+        {
+            new RouteEndpoint("GET", "/users/:id<int>", "routes/users__id_int_get.axom")
+        };
+
+        var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+
+        using var client = new HttpClient();
+        var response = await WaitForAsync(client, $"http://127.0.0.1:{port}/users/42");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("GET /users/:id<int>", body, StringComparison.Ordinal);
+        Assert.Contains("params{id=42}", body, StringComparison.Ordinal);
+
+        cancellation.Cancel();
+        await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public void Serve_with_invalid_port_fails()
     {
         var tempDir = CreateTempDirectory();
@@ -155,6 +180,11 @@ public class CliServeTests
     private static async Task<HttpResponseMessage> WaitForHealthAsync(HttpClient client, int port)
     {
         var url = $"http://127.0.0.1:{port}/health";
+        return await WaitForAsync(client, url);
+    }
+
+    private static async Task<HttpResponseMessage> WaitForAsync(HttpClient client, string url)
+    {
         var timeoutAt = DateTime.UtcNow.AddSeconds(5);
 
         while (DateTime.UtcNow < timeoutAt)

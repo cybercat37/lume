@@ -227,6 +227,10 @@ public class Program
         }
 
         using var cancellationTokenSource = new CancellationTokenSource();
+        var runtimeRoutes = routeResult.Routes
+            .Select(route => new RouteEndpoint(route.Method, route.Template, route.FilePath))
+            .ToList();
+
         ConsoleCancelEventHandler handler = (_, eventArgs) =>
         {
             eventArgs.Cancel = true;
@@ -245,13 +249,18 @@ public class Program
                 {
                     Console.WriteLine($"Serving source: {inputPath}");
                     Console.WriteLine($"Discovered routes: {routeResult.Routes.Count}");
+
+                    foreach (var route in routeResult.Routes.OrderBy(route => route.Template, StringComparer.Ordinal))
+                    {
+                        Console.WriteLine($"  {route.Method} {route.Template}");
+                    }
                 }
 
                 Console.WriteLine($"Listening on http://{host}:{port}");
                 Console.WriteLine("Press Ctrl+C to stop.");
             }
 
-            httpHost.RunAsync(host, port, cancellationTokenSource.Token).GetAwaiter().GetResult();
+            httpHost.RunAsync(host, port, runtimeRoutes, cancellationTokenSource.Token).GetAwaiter().GetResult();
             return 0;
         }
         catch (OperationCanceledException)
