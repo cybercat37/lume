@@ -39,6 +39,18 @@ Build to C# without running:
 axom build hello.axom
 ```
 
+Serve with the HTTP bootstrap runtime:
+
+```bash
+axom serve hello.axom --host 127.0.0.1 --port 8080
+curl -i http://127.0.0.1:8080/health
+```
+
+Current `serve` behavior is intentionally incremental:
+- route files are discovered from `routes/**/*.axom`
+- route conflicts are diagnosed before boot
+- discovered routes are mounted as runtime stubs
+
 ### Install via NuGet (dotnet tool)
 
 If you want the CLI without cloning the repo, install the tool from NuGet:
@@ -56,6 +68,11 @@ dotnet tool update --global Axom.CLI --prerelease
 ```
 
 See `examples/nuget-tool/README.md` for a local tool manifest example.
+See `examples/http/README.md` for HTTP bootstrap examples.
+
+HTTP + DB design references:
+- `docs/roadmap/http-db-plan.md` (execution milestones)
+- `docs/proposals/http-db-reference.md` (vision/reference)
 
 
 ---
