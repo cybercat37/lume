@@ -10,12 +10,13 @@ public class Program
     public static int Main(string[] args)
     {
         const string usage =
-            "Usage: axom <build|run|check|serve> <file.axom> [options]\n" +
+            "Usage: axom <build|run|check|serve|init> <file.axom|project-name> [options]\n" +
             "\n" +
             "Options:\n" +
             "  --out <dir>   Override output directory (default: out)\n" +
             "  --host <addr> Bind host for serve (default: 127.0.0.1)\n" +
             "  --port <n>    Bind port for serve (default: 8080)\n" +
+            "  --force       Overwrite scaffold files for init\n" +
             "  --quiet       Suppress non-error output\n" +
             "  --verbose     Include extra context\n" +
             "  --cache       Enable compilation cache\n" +
@@ -23,6 +24,7 @@ public class Program
             "  --version     Show version\n" +
             "\n" +
             "Examples:\n" +
+            "  axom init myapp\n" +
             "  axom check hello.axom\n" +
             "  axom build hello.axom --out out\n" +
             "  axom run hello.axom --cache\n" +
@@ -44,13 +46,24 @@ public class Program
             }
         }
 
-        if (args.Length < 2)
+        if (args.Length == 0)
         {
             Console.Error.WriteLine(usage);
             return 1;
         }
 
         var command = args[0];
+        if (command == "init")
+        {
+            return InitProject(args, usage);
+        }
+
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
         var inputPath = args[1];
 
         if (command != "build" && command != "run" && command != "check" && command != "serve")
@@ -210,6 +223,49 @@ public class Program
 
         // run command: compile and execute
         return RunGeneratedCode(outputDir);
+    }
+
+    private static int InitProject(string[] args, string usage)
+    {
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
+        var projectName = args[1];
+        if (string.IsNullOrWhiteSpace(projectName))
+        {
+            Console.Error.WriteLine("Project name cannot be empty.");
+            return 1;
+        }
+
+        var force = false;
+        for (var i = 2; i < args.Length; i++)
+        {
+            if (args[i] == "--force")
+            {
+                force = true;
+                continue;
+            }
+
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
+        var projectPath = Path.GetFullPath(projectName);
+        if (!ProjectScaffolder.TryScaffoldApiProject(projectPath, force, out var error))
+        {
+            Console.Error.WriteLine(error ?? "Failed to scaffold project.");
+            return 1;
+        }
+
+        Console.WriteLine($"Initialized Axom API project at {projectPath}");
+        Console.WriteLine("Next steps:");
+        Console.WriteLine($"  cd {projectName}");
+        Console.WriteLine("  axom serve main.axom --host 127.0.0.1 --port 8080");
+        Console.WriteLine("  curl -i http://127.0.0.1:8080/health");
+        return 0;
     }
 
     private static int ServeProgram(string inputPath, string host, int port, bool quiet, bool verbose)

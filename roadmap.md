@@ -42,7 +42,7 @@ Runtime + tooling:
 - Dedicated lowering pass with lowered nodes
 - Concurrency runtime prototype (scope/spawn/join)
 - Aspect runtime v1 (`@logging` on functions, timestamped call/return logs)
-- CLI: check, build, run, serve (+ out/verbosity/host/port flags)
+- CLI: check, build, run, serve, init (+ out/verbosity/host/port/force flags)
 - Golden + snapshot tests and fuzz harness
 - Compilation cache and large input guardrail
 - NuGet tool packaging + CI + shell completions
@@ -281,6 +281,7 @@ Current HTTP+DB progress:
 - M13 (Partial): `axom serve` and runtime host are implemented; `/health` endpoint is live; graceful stop via Ctrl+C is supported.
 - M14 (Partial): route discovery/normalization and pre-boot conflict diagnostics are implemented, including overlap-reason details and dynamic filename validation.
 - M14 runtime bridge (Implemented): discovered routes execute Axom route files, expose dynamic/query params via `route_param*` and `query_param*` helpers, support `respond(status, body)`, expose request context (`request_method`, `request_path`), and return plain-text output.
+- DX bootstrap (Implemented): `axom init <name>` scaffolds an API-first project with routes, `.gitignore`, Dockerfile, compose, and onboarding README.
 
 See `docs/roadmap/http-db-plan.md` for objectives, DoD, implementation tasks,
 test strategy, sprint cadence, and risk mitigations.

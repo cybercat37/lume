@@ -21,7 +21,7 @@ public class CliHelpVersionTests
             var exitCode = Axom.Cli.Program.Main(new[] { "--help" });
 
             Assert.Equal(0, exitCode);
-            Assert.Contains("Usage: axom <build|run|check|serve>", output.ToString());
+            Assert.Contains("Usage: axom <build|run|check|serve|init>", output.ToString());
             Assert.Equal(string.Empty, error.ToString());
         }
         finally

@@ -308,6 +308,24 @@ make build
 dotnet build
 ```
 
+### Init a Project
+
+```bash
+axom init myapp
+```
+
+This creates an API-first scaffold (`main.axom`, `routes/`, `.gitignore`,
+`Dockerfile`, `docker-compose.yml`, and a project README).
+
+If the target directory already exists and is not empty, use:
+
+```bash
+axom init myapp --force
+```
+
+The generated project README includes a "Run Without Web" section that explains
+how to use the project in CLI/script mode and ignore `routes/`.
+
 ### Run a Axom Program
 
 ```bash
@@ -429,6 +447,7 @@ dotnet run --project src/axom -- build path/to/file.axom
 - `--out <dir>` — Override output directory (default: `out`)
 - `--host <addr>` — Bind host for `serve` (default: `127.0.0.1`)
 - `--port <n>` — Bind port for `serve` (default: `8080`)
+- `--force` — Overwrite scaffold files for `init`
 - `--quiet` — Suppress non-error output
 - `--verbose` — Include extra context
 - `--cache` — Enable compilation cache for repeated builds
