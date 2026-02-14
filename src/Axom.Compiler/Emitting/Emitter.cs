@@ -1060,6 +1060,7 @@ public sealed class Emitter
                 "str" => $"AxomStringify({argumentExpressions[0]})",
                 "format" => $"AxomFormat({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "sleep" => $"((Func<object?>)(() => {{ System.Threading.Thread.Sleep(Math.Max(0, {argumentExpressions[0]})); return null; }}))()",
+                "clear" => "((Func<object?>)(() => { Console.Clear(); return null; }))()",
                 "time_now_utc" => "DateTimeOffset.UtcNow",
                 "time_add_ms" => $"({argumentExpressions[0]}).AddMilliseconds({argumentExpressions[1]})",
                 "time_diff_ms" => $"(int)({argumentExpressions[0]} - {argumentExpressions[1]}).TotalMilliseconds",

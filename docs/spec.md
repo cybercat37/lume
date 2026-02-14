@@ -69,12 +69,13 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - String interpolation: `f"...{expr}..."` with `{}` expressions.
 - String helpers (length/split) live in stdlib.
 - Function-style collection combinators are implemented: `map`, `filter`, `fold`, `each`, `range`, `take`, `skip`, `take_while`, `skip_while`, `enumerate`, `zip`, `zip_with`, `count`, `sum`, `any`, `all`, `result_map`.
-- Time/random builtins are available: `sleep(ms)`, `time_now_utc()`, `time_add_ms`, `time_diff_ms`, `time_to_iso`, `time_to_local_iso`, `time_from_iso`, `rand_float()`, `rand_int(max)`, `rand_seed(seed)`.
+- Time/random/screen builtins are available: `sleep(ms)`, `clear()`, `time_now_utc()`, `time_add_ms`, `time_diff_ms`, `time_to_iso`, `time_to_local_iso`, `time_from_iso`, `rand_float()`, `rand_int(max)`, `rand_seed(seed)`.
 - Dedicated pipeline-combinator expression syntax remains proposed
   (see `docs/proposals/pipeline-combinators.md`).
 
 Builtin notes:
 - `sleep(ms: Int) -> Unit` blocks for `ms` milliseconds (`ms <= 0` is a no-op).
+- `clear() -> Unit` clears the current console screen.
 - `time_now_utc() -> Instant` returns current UTC instant.
 - `time_add_ms(value: Instant, ms: Int) -> Instant` shifts an instant by milliseconds.
 - `time_diff_ms(a: Instant, b: Instant) -> Int` returns signed millisecond difference (`a - b`).

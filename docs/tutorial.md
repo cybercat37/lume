@@ -651,6 +651,7 @@ print time_diff_ms(later, now)
 print time_to_iso(now)
 print time_to_local_iso(now)
 print time_from_iso(time_to_iso(now))
+clear()
 
 let total = [1, 2, 3]
   |> map(fn(x: Int) => x * 2)

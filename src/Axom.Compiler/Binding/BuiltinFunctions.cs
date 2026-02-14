@@ -92,6 +92,13 @@ public static class BuiltinFunctions
         TypeSymbol.Unit,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Clear = new(
+        "clear",
+        Array.Empty<ParameterSymbol>(),
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Unit,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol TimeNowUtc = new(
         "time_now_utc",
         Array.Empty<ParameterSymbol>(),
@@ -363,6 +370,7 @@ public static class BuiltinFunctions
         [Str.Name] = Str,
         [Format.Name] = Format,
         [Sleep.Name] = Sleep,
+        [Clear.Name] = Clear,
         [TimeNowUtc.Name] = TimeNowUtc,
         [TimeAddMs.Name] = TimeAddMs,
         [TimeDiffMs.Name] = TimeDiffMs,

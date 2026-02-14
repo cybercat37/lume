@@ -84,9 +84,11 @@ print time_from_iso(time_to_iso(now))
 print rand_float()
 print rand_int(10)
 sleep(20)
+clear()
 ```
 
 - `sleep(ms)` waits for `ms` milliseconds (`ms <= 0` is a no-op)
+- `clear()` clears the current console screen
 - `time_from_iso(text)` returns `Ok(instant)` or `Error("invalid ISO-8601 instant")`
 - `rand_int(max)` returns `Ok(n)` or `Error("max must be > 0")`
 

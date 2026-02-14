@@ -1002,6 +1002,9 @@ public sealed class Interpreter
                     }
 
                     return null;
+                case "clear":
+                    output.Clear();
+                    return null;
                 case "time_now_utc":
                     return DateTimeOffset.UtcNow;
                 case "time_add_ms":

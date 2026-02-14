@@ -29,7 +29,7 @@ Language core:
 - Records v1.1 (`with` update + spread copy) and sum types v1
 - Option/Result patterns with ? and unwrap()
 - Generics v1 (functions + initial type-generic syntax)
-- Builtins: print, println, input, len, abs, min, max, sleep, rand_float, rand_int, rand_seed
+- Builtins: print, println, input, len, abs, min, max, sleep, clear, rand_float, rand_int, rand_seed
 
 Runtime + tooling:
 - Interpreter and codegen (C# emitter)

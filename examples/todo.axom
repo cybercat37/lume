@@ -1,0 +1,115 @@
+type Todo {
+  id: Int
+  title: String
+  done: Bool
+}
+
+fn todo_status(t: Todo) -> String {
+  match t.done {
+    true -> "x"
+    false -> " "
+  }
+}
+
+fn render_todo(t: Todo) -> String {
+  f"[{todo_status(t)}] #{t.id} {t.title}"
+}
+
+fn render_list(items: List<Todo>) -> String {
+  fold(items, "", fn(acc: String, t: Todo) => match acc == "" {
+    true -> render_todo(t)
+    false -> acc + "\n" + render_todo(t)
+  })
+}
+
+fn render_stats(items: List<Todo>) -> String {
+  let done_count = count(filter(items, fn(t: Todo) => t.done))
+  let open_count = count(filter(items, fn(t: Todo) => !t.done))
+  f"Completati: {done_count}\nAperti: {open_count}\nTotale: {count(items)}"
+}
+
+fn mark_done(items: List<Todo>, target_id: Int) -> List<Todo> {
+  map(items, fn(t: Todo) => match t.id == target_id {
+    true -> t with { done: true }
+    false -> t
+  })
+}
+
+fn done_ok(items: List<Todo>, id: Int) -> List<Todo> {
+  let updated = mark_done(items, id)
+  print "Todo aggiornato."
+  print render_list(updated)
+  updated
+}
+
+fn done_not_found(items: List<Todo>) -> List<Todo> {
+  print "ID non trovato."
+  items
+}
+
+fn done_invalid_id(items: List<Todo>, e: String) -> List<Todo> {
+  print f"ID non valido: {e}"
+  items
+}
+
+fn cmd_list(items: List<Todo>) -> List<Todo> {
+  print render_list(items)
+  items
+}
+
+fn cmd_stats(items: List<Todo>) -> List<Todo> {
+  print render_stats(items)
+  items
+}
+
+fn cmd_done(items: List<Todo>) -> List<Todo> {
+  print "Inserisci ID da completare:"
+  let id_text = input()
+  let parsed = dotnet.try_call<Int>("System.Convert", "ToInt32", id_text)
+
+  match parsed {
+    Ok(id) -> match any(items, fn(t: Todo) => t.id == id) {
+      true -> done_ok(items, id)
+      false -> done_not_found(items)
+    }
+    Error(e) -> done_invalid_id(items, e)
+  }
+}
+
+fn cmd_unknown(items: List<Todo>) -> List<Todo> {
+  print "Comando non riconosciuto."
+  items
+}
+
+fn stop_loop(items: List<Todo>) -> List<Todo> {
+  print "Fine."
+  items
+}
+
+fn loop(items: List<Todo>) -> List<Todo> {
+  print "Comando? (list | stats | done | exit)"
+  let cmd = input()
+  clear()
+
+  let next_items = match cmd {
+    "list" -> cmd_list(items)
+    "stats" -> cmd_stats(items)
+    "done" -> cmd_done(items)
+    "exit" -> items
+    _ -> cmd_unknown(items)
+  }
+
+  match cmd {
+    "exit" -> stop_loop(next_items)
+    _ -> loop(next_items)
+  }
+}
+
+let todos = [
+  Todo { id: 1, title: "Studiare Axom", done: false },
+  Todo { id: 2, title: "Scrivere primo progetto", done: false },
+  Todo { id: 3, title: "Fare commit", done: true }
+]
+
+clear()
+let _end = loop(todos)
