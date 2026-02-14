@@ -170,6 +170,60 @@ public class RouteDiscoveryTests
         }
     }
 
+    [Fact]
+    public void Discover_reports_invalid_dynamic_marker_without_param_name()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var appDir = Path.Combine(tempDir, "app");
+            var routesDir = Path.Combine(appDir, "routes");
+            Directory.CreateDirectory(routesDir);
+
+            var entry = Path.Combine(appDir, "main.axom");
+            File.WriteAllText(entry, "print 1");
+            File.WriteAllText(Path.Combine(routesDir, "users___get.axom"), "print 1");
+
+            var discovery = new RouteDiscovery();
+            var result = discovery.Discover(entry);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Message.Contains("dynamic parameter name cannot be empty", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void Discover_reports_invalid_dynamic_parameter_identifier()
+    {
+        var tempDir = CreateTempDirectory();
+        try
+        {
+            var appDir = Path.Combine(tempDir, "app");
+            var routesDir = Path.Combine(appDir, "routes");
+            Directory.CreateDirectory(routesDir);
+
+            var entry = Path.Combine(appDir, "main.axom");
+            File.WriteAllText(entry, "print 1");
+            File.WriteAllText(Path.Combine(routesDir, "users__123id_get.axom"), "print 1");
+
+            var discovery = new RouteDiscovery();
+            var result = discovery.Discover(entry);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Message.Contains("is not a valid identifier", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_routes_{Guid.NewGuid():N}");

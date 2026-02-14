@@ -29,12 +29,20 @@ public sealed class RouteDiscovery
             .ToList();
 
         var routes = new List<RouteDefinition>(routeFiles.Count);
+        var diagnostics = new List<Diagnostic>();
         foreach (var routeFile in routeFiles)
         {
-            routes.Add(ParseRoute(routeFile, routesRoot));
+            var parseResult = ParseRoute(routeFile, routesRoot);
+            if (parseResult.Route is not null)
+            {
+                routes.Add(parseResult.Route);
+            }
+
+            diagnostics.AddRange(parseResult.Diagnostics);
         }
 
-        var diagnostics = DetectConflicts(routes);
+        diagnostics.AddRange(DetectConflicts(routes));
+
         if (diagnostics.Count > 0)
         {
             return RouteDiscoveryResult.CreateFailure(routes, diagnostics);
@@ -66,7 +74,7 @@ public sealed class RouteDiscovery
         return null;
     }
 
-    private static RouteDefinition ParseRoute(string routeFile, string routesRoot)
+    private static ParseRouteResult ParseRoute(string routeFile, string routesRoot)
     {
         var relative = Path.GetRelativePath(routesRoot, routeFile);
         var withoutExtension = Path.ChangeExtension(relative, null) ?? string.Empty;
@@ -76,7 +84,9 @@ public sealed class RouteDiscovery
         var fileName = pathParts.Length == 0 ? string.Empty : pathParts[^1];
         var method = "GET";
 
-        var fileTokens = ParseFileTokens(fileName, out var detectedMethod);
+        var diagnostics = new List<Diagnostic>();
+
+        var fileTokens = ParseFileTokens(routeFile, fileName, diagnostics, out var detectedMethod);
         if (!string.IsNullOrWhiteSpace(detectedMethod))
         {
             method = detectedMethod;
@@ -103,10 +113,19 @@ public sealed class RouteDiscovery
             ? "/"
             : "/" + string.Join('/', segments.Select(ToTemplateSegment));
 
-        return new RouteDefinition(method, template, routeFile, segments);
+        if (diagnostics.Count > 0)
+        {
+            return new ParseRouteResult(null, diagnostics);
+        }
+
+        return new ParseRouteResult(new RouteDefinition(method, template, routeFile, segments), diagnostics);
     }
 
-    private static IReadOnlyList<RouteSegment> ParseFileTokens(string fileName, out string method)
+    private static IReadOnlyList<RouteSegment> ParseFileTokens(
+        string routeFile,
+        string fileName,
+        List<Diagnostic> diagnostics,
+        out string method)
     {
         var tokensWithEmpty = fileName.Split('_', StringSplitOptions.None).ToList();
         method = "GET";
@@ -129,12 +148,32 @@ public sealed class RouteDiscovery
 
             if (i + 1 >= tokensWithEmpty.Count)
             {
+                diagnostics.Add(Diagnostic.Error(
+                    routeFile,
+                    1,
+                    1,
+                    "Invalid route filename: dynamic segment marker '__' must be followed by a parameter name."));
                 continue;
             }
 
             var parameterName = tokensWithEmpty[i + 1];
             if (string.IsNullOrWhiteSpace(parameterName))
             {
+                diagnostics.Add(Diagnostic.Error(
+                    routeFile,
+                    1,
+                    1,
+                    "Invalid route filename: dynamic parameter name cannot be empty."));
+                continue;
+            }
+
+            if (!IsValidParameterName(parameterName))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    routeFile,
+                    1,
+                    1,
+                    $"Invalid route filename: dynamic parameter '{parameterName}' is not a valid identifier."));
                 continue;
             }
 
@@ -151,6 +190,29 @@ public sealed class RouteDiscovery
         }
 
         return tokens;
+    }
+
+    private static bool IsValidParameterName(string parameterName)
+    {
+        if (parameterName.Length == 0)
+        {
+            return false;
+        }
+
+        if (!(char.IsLetter(parameterName[0]) || parameterName[0] == '_'))
+        {
+            return false;
+        }
+
+        for (var i = 1; i < parameterName.Length; i++)
+        {
+            if (!(char.IsLetterOrDigit(parameterName[i]) || parameterName[i] == '_'))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static string ToTemplateSegment(RouteSegment segment)
@@ -306,4 +368,6 @@ public sealed class RouteDiscovery
             _ => true
         };
     }
+
+    private sealed record ParseRouteResult(RouteDefinition? Route, IReadOnlyList<Diagnostic> Diagnostics);
 }
