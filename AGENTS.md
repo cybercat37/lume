@@ -141,6 +141,39 @@ Follow the existing conventions visible in the C# files.
   executable forms. Avoid cross-layer dependencies.
 - Preserve public entry points used by tests (e.g., `SyntaxTree.Parse`,
   `Interpreter.Run`) to keep tests unchanged while internal structure evolves.
+## Core inviolable rule
+The Axom core must remain small, stable, and conceptually minimal.
+
+**Any new feature must be expressible as syntactic sugar or a library built on top of existing primitives.
+If it requires new fundamental runtime semantics or new type system rules, it does not belong in the core.**
+
+### Non-negotiable constraints
+1. **The core does not grow casually**
+   Adding new keywords, new typing rules, or new runtime behaviors is forbidden unless something of equal weight is removed.
+
+2. **One canonical way**
+   If a feature introduces a second official way to solve the same problem, it does not enter the core.
+
+3. **No semantic exceptions**
+   If the feature requires "except when..." rules, it does not enter the core.
+
+4. **Low systemic impact**
+   A core change may touch at most two of the following:
+   - Parser
+   - Type checker
+   - Code generation
+   - Runtime
+   - Documentation model
+   If it affects three or more, it must live outside the core.
+
+5. **Tutorial test**
+   If explaining the feature requires introducing new conceptual prerequisites, it does not belong in the core.
+
+Growth should happen through:
+- DSLs and macros
+- Code generation
+- Libraries and modules
+- Tooling
 ## Roadmap references
 - The consolidated roadmap lives in `roadmap.md`.
 ## If you add new tooling
