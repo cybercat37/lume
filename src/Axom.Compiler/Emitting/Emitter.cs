@@ -674,6 +674,11 @@ public sealed class Emitter
                     || string.Equals(function.Function.Name, "http_timeout", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "get", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "post", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "put", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "patch", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "delete", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "request_header", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "request_text", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "send", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "require", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "response_text", StringComparison.Ordinal)) => true,
@@ -1182,6 +1187,11 @@ public sealed class Emitter
                 "http_timeout" => $"AxomHttpTimeout({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "get" => $"AxomHttpGet({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "post" => $"AxomHttpPost({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
+                "put" => $"AxomHttpPut({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
+                "patch" => $"AxomHttpPatch({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
+                "delete" => $"AxomHttpDelete({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "request_header" => $"AxomHttpRequestHeader({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
+                "request_text" => $"AxomHttpRequestText({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "send" => $"AxomHttpSend({argumentExpressions[0]})",
                 "require" => $"AxomHttpRequire({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "response_text" => $"AxomHttpResponseText({argumentExpressions[0]})",
@@ -1739,6 +1749,41 @@ public sealed class Emitter
         builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
         builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
         builder.AppendLine("        return new AxomHttpRequestValue(\"POST\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpRequestValue AxomHttpPut(AxomHttpClientValue client, string path, string body)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
+        builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"PUT\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpRequestValue AxomHttpPatch(AxomHttpClientValue client, string path, string body)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
+        builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"PATCH\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpRequestValue AxomHttpDelete(AxomHttpClientValue client, string path)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
+        builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"DELETE\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), null, client.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpRequestValue AxomHttpRequestHeader(AxomHttpRequestValue request, string name, string value)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var headers = new System.Collections.Generic.Dictionary<string, string>(request.Headers, StringComparer.OrdinalIgnoreCase)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            [name] = value");
+        builder.AppendLine("        };");
+        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, headers, request.Body, request.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpRequestValue AxomHttpRequestText(AxomHttpRequestValue request, string body)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, new System.Collections.Generic.Dictionary<string, string>(request.Headers, StringComparer.OrdinalIgnoreCase), body, request.TimeoutMs);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomResult<AxomHttpResponseValue> AxomHttpSend(AxomHttpRequestValue request)");

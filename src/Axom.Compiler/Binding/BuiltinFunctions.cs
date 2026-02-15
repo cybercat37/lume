@@ -82,6 +82,64 @@ public static class BuiltinFunctions
         TypeSymbol.HttpRequest,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol HttpPut = new(
+        "put",
+        new[]
+        {
+            new ParameterSymbol("client", TypeSymbol.Http),
+            new ParameterSymbol("path", TypeSymbol.String),
+            new ParameterSymbol("body", TypeSymbol.String)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.HttpRequest,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpPatch = new(
+        "patch",
+        new[]
+        {
+            new ParameterSymbol("client", TypeSymbol.Http),
+            new ParameterSymbol("path", TypeSymbol.String),
+            new ParameterSymbol("body", TypeSymbol.String)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.HttpRequest,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpDelete = new(
+        "delete",
+        new[]
+        {
+            new ParameterSymbol("client", TypeSymbol.Http),
+            new ParameterSymbol("path", TypeSymbol.String)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.HttpRequest,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpRequestHeader = new(
+        "request_header",
+        new[]
+        {
+            new ParameterSymbol("request", TypeSymbol.HttpRequest),
+            new ParameterSymbol("name", TypeSymbol.String),
+            new ParameterSymbol("value", TypeSymbol.String)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.HttpRequest,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpRequestText = new(
+        "request_text",
+        new[]
+        {
+            new ParameterSymbol("request", TypeSymbol.HttpRequest),
+            new ParameterSymbol("body", TypeSymbol.String)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.HttpRequest,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol HttpSend = new(
         "send",
         new[]
@@ -517,6 +575,11 @@ public static class BuiltinFunctions
         [HttpWithTimeout.Name] = HttpWithTimeout,
         [HttpGet.Name] = HttpGet,
         [HttpPost.Name] = HttpPost,
+        [HttpPut.Name] = HttpPut,
+        [HttpPatch.Name] = HttpPatch,
+        [HttpDelete.Name] = HttpDelete,
+        [HttpRequestHeader.Name] = HttpRequestHeader,
+        [HttpRequestText.Name] = HttpRequestText,
         [HttpSend.Name] = HttpSend,
         [HttpRequire.Name] = HttpRequire,
         [HttpResponseText.Name] = HttpResponseText,

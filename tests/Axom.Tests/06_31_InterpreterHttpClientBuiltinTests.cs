@@ -57,6 +57,27 @@ public class InterpreterHttpClientBuiltinTests
         Assert.Equal("invalid url: not-a-url/health", result.Output.Trim());
     }
 
+    [Fact]
+    public void Http_extended_verb_and_request_decorator_builtins_produce_requests()
+    {
+        var sourceText = new SourceText(
+            "let client = http(\"http://example.test\")\nlet req = client |> put(\"/users/1\", \"body\") |> request_header(\"x-test\", \"ok\") |> request_text(\"replaced\")\nlet req2 = client |> patch(\"/users/2\", \"patch\")\nlet req3 = client |> delete(\"/users/3\")\nprint req\nprint req2\nprint req3",
+            "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var errors = result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors.Select(error => error.ToString())));
+
+        var lines = result.Output
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        Assert.Equal("Request { method: PUT, url: http://example.test/users/1 }", lines[0]);
+        Assert.Equal("Request { method: PATCH, url: http://example.test/users/2 }", lines[1]);
+        Assert.Equal("Request { method: DELETE, url: http://example.test/users/3 }", lines[2]);
+    }
+
     private static async Task WaitForHealthAsync(int port)
     {
         using var client = new HttpClient();

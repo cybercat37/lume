@@ -7,12 +7,17 @@ public class CodegenHttpClientBuiltinTests
     {
         var compiler = new CompilerDriver();
         var result = compiler.Compile(
-            "let request = http(\"http://127.0.0.1:8080\") |> get(\"/health\")\nlet response = send(request)\nprint response",
+            "let client = http(\"http://127.0.0.1:8080\")\nlet request = client |> put(\"/health\", \"body\") |> request_header(\"x-test\", \"ok\") |> request_text(\"override\")\nlet request2 = client |> patch(\"/health\", \"patch\")\nlet request3 = client |> delete(\"/health\")\nlet request4 = client |> get(\"/health\")\nlet response = send(request)\nprint response\nprint request2\nprint request3\nprint request4",
             "test.axom");
 
         Assert.True(result.Success);
         Assert.Contains("AxomHttpCreate", result.GeneratedCode);
         Assert.Contains("AxomHttpGet", result.GeneratedCode);
+        Assert.Contains("AxomHttpPut", result.GeneratedCode);
+        Assert.Contains("AxomHttpPatch", result.GeneratedCode);
+        Assert.Contains("AxomHttpDelete", result.GeneratedCode);
+        Assert.Contains("AxomHttpRequestHeader", result.GeneratedCode);
+        Assert.Contains("AxomHttpRequestText", result.GeneratedCode);
         Assert.Contains("AxomHttpSend", result.GeneratedCode);
         Assert.Contains("AxomHttpResponseValue", result.GeneratedCode);
         Assert.Contains("AxomHttpErrorValue", result.GeneratedCode);

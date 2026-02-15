@@ -1050,6 +1050,73 @@ public sealed class Interpreter
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "post expects (Http client, String path, String body)."));
                     return null;
+                case "put":
+                    if (arguments.Length == 3
+                        && arguments[0] is HttpClientValue putClient
+                        && arguments[1] is string putPath
+                        && arguments[2] is string putBody)
+                    {
+                        return BuildRequest(putClient, "PUT", putPath, putBody);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "put expects (Http client, String path, String body)."));
+                    return null;
+                case "patch":
+                    if (arguments.Length == 3
+                        && arguments[0] is HttpClientValue patchClient
+                        && arguments[1] is string patchPath
+                        && arguments[2] is string patchBody)
+                    {
+                        return BuildRequest(patchClient, "PATCH", patchPath, patchBody);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "patch expects (Http client, String path, String body)."));
+                    return null;
+                case "delete":
+                    if (arguments.Length == 2
+                        && arguments[0] is HttpClientValue deleteClient
+                        && arguments[1] is string deletePath)
+                    {
+                        return BuildRequest(deleteClient, "DELETE", deletePath, null);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "delete expects (Http client, String path)."));
+                    return null;
+                case "request_header":
+                    if (arguments.Length == 3
+                        && arguments[0] is HttpRequestValue requestWithHeader
+                        && arguments[1] is string requestHeaderName
+                        && arguments[2] is string requestHeaderValue)
+                    {
+                        var mergedHeaders = new Dictionary<string, string>(requestWithHeader.Headers, StringComparer.OrdinalIgnoreCase)
+                        {
+                            [requestHeaderName] = requestHeaderValue
+                        };
+                        return new HttpRequestValue(
+                            requestWithHeader.Method,
+                            requestWithHeader.Url,
+                            mergedHeaders,
+                            requestWithHeader.Body,
+                            requestWithHeader.TimeoutMs);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "request_header expects (Request request, String name, String value)."));
+                    return null;
+                case "request_text":
+                    if (arguments.Length == 2
+                        && arguments[0] is HttpRequestValue requestWithText
+                        && arguments[1] is string requestBody)
+                    {
+                        return new HttpRequestValue(
+                            requestWithText.Method,
+                            requestWithText.Url,
+                            new Dictionary<string, string>(requestWithText.Headers, StringComparer.OrdinalIgnoreCase),
+                            requestBody,
+                            requestWithText.TimeoutMs);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "request_text expects (Request request, String body)."));
+                    return null;
                 case "send":
                     if (arguments.Length == 1 && arguments[0] is HttpRequestValue request)
                     {
