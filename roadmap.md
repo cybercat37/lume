@@ -269,7 +269,7 @@ Proposal backlog:
 ### M13-M21: HTTP + DB Delivery Track
 - M13: HTTP server runtime core
 - M14: file-based routing v1 + conflict diagnostics
-- M15: HTTP client stdlib v1
+- M15: HTTP client stdlib v1 (pipeline-first full spec)
 - M16: auth foundation (`@public`, `@auth`) + 401/403 contract
 - M17: DB runtime v1 (parameterized query/exec)
 - M18: typed SQL interpolation v1 (`sql"..."`, typed params)
@@ -277,10 +277,21 @@ Proposal backlog:
 - M20: customer docs bundle + protected `/docs`
 - M21: hardening/performance/DX/release
 
+M15 target scope (normative direction):
+- `Http` is an immutable configuration record, composed with `|>`.
+- No effect-lane API (`HttpFx`) is planned.
+- `http { ... }` construction sugar is planned with defaults (`headers = {}`, `timeout = 30s`, `retry.max = 0`).
+- Builtins support `Http -> Http`, `Http -> Request`, `Request -> Request`, `Request -> Result<Response, HttpError>`, and `Response -> Result<T, HttpError>` workflows.
+- `?` remains early-return propagation in sequential request pipelines.
+- `Option` use is constrained to semantically optional payloads (`Request.body`, optional `StatusError` body), not configuration defaults.
+- Overload resolution for HTTP builtins with the same name (for example `header`) is type-directed from the left side of `|>`; ambiguity is a compile-time error.
+- Status validation (`require`) is separate from transport (`send`), and supports status code + range forms.
+
 Current HTTP+DB progress:
 - M13 (Partial): `axom serve` and runtime host are implemented; `/health` endpoint is live; graceful stop via Ctrl+C is supported.
 - M14 (Partial): route discovery/normalization and pre-boot conflict diagnostics are implemented, including overlap-reason details and dynamic filename validation.
 - M14 runtime bridge (Implemented): discovered routes execute Axom route files, expose dynamic/query params via `route_param*` and `query_param*` helpers, support `respond(status, body)`, expose request context (`request_method`, `request_path`), and return plain-text output.
+- M15 (Planned): outbound HTTP client remains to be implemented; scope is the full pipeline-first module defined in `docs/spec.md` and `docs/roadmap/http-db-plan.md`.
 - DX bootstrap (Implemented): `axom init <name>` scaffolds an API-first project with routes, `.gitignore`, Dockerfile, compose, Makefile + PowerShell endpoint-doc tooling, and onboarding README.
 
 See `docs/roadmap/http-db-plan.md` for objectives, DoD, implementation tasks,

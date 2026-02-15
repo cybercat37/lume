@@ -42,7 +42,8 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 - Return is implicit from the last expression; `return` is allowed for early exit.
 - `defer` schedules cleanup at scope exit; deferred actions run in LIFO order.
 - Functions without an explicit return type have type `Unit`.
-- No optional/default params or named arguments (for now).
+- No optional/default params or named arguments for user-defined functions.
+- Builtin modules may define sugar forms that desugar to explicit overloads.
 - Lambdas: `fn(x: Int) => x * 2` for single-expression; captures by value only; no `mut` capture.
 - Top-level statements are allowed; `fn main()` is optional. CLI args later.
 
@@ -170,8 +171,170 @@ LetStmt := "let" Identifier IntentAnnotation? "=" Expression
 - Route handlers can read query params using `query_param(name)`, `query_param_int(name)`, and `query_param_float(name)`.
 - Route handlers can override status/body with `respond(status, body)`.
 - Route handlers can read request context with `request_method()` and `request_path()`.
-- HTTP client builtins, DB runtime APIs, typed SQL interpolation, and auth/security DSL are planned.
+- HTTP client v1 is planned as a pipeline-first stdlib module (`http`) with immutable client configuration.
+- DB runtime APIs, typed SQL interpolation, and auth/security DSL are planned.
 - Reference docs: `docs/roadmap/http-db-plan.md`, `docs/proposals/http-db-reference.md`.
+
+### HTTP Client Module v1 (Planned Target)
+
+The `http` module is specified as a pipeline-first client API. It does not
+introduce an effect system (`HttpFx` is not part of the language or stdlib).
+
+Design rules:
+- `Http` is an immutable record value representing client configuration.
+- Composition uses the value pipe `|>`.
+- Errors are modeled with `Result<_, HttpError>`.
+- `?` is used as an early-return propagation operator in client workflows.
+- `Option` is used only where absence is semantically real (for example
+  request body and optional captured error body), not to model omitted config
+  fields with defaults.
+
+Core types:
+
+```axom
+type Http {
+  baseUrl: String
+  headers: Map<String>
+  timeout: Duration
+  retry: Retry
+}
+
+type Retry {
+  max: Int
+}
+
+type Request {
+  method: Method
+  url: String
+  headers: Map<String>
+  body: Option<Body>
+}
+
+type Response {
+  status: Int
+  headers: Map<String>
+  body: Body
+}
+
+type Method {
+  GET
+  POST
+  PUT
+  PATCH
+  DELETE
+  HEAD
+  OPTIONS
+}
+
+type HttpError {
+  NetworkError(String)
+  Timeout
+  InvalidUrl(String)
+  DecodeError(String)
+  StatusError(status: Int, body: Option<String>)
+}
+```
+
+Construction sugar:
+
+```axom
+http {
+  baseUrl: "https://api.example.com",
+  headers: { "x-app": "axom" },
+  timeout: 5s,
+  retry: Retry { max: 1 }
+}
+```
+
+`http { ... }` desugars to `Http { ... }` with defaults when omitted:
+- `headers = {}`
+- `timeout = 30s`
+- `retry = Retry { max: 0 }`
+
+Client decorators (`Http -> Http`):
+- `bearer(token: String)`
+- `basic(user: String, pass: String)`
+- `retry(max: Int)`
+- `timeout(d: Duration)`
+- `header(k: String, v: String)`
+
+HTTP verbs (`Http -> Request`):
+- `get(path: String, params?: Record)`
+- `delete(path: String, params?: Record)`
+- `post(path: String, body?: Any)`
+- `put(path: String, body?: Any)`
+- `patch(path: String, body?: Any)`
+
+Path templating uses `{name}` placeholders:
+- Every placeholder requires `params.name`.
+- Placeholder present without `params` is an error.
+- Unresolved placeholders are errors.
+- Values convert to `String` via standard conversion.
+
+Request decorators (`Request -> Request`):
+- `header(k: String, v: String)`
+- `json(body: Any)`
+- `text(body: String)`
+- `bytes(body: Bytes)`
+- `acceptJson()`
+
+If `post(path, body)` receives a JSON-serializable value, it is equivalent to:
+- `post(path) |> json(body)`
+
+Execution and validation:
+- `send(): Request -> Result<Response, HttpError>`
+- Network failures map to `NetworkError`.
+- Timeouts map to `Timeout`.
+- HTTP status codes do not fail `send` directly.
+
+Status validation:
+
+```axom
+type StatusRange {
+  S2xx
+  S3xx
+  S4xx
+  S5xx
+  Range(from: Int, to: Int)
+}
+```
+
+Sugar forms are planned:
+- `2xx`
+- `200..299`
+
+Validation helpers:
+- `require(code: Int, includeBody?: Bool): Response -> Result<Response, HttpError>`
+- `require(range: StatusRange, includeBody?: Bool): Response -> Result<Response, HttpError>`
+- Non-matching status returns `StatusError(status, bodyOpt)`.
+- `bodyOpt` is populated only when `includeBody = true` and conversion to `String` succeeds.
+
+Body decoding (`Response -> Result<T, HttpError>`):
+- `json<T>()`
+- `text()`
+- `bytes()`
+- Decode failures map to `DecodeError`.
+
+Overload resolution in pipeline:
+- Builtins with the same name are resolved using the type on the left side of `|>`.
+- Example: `header(k, v)` may resolve to either `Http -> Http` or `Request -> Request`.
+- Ambiguity is a compile-time error.
+
+Example:
+
+```axom
+type User { id: Uuid, name: String }
+
+fn load_user(h: Http, id: Uuid) -> Result<User, HttpError> {
+  let resp =
+    h
+    |> get("/users/{id}", { id })
+    |> send()?
+
+  let ok = require(2xx)(resp)?
+  json<User>()(ok)
+}
+```
 
 ---
 

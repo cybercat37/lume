@@ -69,23 +69,45 @@ Tests:
 
 ## M15: HTTP Client Stdlib v1
 
-Objective: provide outbound HTTP calls with `Result`-based error handling.
+Objective: ship the full pipeline-first HTTP client module described by the
+language spec, including immutable `Http` configuration, request/response
+decorators, and deterministic `Result`-based errors.
 
 DoD:
-- `http.get` and `http.post` builtins are available.
-- Headers and timeout are supported.
-- Failures map to stable error categories.
+- Core records/sums are available: `Http`, `Retry`, `Request`, `Response`, `Method`, `HttpError`, `StatusRange`.
+- `http { ... }` construction sugar exists and desugars to `Http { ... }` with defaults (`headers = {}`, `timeout = 30s`, `retry.max = 0`).
+- Pipeline categories are available end-to-end:
+  - `Http -> Http` decorators (`bearer`, `basic`, `retry`, `timeout`, `header`)
+  - `Http -> Request` verbs (`get`, `delete`, `post`, `put`, `patch`)
+  - `Request -> Request` decorators (`header`, `json`, `text`, `bytes`, `acceptJson`)
+  - `send(): Request -> Result<Response, HttpError>`
+  - decode helpers (`json<T>`, `text`, `bytes`) and `require(...)` validators
+- Placeholder templating (`/users/{id}` + params binding) is validated with stable diagnostics/error mapping.
+- HTTP status does not fail `send`; status policies are handled through `require`.
+- Overload resolution for shared builtin names (for example `header`) is type-directed from the left side of `|>`.
+- No effect-system surface is introduced for HTTP client (`HttpFx` is out of scope).
 
 Implementation tasks:
-- Add builtin symbols and binder checks.
-- Implement interpreter runtime using `HttpClient`.
-- Emit codegen runtime helpers with the same semantics.
-- Add response helpers (`status`, `headers`, `text`, `json` baseline).
+- Type system and parser work:
+  - Add/enable required HTTP client types and syntax support (`http { ... }`, `StatusRange`, range sugar).
+  - Keep defaults as desugaring behavior, not `Option`-encoded config state.
+- Binder work:
+  - Add builtin symbols and signatures for all pipeline stages.
+  - Add type-directed overload selection for piped calls with deterministic ambiguity diagnostics.
+  - Enforce path-template placeholder checks where compile-time information is available.
+- Runtime work (interpreter):
+  - Implement outbound execution using `HttpClient`.
+  - Map transport and timeout errors to stable `HttpError` variants.
+  - Implement encoding/decoding helpers with deterministic `DecodeError` behavior.
+- Runtime work (codegen/emitter):
+  - Emit runtime helpers with interpreter parity for timeout, headers, retries, template expansion, and error mapping.
+  - Ensure `send` vs `require` separation is preserved.
 
 Tests:
-- Integration tests against a local test server.
-- Parity tests for interpreter vs emitted C#.
-- Timeout and network failure tests.
+- Integration tests against local HTTP fixtures for success and failure paths.
+- Parity tests for interpreter vs emitted C# across all pipeline stages.
+- Timeout, DNS/connect, invalid URL, decode-failure, and status-requirement tests.
+- Compile-time diagnostics tests for overload ambiguity and unresolved placeholders.
 
 ## M16: Auth Foundation (`@public`, `@auth`)
 
@@ -273,21 +295,39 @@ Acceptance gate:
 
 ### M15 Backlog (HTTP Client Stdlib)
 
-Stdlib/compiler tasks:
-- Add builtin symbols (`http_get`, `http_post` or chosen canonical names) in binder.
-- Add type symbols for response/error wrappers.
+Language and type surfaces:
+- Add/enable HTTP client types used by the spec (`Http`, `Retry`, `Request`, `Response`, `Method`, `HttpError`, `StatusRange`).
+- Add/enable supporting value types used by the API surface (`Duration`, `Bytes`, `Uuid`, JSON-compatible payload representation).
+- Keep record declarations and literals as the canonical object model; avoid introducing parallel object forms.
 
-Runtime/emitter tasks:
-- Implement interpreter path using `HttpClient`.
-- Implement codegen helper runtime with same timeout/header semantics.
-- Ensure deterministic mapping into `Result` errors.
+Parser and sugar:
+- Add `http { ... }` sugar and default-field desugaring.
+- Add status-range sugar (`2xx`, `200..299`) mapped to `StatusRange` forms.
+- Ensure diagnostics point to source sugar sites.
+
+Binder and overload resolution:
+- Register HTTP builtins for all pipeline stages, including same-name overloads (`header` on `Http` and `Request`).
+- Implement type-directed overload resolution for piped forms using the left-hand value type.
+- Emit deterministic diagnostics for ambiguous or invalid candidate sets.
+- Preserve `?` as early-return propagation and avoid introducing alternate HTTP propagation forms.
+
+Runtime behavior:
+- Implement request construction, header layering, and URL template expansion.
+- Implement `send` with deterministic `HttpError` mapping (`NetworkError`, `Timeout`, `InvalidUrl`).
+- Implement retry policy from `Http.retry.max`.
+- Implement body encoders/decoders and `StatusError` generation via `require`.
+
+Emitter parity:
+- Keep generated C# semantics aligned with interpreter for all success/failure paths.
+- Add parity harness cases for GET/POST/PUT/PATCH/DELETE, decorators, and decoder flows.
 
 Tests to add:
-- Local server-driven tests for success, timeout, DNS/connect failure.
-- Parity tests: same Axom program in interpreter and emitted C#.
+- End-to-end fixtures for templated paths, missing params, status policies, and decode errors.
+- Contract tests for no-`HttpFx` surface and Option discipline (Option only for true absence semantics).
+- Snapshot diagnostics for ambiguous overload resolution and invalid sugar forms.
 
 Acceptance gate:
-- Outbound calls are stable in CI and return predictable errors.
+- Full spec-shaped HTTP client examples compile and pass in interpreter and emitted C# lanes with deterministic outputs/errors.
 
 ### M16 Backlog (Auth Foundation)
 
