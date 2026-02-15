@@ -29,6 +29,90 @@ public static class BuiltinFunctions
         TypeSymbol.String,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Http = new(
+        "http",
+        new[] { new ParameterSymbol("baseUrl", TypeSymbol.String) },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Http,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpWithHeader = new(
+        "http_header",
+        new[]
+        {
+            new ParameterSymbol("client", TypeSymbol.Http),
+            new ParameterSymbol("name", TypeSymbol.String),
+            new ParameterSymbol("value", TypeSymbol.String)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Http,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpWithTimeout = new(
+        "http_timeout",
+        new[]
+        {
+            new ParameterSymbol("client", TypeSymbol.Http),
+            new ParameterSymbol("timeoutMs", TypeSymbol.Int)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Http,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpGet = new(
+        "get",
+        new[]
+        {
+            new ParameterSymbol("client", TypeSymbol.Http),
+            new ParameterSymbol("path", TypeSymbol.String)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.HttpRequest,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpPost = new(
+        "post",
+        new[]
+        {
+            new ParameterSymbol("client", TypeSymbol.Http),
+            new ParameterSymbol("path", TypeSymbol.String),
+            new ParameterSymbol("body", TypeSymbol.String)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.HttpRequest,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpSend = new(
+        "send",
+        new[]
+        {
+            new ParameterSymbol("request", TypeSymbol.HttpRequest)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.HttpResponse, TypeSymbol.HttpError),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpRequire = new(
+        "require",
+        new[]
+        {
+            new ParameterSymbol("response", TypeSymbol.HttpResponse),
+            new ParameterSymbol("statusCode", TypeSymbol.Int)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.HttpResponse, TypeSymbol.HttpError),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpResponseText = new(
+        "response_text",
+        new[]
+        {
+            new ParameterSymbol("response", TypeSymbol.HttpResponse)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.String, TypeSymbol.HttpError),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol RouteParam = new(
         "route_param",
         new[] { new ParameterSymbol("name", TypeSymbol.String) },
@@ -428,6 +512,14 @@ public static class BuiltinFunctions
         [Print.Name] = Print,
         [Println.Name] = Println,
         [Input.Name] = Input,
+        [Http.Name] = Http,
+        [HttpWithHeader.Name] = HttpWithHeader,
+        [HttpWithTimeout.Name] = HttpWithTimeout,
+        [HttpGet.Name] = HttpGet,
+        [HttpPost.Name] = HttpPost,
+        [HttpSend.Name] = HttpSend,
+        [HttpRequire.Name] = HttpRequire,
+        [HttpResponseText.Name] = HttpResponseText,
         [RouteParam.Name] = RouteParam,
         [RouteParamInt.Name] = RouteParamInt,
         [RouteParamFloat.Name] = RouteParamFloat,

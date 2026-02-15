@@ -1,0 +1,32 @@
+using Axom.Compiler.Binding;
+using Axom.Compiler.Parsing;
+using Axom.Compiler.Text;
+
+public class HttpClientBuiltinTypeTests
+{
+    [Fact]
+    public void Http_client_builtins_type_check_for_valid_signatures()
+    {
+        var sourceText = new SourceText(
+            "let client = http(\"http://127.0.0.1:8080\") |> http_timeout(2000) |> http_header(\"x-test\", \"ok\")\nlet request = client |> get(\"/health\")\nlet sent = send(request)\nprint sent",
+            "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics.Where(d => d.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void Http_builtin_rejects_non_string_base_url()
+    {
+        var sourceText = new SourceText("let client = http(1)", "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.NotEmpty(result.Diagnostics.Where(d => d.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error));
+    }
+}

@@ -56,6 +56,10 @@ public sealed class TypeSymbol
     public static TypeSymbol Bool { get; } = new("Bool");
     public static TypeSymbol String { get; } = new("String");
     public static TypeSymbol Instant { get; } = new("Instant");
+    public static TypeSymbol Http { get; } = new("Http");
+    public static TypeSymbol HttpRequest { get; } = new("Request");
+    public static TypeSymbol HttpResponse { get; } = new("Response");
+    public static TypeSymbol HttpError { get; } = new("HttpError");
     public static TypeSymbol Error { get; } = new("Error");
     public static TypeSymbol Unit { get; } = new("Unit");
 

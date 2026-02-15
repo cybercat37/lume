@@ -3810,6 +3810,10 @@ public sealed class Binder
                 "Bool" => TypeSymbol.Bool,
                 "String" => TypeSymbol.String,
                 "Instant" => TypeSymbol.Instant,
+                "Http" => TypeSymbol.Http,
+                "Request" => TypeSymbol.HttpRequest,
+                "Response" => TypeSymbol.HttpResponse,
+                "HttpError" => TypeSymbol.HttpError,
                 "Unit" => TypeSymbol.Unit,
                 _ => TypeSymbol.Error
             };

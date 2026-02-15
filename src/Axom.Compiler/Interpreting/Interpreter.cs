@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Text;
 using System.Linq;
 using System.Threading;
@@ -994,6 +995,93 @@ public sealed class Interpreter
                     return null;
                 case "input":
                     return inputBuffer.Count > 0 ? inputBuffer.Dequeue() : string.Empty;
+                case "http":
+                    if (arguments.Length == 1 && arguments[0] is string baseUrl)
+                    {
+                        return new HttpClientValue(baseUrl, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), 30000);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "http expects (String baseUrl)."));
+                    return null;
+                case "http_header":
+                    if (arguments.Length == 3
+                        && arguments[0] is HttpClientValue clientWithHeader
+                        && arguments[1] is string headerName
+                        && arguments[2] is string headerValue)
+                    {
+                        var mergedHeaders = new Dictionary<string, string>(clientWithHeader.Headers, StringComparer.OrdinalIgnoreCase)
+                        {
+                            [headerName] = headerValue
+                        };
+                        return new HttpClientValue(clientWithHeader.BaseUrl, mergedHeaders, clientWithHeader.TimeoutMs);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "http_header expects (Http client, String name, String value)."));
+                    return null;
+                case "http_timeout":
+                    if (arguments.Length == 2
+                        && arguments[0] is HttpClientValue clientWithTimeout
+                        && arguments[1] is int timeoutMs)
+                    {
+                        var normalized = timeoutMs <= 0 ? 1 : timeoutMs;
+                        return new HttpClientValue(clientWithTimeout.BaseUrl, clientWithTimeout.Headers, normalized);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "http_timeout expects (Http client, Int timeoutMs)."));
+                    return null;
+                case "get":
+                    if (arguments.Length == 2
+                        && arguments[0] is HttpClientValue getClient
+                        && arguments[1] is string getPath)
+                    {
+                        return BuildRequest(getClient, "GET", getPath, null);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "get expects (Http client, String path)."));
+                    return null;
+                case "post":
+                    if (arguments.Length == 3
+                        && arguments[0] is HttpClientValue postClient
+                        && arguments[1] is string postPath
+                        && arguments[2] is string postBody)
+                    {
+                        return BuildRequest(postClient, "POST", postPath, postBody);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "post expects (Http client, String path, String body)."));
+                    return null;
+                case "send":
+                    if (arguments.Length == 1 && arguments[0] is HttpRequestValue request)
+                    {
+                        return SendRequest(request);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "send expects (Request request)."));
+                    return BuildHttpResponseResult(isSuccess: false, null, "invalid request");
+                case "require":
+                    if (arguments.Length == 2 && arguments[0] is HttpResponseValue requireResponse && arguments[1] is int expectedStatus)
+                    {
+                        if (requireResponse.StatusCode == expectedStatus)
+                        {
+                            return BuildHttpResponseResult(isSuccess: true, requireResponse, null);
+                        }
+
+                        return BuildHttpResponseResult(
+                            isSuccess: false,
+                            null,
+                            $"status mismatch: expected {expectedStatus}, got {requireResponse.StatusCode}");
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "require expects (Response response, Int statusCode)."));
+                    return BuildHttpResponseResult(isSuccess: false, null, "invalid require invocation");
+                case "response_text":
+                    if (arguments.Length == 1 && arguments[0] is HttpResponseValue responseText)
+                    {
+                        return BuildHttpTextResult(isSuccess: true, responseText.Body, null);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "response_text expects (Response response)."));
+                    return BuildHttpTextResult(isSuccess: false, null, "invalid response");
                 case "route_param":
                     if (arguments.Length == 1 && arguments[0] is string routeParamName)
                     {
@@ -1776,6 +1864,68 @@ public sealed class Interpreter
             return DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
         }
 
+        private static HttpRequestValue BuildRequest(HttpClientValue client, string method, string path, string? body)
+        {
+            var normalizedPath = path.StartsWith("/", StringComparison.Ordinal) ? path : "/" + path;
+            var requestUrl = client.BaseUrl.EndsWith("/", StringComparison.Ordinal)
+                ? client.BaseUrl.TrimEnd('/') + normalizedPath
+                : client.BaseUrl + normalizedPath;
+
+            return new HttpRequestValue(
+                method,
+                requestUrl,
+                new Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase),
+                body,
+                client.TimeoutMs);
+        }
+
+        private static object SendRequest(HttpRequestValue request)
+        {
+            if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri))
+            {
+                return BuildHttpResponseResult(isSuccess: false, null, $"invalid url: {request.Url}");
+            }
+
+            using var httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs)
+            };
+            using var message = new HttpRequestMessage(new HttpMethod(request.Method), uri);
+
+            foreach (var header in request.Headers)
+            {
+                message.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+
+            if (request.Body is not null)
+            {
+                message.Content = new StringContent(request.Body, Encoding.UTF8, "text/plain");
+            }
+
+            try
+            {
+                var response = httpClient.SendAsync(message).GetAwaiter().GetResult();
+                var responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                var headers = response.Headers
+                    .Concat(response.Content.Headers)
+                    .ToDictionary(
+                        header => header.Key,
+                        header => string.Join(",", header.Value),
+                        StringComparer.OrdinalIgnoreCase);
+
+                var responseValue = new HttpResponseValue((int)response.StatusCode, responseBody, headers);
+                return BuildHttpResponseResult(isSuccess: true, responseValue, null);
+            }
+            catch (TaskCanceledException)
+            {
+                return BuildHttpResponseResult(isSuccess: false, null, "timeout");
+            }
+            catch (Exception ex)
+            {
+                return BuildHttpResponseResult(isSuccess: false, null, $"network error: {ex.Message}");
+            }
+        }
+
         private static object BuildIntResult(bool isSuccess, int? value, string? error)
         {
             var resultType = TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String);
@@ -1800,6 +1950,32 @@ public sealed class Interpreter
             }
 
             return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.String), error ?? "route error");
+        }
+
+        private static object BuildHttpResponseResult(bool isSuccess, HttpResponseValue? value, string? error)
+        {
+            var resultType = TypeSymbol.Result(TypeSymbol.HttpResponse, TypeSymbol.HttpError);
+            var okVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
+            var errorVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Error", StringComparison.Ordinal));
+            if (isSuccess)
+            {
+                return new SumValue(okVariant ?? new SumVariantSymbol("Ok", resultType, TypeSymbol.HttpResponse), value ?? new HttpResponseValue(0, string.Empty, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)));
+            }
+
+            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.HttpError), error ?? "http error");
+        }
+
+        private static object BuildHttpTextResult(bool isSuccess, string? value, string? error)
+        {
+            var resultType = TypeSymbol.Result(TypeSymbol.String, TypeSymbol.HttpError);
+            var okVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
+            var errorVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Error", StringComparison.Ordinal));
+            if (isSuccess)
+            {
+                return new SumValue(okVariant ?? new SumVariantSymbol("Ok", resultType, TypeSymbol.String), value ?? string.Empty);
+            }
+
+            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.HttpError), error ?? "http error");
         }
 
         private static object BuildFloatResult(bool isSuccess, double? value, string? error)
@@ -1917,6 +2093,72 @@ public sealed class Interpreter
             {
                 var parts = fields.Select(field => $"{field.Key}: {FormatValue(field.Value)}");
                 return $"{Type.Name} {{ {string.Join(", ", parts)} }}";
+            }
+        }
+
+        private sealed class HttpClientValue
+        {
+            public string BaseUrl { get; }
+            public IReadOnlyDictionary<string, string> Headers { get; }
+            public int TimeoutMs { get; }
+
+            public HttpClientValue(string baseUrl, IReadOnlyDictionary<string, string> headers, int timeoutMs)
+            {
+                BaseUrl = baseUrl;
+                Headers = headers;
+                TimeoutMs = timeoutMs;
+            }
+
+            public override string ToString()
+            {
+                return $"Http {{ baseUrl: {BaseUrl}, headers: {Headers.Count}, timeoutMs: {TimeoutMs} }}";
+            }
+        }
+
+        private sealed class HttpRequestValue
+        {
+            public string Method { get; }
+            public string Url { get; }
+            public IReadOnlyDictionary<string, string> Headers { get; }
+            public string? Body { get; }
+            public int TimeoutMs { get; }
+
+            public HttpRequestValue(
+                string method,
+                string url,
+                IReadOnlyDictionary<string, string> headers,
+                string? body,
+                int timeoutMs)
+            {
+                Method = method;
+                Url = url;
+                Headers = headers;
+                Body = body;
+                TimeoutMs = timeoutMs;
+            }
+
+            public override string ToString()
+            {
+                return $"Request {{ method: {Method}, url: {Url} }}";
+            }
+        }
+
+        private sealed class HttpResponseValue
+        {
+            public int StatusCode { get; }
+            public string Body { get; }
+            public IReadOnlyDictionary<string, string> Headers { get; }
+
+            public HttpResponseValue(int statusCode, string body, IReadOnlyDictionary<string, string> headers)
+            {
+                StatusCode = statusCode;
+                Body = body;
+                Headers = headers;
+            }
+
+            public override string ToString()
+            {
+                return $"Response {{ status: {StatusCode}, body: {Body} }}";
             }
         }
 

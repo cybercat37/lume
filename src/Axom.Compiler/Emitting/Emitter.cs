@@ -17,6 +17,7 @@ public sealed class Emitter
         var requiresRandomBuiltins = RequiresRandomBuiltins(program);
         var requiresRangeBuiltin = RequiresRangeBuiltin(program);
         var requiresRandomResultRuntime = RequiresRandomResultRuntime(program);
+        var requiresHttpBuiltins = RequiresHttpBuiltins(program);
         var requiresFormat = RequiresFormat(program);
         var requiresStringify = RequiresStringify(program) || requiresFormat || requiresFunctionLogging;
         var builder = new StringBuilder();
@@ -35,6 +36,12 @@ public sealed class Emitter
         {
             builder.AppendLine("using System.Reflection;");
             builder.AppendLine("using System.Globalization;");
+        }
+
+        if (requiresHttpBuiltins)
+        {
+            builder.AppendLine("using System.Net.Http;");
+            builder.AppendLine("using System.Text;");
         }
 
         if (RequiresTasks(program))
@@ -57,6 +64,7 @@ public sealed class Emitter
             || RequiresDotNetInterop(program)
             || requiresRandomBuiltins
             || requiresRandomResultRuntime
+            || requiresHttpBuiltins
             || requiresFunctionTimeout)
         {
             WriteAxomResultRuntime(builder);
@@ -103,6 +111,12 @@ public sealed class Emitter
         if (requiresRangeBuiltin)
         {
             WriteRangeHelper(builder);
+            builder.AppendLine();
+        }
+
+        if (requiresHttpBuiltins)
+        {
+            WriteHttpHelpers(builder);
             builder.AppendLine();
         }
 
@@ -171,6 +185,11 @@ public sealed class Emitter
     private static bool RequiresRangeBuiltin(LoweredProgram program)
     {
         return program.Statements.Any(UsesRangeBuiltin) || program.Functions.Any(function => UsesRangeBuiltin(function.Body));
+    }
+
+    private static bool RequiresHttpBuiltins(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesHttpBuiltins) || program.Functions.Any(function => UsesHttpBuiltins(function.Body));
     }
 
     private static bool RequiresRandomResultRuntime(LoweredProgram program)
@@ -300,6 +319,20 @@ public sealed class Emitter
             LoweredExpressionStatement expressionStatement => UsesRandomResultBuiltin(expressionStatement.Expression),
             LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesRandomResultBuiltin(returnStatement.Expression),
             LoweredIfStatement ifStatement => UsesRandomResultBuiltin(ifStatement.Condition) || UsesRandomResultBuiltin(ifStatement.Then) || (ifStatement.Else is not null && UsesRandomResultBuiltin(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesHttpBuiltins(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesHttpBuiltins),
+            LoweredVariableDeclaration declaration => UsesHttpBuiltins(declaration.Initializer),
+            LoweredPrintStatement print => UsesHttpBuiltins(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesHttpBuiltins(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesHttpBuiltins(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesHttpBuiltins(ifStatement.Condition) || UsesHttpBuiltins(ifStatement.Then) || (ifStatement.Else is not null && UsesHttpBuiltins(ifStatement.Else)),
             _ => false
         };
     }
@@ -626,6 +659,50 @@ public sealed class Emitter
             LoweredDotNetCallExpression dotNet => UsesRandomResultBuiltin(dotNet.TypeNameExpression)
                 || UsesRandomResultBuiltin(dotNet.MethodNameExpression)
                 || dotNet.Arguments.Any(UsesRandomResultBuiltin),
+            _ => false
+        };
+    }
+
+    private static bool UsesHttpBuiltins(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
+                && function.Function.IsBuiltin
+                && (string.Equals(function.Function.Name, "http", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "http_header", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "http_timeout", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "get", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "post", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "send", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "require", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "response_text", StringComparison.Ordinal)) => true,
+            LoweredCallExpression call => UsesHttpBuiltins(call.Callee) || call.Arguments.Any(UsesHttpBuiltins),
+            LoweredUnaryExpression unary => UsesHttpBuiltins(unary.Operand),
+            LoweredBinaryExpression binary => UsesHttpBuiltins(binary.Left) || UsesHttpBuiltins(binary.Right),
+            LoweredAssignmentExpression assignment => UsesHttpBuiltins(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesHttpBuiltins) || UsesHttpBuiltins(block.Result),
+            LoweredLambdaExpression lambda => UsesHttpBuiltins(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesHttpBuiltins(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesHttpBuiltins(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesHttpBuiltins(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesHttpBuiltins(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesHttpBuiltins(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesHttpBuiltins(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesHttpBuiltins(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesHttpBuiltins(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesHttpBuiltins(unwrap.Target),
+            LoweredSpawnExpression spawn => UsesHttpBuiltins(spawn.Body),
+            LoweredJoinExpression join => UsesHttpBuiltins(join.Expression),
+            LoweredIndexExpression index => UsesHttpBuiltins(index.Target) || UsesHttpBuiltins(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesHttpBuiltins),
+            LoweredListExpression list => list.Elements.Any(UsesHttpBuiltins),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesHttpBuiltins(entry.Key) || UsesHttpBuiltins(entry.Value)),
+            LoweredChannelSendExpression send => UsesHttpBuiltins(send.Sender) || UsesHttpBuiltins(send.Value),
+            LoweredChannelReceiveExpression recv => UsesHttpBuiltins(recv.Receiver),
+            LoweredDotNetCallExpression dotNet => UsesHttpBuiltins(dotNet.TypeNameExpression)
+                || UsesHttpBuiltins(dotNet.MethodNameExpression)
+                || dotNet.Arguments.Any(UsesHttpBuiltins),
             _ => false
         };
     }
@@ -1100,6 +1177,14 @@ public sealed class Emitter
                 "println" => $"Console.WriteLine({printValue})",
                 "print" => $"Console.WriteLine({printValue})",
                 "input" => "Console.ReadLine()",
+                "http" => $"AxomHttpCreate({argumentExpressions[0]})",
+                "http_header" => $"AxomHttpHeader({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
+                "http_timeout" => $"AxomHttpTimeout({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "get" => $"AxomHttpGet({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "post" => $"AxomHttpPost({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
+                "send" => $"AxomHttpSend({argumentExpressions[0]})",
+                "require" => $"AxomHttpRequire({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "response_text" => $"AxomHttpResponseText({argumentExpressions[0]})",
                 "route_param" => $"AxomResult<string>.Error(\"route_param is only available in serve route handlers\")",
                 "route_param_int" => $"AxomResult<int>.Error(\"route_param_int is only available in serve route handlers\")",
                 "route_param_float" => $"AxomResult<double>.Error(\"route_param_float is only available in serve route handlers\")",
@@ -1562,6 +1647,145 @@ public sealed class Emitter
         builder.AppendLine("    }");
     }
 
+    private static void WriteHttpHelpers(StringBuilder builder)
+    {
+        builder.AppendLine("    sealed class AxomHttpClientValue");
+        builder.AppendLine("    {");
+        builder.AppendLine("        public AxomHttpClientValue(string baseUrl, System.Collections.Generic.Dictionary<string, string> headers, int timeoutMs)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            BaseUrl = baseUrl;");
+        builder.AppendLine("            Headers = headers;");
+        builder.AppendLine("            TimeoutMs = timeoutMs;");
+        builder.AppendLine("        }");
+        builder.AppendLine("        public string BaseUrl { get; }");
+        builder.AppendLine("        public System.Collections.Generic.Dictionary<string, string> Headers { get; }");
+        builder.AppendLine("        public int TimeoutMs { get; }");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    sealed class AxomHttpRequestValue");
+        builder.AppendLine("    {");
+        builder.AppendLine("        public AxomHttpRequestValue(string method, string url, System.Collections.Generic.Dictionary<string, string> headers, string? body, int timeoutMs)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            Method = method;");
+        builder.AppendLine("            Url = url;");
+        builder.AppendLine("            Headers = headers;");
+        builder.AppendLine("            Body = body;");
+        builder.AppendLine("            TimeoutMs = timeoutMs;");
+        builder.AppendLine("        }");
+        builder.AppendLine("        public string Method { get; }");
+        builder.AppendLine("        public string Url { get; }");
+        builder.AppendLine("        public System.Collections.Generic.Dictionary<string, string> Headers { get; }");
+        builder.AppendLine("        public string? Body { get; }");
+        builder.AppendLine("        public int TimeoutMs { get; }");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    sealed class AxomHttpResponseValue");
+        builder.AppendLine("    {");
+        builder.AppendLine("        public AxomHttpResponseValue(int statusCode, string body, System.Collections.Generic.Dictionary<string, string> headers)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            StatusCode = statusCode;");
+        builder.AppendLine("            Body = body;");
+        builder.AppendLine("            Headers = headers;");
+        builder.AppendLine("        }");
+        builder.AppendLine("        public int StatusCode { get; }");
+        builder.AppendLine("        public string Body { get; }");
+        builder.AppendLine("        public System.Collections.Generic.Dictionary<string, string> Headers { get; }");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpClientValue AxomHttpCreate(string baseUrl)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return new AxomHttpClientValue(baseUrl, new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), 30000);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpClientValue AxomHttpHeader(AxomHttpClientValue client, string name, string value)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var headers = new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            [name] = value");
+        builder.AppendLine("        };");
+        builder.AppendLine("        return new AxomHttpClientValue(client.BaseUrl, headers, client.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpClientValue AxomHttpTimeout(AxomHttpClientValue client, int timeoutMs)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var normalized = timeoutMs <= 0 ? 1 : timeoutMs;");
+        builder.AppendLine("        return new AxomHttpClientValue(client.BaseUrl, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), normalized);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpRequestValue AxomHttpGet(AxomHttpClientValue client, string path)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
+        builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"GET\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), null, client.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpRequestValue AxomHttpPost(AxomHttpClientValue client, string path, string body)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
+        builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"POST\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<AxomHttpResponseValue> AxomHttpSend(AxomHttpRequestValue request)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri))");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(\"invalid url: \" + request.Url);");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs) };");
+        builder.AppendLine("        using var message = new HttpRequestMessage(new HttpMethod(request.Method), uri);");
+        builder.AppendLine("        foreach (var header in request.Headers)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            message.Headers.TryAddWithoutValidation(header.Key, header.Value);");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        if (request.Body is not null)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            message.Content = new StringContent(request.Body, Encoding.UTF8, \"text/plain\");");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        try");
+        builder.AppendLine("        {");
+        builder.AppendLine("            var response = httpClient.SendAsync(message).GetAwaiter().GetResult();");
+        builder.AppendLine("            var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();");
+        builder.AppendLine("            var headers = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);");
+        builder.AppendLine("            foreach (var header in response.Headers)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                headers[header.Key] = string.Join(\",\", header.Value);");
+        builder.AppendLine("            }");
+        builder.AppendLine("            foreach (var header in response.Content.Headers)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                headers[header.Key] = string.Join(\",\", header.Value);");
+        builder.AppendLine("            }");
+        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Ok(new AxomHttpResponseValue((int)response.StatusCode, body, headers));");
+        builder.AppendLine("        }");
+        builder.AppendLine("        catch (System.Threading.Tasks.TaskCanceledException)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(\"timeout\");");
+        builder.AppendLine("        }");
+        builder.AppendLine("        catch (Exception ex)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(\"network error: \" + ex.Message);");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<AxomHttpResponseValue> AxomHttpRequire(AxomHttpResponseValue response, int statusCode)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        if (response.StatusCode == statusCode)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Ok(response);");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        return AxomResult<AxomHttpResponseValue>.Error($\"status mismatch: expected {statusCode}, got {response.StatusCode}\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<string> AxomHttpResponseText(AxomHttpResponseValue response)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<string>.Ok(response.Body);");
+        builder.AppendLine("    }");
+    }
+
     private static string WriteBinaryExpression(LoweredBinaryExpression binary, int parentPrecedence)
     {
         var precedence = GetBinaryPrecedence(binary.OperatorKind);
@@ -1725,6 +1949,10 @@ public sealed class Emitter
             var t when t == TypeSymbol.Bool => "bool",
             var t when t == TypeSymbol.String => "string",
             var t when t == TypeSymbol.Instant => "DateTimeOffset",
+            var t when t == TypeSymbol.Http => "AxomHttpClientValue",
+            var t when t == TypeSymbol.HttpRequest => "AxomHttpRequestValue",
+            var t when t == TypeSymbol.HttpResponse => "AxomHttpResponseValue",
+            var t when t == TypeSymbol.HttpError => "string",
             var t when t == TypeSymbol.Unit => "void",
             _ => EscapeIdentifier(type.Name)
         };
