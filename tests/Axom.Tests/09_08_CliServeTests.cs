@@ -5,6 +5,8 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
 
 namespace Axom.Tests;
 
@@ -352,6 +354,146 @@ public class CliServeTests
         {
             DeleteTempDirectory(tempDir);
         }
+    }
+
+    [Fact]
+    public async Task Http_host_executes_post_route_handler()
+    {
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var routeFile = Path.Combine(tempDir, "echo_post.axom");
+            File.WriteAllText(routeFile, "print request_method()\nprint request_path()");
+            var routeDefinition = new RouteDefinition(
+                "POST",
+                "/echo",
+                routeFile,
+                new[]
+                {
+                    RouteSegment.Static("echo")
+                });
+            var routes = new[]
+            {
+                RouteHandlerFactory.CreateEndpoint(routeDefinition)
+            };
+
+            var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+
+            using var client = new HttpClient();
+            await WaitForHealthAsync(client, port);
+            var response = await client.PostAsync(
+                $"http://127.0.0.1:{port}/echo",
+                new StringContent("ping", Encoding.UTF8, "text/plain"));
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("POST\n/echo", body);
+
+            cancellation.Cancel();
+            await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Http_host_returns_not_found_for_unmatched_route()
+    {
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+
+        var runTask = host.RunAsync("127.0.0.1", port, cancellation.Token);
+
+        using var client = new HttpClient();
+        await WaitForHealthAsync(client, port);
+        var response = await client.GetAsync($"http://127.0.0.1:{port}/missing");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        cancellation.Cancel();
+        await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Http_host_returns_internal_server_error_for_route_parse_failures()
+    {
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var routeFile = Path.Combine(tempDir, "broken_get.axom");
+            File.WriteAllText(routeFile, "print \"unterminated");
+            var routeDefinition = new RouteDefinition(
+                "GET",
+                "/broken",
+                routeFile,
+                new[]
+                {
+                    RouteSegment.Static("broken")
+                });
+            var routes = new[]
+            {
+                RouteHandlerFactory.CreateEndpoint(routeDefinition)
+            };
+
+            var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+
+            using var client = new HttpClient();
+            await WaitForHealthAsync(client, port);
+            var response = await client.GetAsync($"http://127.0.0.1:{port}/broken");
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.Contains("error", body, StringComparison.OrdinalIgnoreCase);
+
+            cancellation.Cancel();
+            await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Http_host_supports_json_responses_from_runtime_contract()
+    {
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+        var route = new RouteEndpoint(
+            "GET",
+            "/json",
+            "inline",
+            (_, _) => Task.FromResult(AxomHttpResponse.Json(200, new { status = "ok", count = 2 })));
+        var routes = new[] { route };
+
+        var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+
+        using var client = new HttpClient();
+        await WaitForHealthAsync(client, port);
+        var response = await client.GetAsync($"http://127.0.0.1:{port}/json");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+
+        using var json = JsonDocument.Parse(body);
+        Assert.Equal("ok", json.RootElement.GetProperty("status").GetString());
+        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+
+        cancellation.Cancel();
+        await runTask.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact]

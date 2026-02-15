@@ -71,7 +71,7 @@ Status labels used across docs: `Implemented`, `Partial`, `Planned`.
 | .NET interop | Direct calls + NuGet | Partial | `dotnet.call<T>` / `dotnet.try_call<T>` implemented with whitelist for `System.Math`, `System.String`, and `System.Convert` |
 | Pipeline operator + combinators | \|> and combinators | Partial | Value pipe `|>` implemented; combinator syntax remains proposal-only |
 | Aspects/runtime policies | Builtin aspect tags + runtime behavior | Partial | `@logging` and `@timeout(ms)` are implemented with keyword syntax and interpreter/codegen parity |
-| HTTP server + route discovery | `serve` + file-based route model | Partial | `axom serve` implemented with health endpoint, route discovery (`index`, method suffixes, dynamic params), conflict diagnostics with overlap reasons, and Axom route-file execution |
+| HTTP server + route discovery | `serve` + file-based route model | Implemented | `axom serve` is implemented with health endpoint, file-based route discovery (`index`, method suffixes, dynamic params), conflict diagnostics with overlap reasons, deterministic status mapping (`404` fallback, route `500`, `respond(status, body)` override), and Axom route-file execution |
 | Scoped cleanup (`defer`) | Scope-exit cleanup with predictable ordering | Implemented | `defer <expr>` and `defer { ... }` run on scope exit in LIFO order, including early returns |
 
 ## Milestones (Priority Ordered)
@@ -288,8 +288,8 @@ M15 target scope (normative direction):
 - Status validation (`require`) is separate from transport (`send`), and supports status code + range forms.
 
 Current HTTP+DB progress:
-- M13 (Partial): `axom serve` and runtime host are implemented; `/health` endpoint is live; graceful stop via Ctrl+C is supported.
-- M14 (Partial): route discovery/normalization and pre-boot conflict diagnostics are implemented, including overlap-reason details and dynamic filename validation.
+- M13 (Implemented): `axom serve` and runtime host are implemented with explicit runtime request/response contracts, `GET`/`POST` route handling, deterministic status mapping (`404` fallback and route `500`), and graceful stop via Ctrl+C.
+- M14 (Implemented): route discovery/normalization and pre-boot conflict diagnostics are implemented, including overlap-reason details and dynamic filename validation.
 - M14 runtime bridge (Implemented): discovered routes execute Axom route files, expose dynamic/query params via `route_param*` and `query_param*` helpers, support `respond(status, body)`, expose request context (`request_method`, `request_path`), and return plain-text output.
 - M15 (Planned): outbound HTTP client remains to be implemented; scope is the full pipeline-first module defined in `docs/spec.md` and `docs/roadmap/http-db-plan.md`.
 - DX bootstrap (Implemented): `axom init <name>` scaffolds an API-first project with routes, `.gitignore`, Dockerfile, compose, Makefile + PowerShell endpoint-doc tooling, and onboarding README.

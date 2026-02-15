@@ -16,7 +16,7 @@ Planning horizon: 12-20 weeks depending on team size and scope discipline.
 
 Objective: serve HTTP requests from Axom handlers without file-based routing yet.
 
-Status: Partial (implemented slices)
+Status: Done
 - `axom serve <file.axom>` is available.
 - Runtime host boots and serves `GET /health`.
 - Serve validates source compilation before host startup.
@@ -43,7 +43,7 @@ Tests:
 
 Objective: implement route discovery from filesystem according to the new spec.
 
-Status: Partial (implemented slices)
+Status: Done
 - `routes/**/*.axom` route scan/normalization is implemented.
 - `index`, method suffixes, and dynamic params (`__id`, `__id_int`, etc.) are implemented.
 - Compile-time conflict diagnostics are implemented, including overlap reason details.

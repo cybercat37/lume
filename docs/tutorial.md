@@ -46,7 +46,7 @@ axom serve hello.axom --host 127.0.0.1 --port 8080
 curl -i http://127.0.0.1:8080/health
 ```
 
-Current `serve` behavior is intentionally incremental:
+Current `serve` behavior:
 - route files are discovered from `routes/**/*.axom`
 - route conflicts are diagnosed before boot
 - discovered routes execute Axom handlers and return plain-text output

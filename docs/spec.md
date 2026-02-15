@@ -163,7 +163,7 @@ LetStmt := "let" Identifier IntentAnnotation? "=" Expression
 - Mutual recursion is allowed; no forward-declare keyword.
 - Attributes use `@attr`, planned for later (besides built-in `@intent`).
 
-### HTTP + DB Track (Early/Partial)
+### HTTP + DB Track
 - CLI `serve` mode is available (`axom serve <file.axom> --host <addr> --port <n>`).
 - Route discovery from `routes/**/*.axom` is available with compile-time conflict diagnostics.
 - Discovered routes execute Axom route files and return plain-text responses.

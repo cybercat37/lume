@@ -3,7 +3,6 @@ using Axom.Compiler.Interpreting;
 using Axom.Compiler.Parsing;
 using Axom.Compiler.Text;
 using Axom.Runtime.Http;
-using Microsoft.AspNetCore.Http;
 
 namespace Axom.Cli;
 
@@ -27,20 +26,17 @@ public static class RouteHandlerFactory
                 var parseMessage = string.Join(
                     Environment.NewLine,
                     syntaxTree.Diagnostics.Select(diagnostic => diagnostic.ToString()));
-                return Task.FromResult<IResult>(
-                    Results.Text(parseMessage, "text/plain; charset=utf-8", statusCode: StatusCodes.Status500InternalServerError));
+                return Task.FromResult(AxomHttpResponse.Text(500, parseMessage));
             }
 
             var interpreter = new Interpreter();
-            interpreter.SetRequestContext(context.Request.Method, context.Request.Path.ToString());
-            var queryValues = context.Request.Query
-                .ToDictionary(pair => pair.Key, pair => pair.Value.ToString(), StringComparer.Ordinal);
-            interpreter.SetQueryParameters(queryValues);
+            interpreter.SetRequestContext(context.Method, context.Path);
+            interpreter.SetQueryParameters(context.QueryParameters);
             if (dynamicSegmentNames.Length > 0)
             {
                 var routeValues = dynamicSegmentNames
-                    .Select(name => context.Request.RouteValues.TryGetValue(name, out var value)
-                        ? (name, value: Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)
+                    .Select(name => context.RouteParameters.TryGetValue(name, out var value)
+                        ? (name, value)
                         : (name, value: string.Empty))
                     .ToDictionary(entry => entry.name, entry => entry.value, StringComparer.Ordinal);
                 interpreter.SetRouteParameters(routeValues);
@@ -53,18 +49,15 @@ public static class RouteHandlerFactory
             if (errorDiagnostics.Count > 0)
             {
                 var message = string.Join(Environment.NewLine, errorDiagnostics.Select(diagnostic => diagnostic.ToString()));
-                return Task.FromResult<IResult>(
-                    Results.Text(message, "text/plain; charset=utf-8", statusCode: StatusCodes.Status500InternalServerError));
+                return Task.FromResult(AxomHttpResponse.Text(500, message));
             }
 
             if (result.Response is not null)
             {
-                return Task.FromResult<IResult>(
-                    Results.Text(result.Response.Body, "text/plain; charset=utf-8", statusCode: result.Response.StatusCode));
+                return Task.FromResult(AxomHttpResponse.Text(result.Response.StatusCode, result.Response.Body));
             }
 
-            return Task.FromResult<IResult>(
-                Results.Text(result.Output, "text/plain; charset=utf-8", statusCode: StatusCodes.Status200OK));
+            return Task.FromResult(AxomHttpResponse.Text(200, result.Output));
         });
     }
 }
