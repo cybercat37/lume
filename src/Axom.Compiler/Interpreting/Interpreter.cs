@@ -1003,6 +1003,38 @@ public sealed class Interpreter
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "http expects (String baseUrl)."));
                     return null;
+                case "header":
+                    if (arguments.Length == 3
+                        && arguments[0] is HttpClientValue headerClient
+                        && arguments[1] is string clientHeaderName
+                        && arguments[2] is string clientHeaderValue)
+                    {
+                        var clientHeaders = new Dictionary<string, string>(headerClient.Headers, StringComparer.OrdinalIgnoreCase)
+                        {
+                            [clientHeaderName] = clientHeaderValue
+                        };
+                        return new HttpClientValue(headerClient.BaseUrl, clientHeaders, headerClient.TimeoutMs);
+                    }
+
+                    if (arguments.Length == 3
+                        && arguments[0] is HttpRequestValue headerRequest
+                        && arguments[1] is string genericRequestHeaderName
+                        && arguments[2] is string genericRequestHeaderValue)
+                    {
+                        var requestHeaders = new Dictionary<string, string>(headerRequest.Headers, StringComparer.OrdinalIgnoreCase)
+                        {
+                            [genericRequestHeaderName] = genericRequestHeaderValue
+                        };
+                        return new HttpRequestValue(
+                            headerRequest.Method,
+                            headerRequest.Url,
+                            requestHeaders,
+                            headerRequest.Body,
+                            headerRequest.TimeoutMs);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "header expects (Http|Request target, String name, String value)."));
+                    return null;
                 case "http_header":
                     if (arguments.Length == 3
                         && arguments[0] is HttpClientValue clientWithHeader

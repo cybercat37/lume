@@ -2972,9 +2972,65 @@ public sealed class Binder
             case "min":
             case "max":
                 return BindBuiltinBinary(function, call, arguments, allowFloat: true);
+            case "header":
+                return BindBuiltinHeader(function, call, arguments);
             default:
                 return null;
         }
+    }
+
+    private BoundExpression BindBuiltinHeader(
+        FunctionSymbol function,
+        CallExpressionSyntax call,
+        IReadOnlyList<BoundExpression> arguments)
+    {
+        if (arguments.Count != 3)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                "header() expects (Http|Request target, String name, String value)."));
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+        }
+
+        var targetType = arguments[0].Type;
+        var nameType = arguments[1].Type;
+        var valueType = arguments[2].Type;
+        var hasTypeError = false;
+
+        if (targetType != TypeSymbol.Http && targetType != TypeSymbol.HttpRequest && targetType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Arguments[0].Span,
+                $"header() expects Http or Request as first argument but got '{targetType}'."));
+            hasTypeError = true;
+        }
+
+        if (nameType != TypeSymbol.String && nameType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Arguments[1].Span,
+                $"header() expects String name but got '{nameType}'."));
+            hasTypeError = true;
+        }
+
+        if (valueType != TypeSymbol.String && valueType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Arguments[2].Span,
+                $"header() expects String value but got '{valueType}'."));
+            hasTypeError = true;
+        }
+
+        if (hasTypeError)
+        {
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+        }
+
+        return new BoundCallExpression(new BoundFunctionExpression(function), arguments, targetType);
     }
 
     private BoundExpression BindBuiltinRange(

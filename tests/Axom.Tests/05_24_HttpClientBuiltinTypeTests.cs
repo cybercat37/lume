@@ -8,7 +8,7 @@ public class HttpClientBuiltinTypeTests
     public void Http_client_builtins_type_check_for_valid_signatures()
     {
         var sourceText = new SourceText(
-            "let client = http(\"http://127.0.0.1:8080\") |> http_timeout(2000) |> http_header(\"x-test\", \"ok\")\nlet request = client |> get(\"/health\")\nlet sent = send(request)\nprint sent",
+            "let client = http(\"http://127.0.0.1:8080\") |> http_timeout(2000) |> header(\"x-test\", \"ok\")\nlet request = client |> get(\"/health\") |> header(\"x-req\", \"v\")\nlet sent = send(request)\nprint sent",
             "test.axom");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 
@@ -48,7 +48,7 @@ public class HttpClientBuiltinTypeTests
     public void Http_request_builders_type_check_for_extended_verbs_and_decorators()
     {
         var sourceText = new SourceText(
-            "let client = http(\"http://127.0.0.1:8080\")\nlet putReq = client |> put(\"/users/1\", \"payload\") |> request_header(\"x-id\", \"1\") |> request_text(\"override\")\nlet patchReq = client |> patch(\"/users/1\", \"patch\")\nlet deleteReq = client |> delete(\"/users/1\")\nprint putReq\nprint patchReq\nprint deleteReq",
+            "let client = http(\"http://127.0.0.1:8080\")\nlet putReq = client |> put(\"/users/1\", \"payload\") |> header(\"x-id\", \"1\") |> request_text(\"override\")\nlet patchReq = client |> patch(\"/users/1\", \"patch\")\nlet deleteReq = client |> delete(\"/users/1\")\nprint putReq\nprint patchReq\nprint deleteReq",
             "test.axom");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 

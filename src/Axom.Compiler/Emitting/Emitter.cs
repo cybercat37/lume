@@ -670,6 +670,7 @@ public sealed class Emitter
             LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
                 && function.Function.IsBuiltin
                 && (string.Equals(function.Function.Name, "http", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "header", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "http_header", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "http_timeout", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "get", StringComparison.Ordinal)
@@ -1183,6 +1184,7 @@ public sealed class Emitter
                 "print" => $"Console.WriteLine({printValue})",
                 "input" => "Console.ReadLine()",
                 "http" => $"AxomHttpCreate({argumentExpressions[0]})",
+                "header" => WriteHeaderCall(call, argumentExpressions),
                 "http_header" => $"AxomHttpHeader({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
                 "http_timeout" => $"AxomHttpTimeout({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "get" => $"AxomHttpGet({argumentExpressions[0]}, {argumentExpressions[1]})",
@@ -1271,6 +1273,25 @@ public sealed class Emitter
         var transform = argumentExpressions[1];
 
         return $"((Func<AxomResult<{resultType}>>)(() => {{ var __axomRes = {source}; return __axomRes.Tag == \"Ok\" ? AxomResult<{resultType}>.Ok(((Func<{sourceOkType}, {mapReturnType}>)({transform}))(({sourceOkType})__axomRes.Value!)) : AxomResult<{resultType}>.Error(__axomRes.Value); }}))()";
+    }
+
+    private static string WriteHeaderCall(LoweredCallExpression call, IReadOnlyList<string> argumentExpressions)
+    {
+        if (call.Arguments.Count > 0)
+        {
+            var targetType = call.Arguments[0].Type;
+            if (targetType == TypeSymbol.Http)
+            {
+                return $"AxomHttpHeader({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})";
+            }
+
+            if (targetType == TypeSymbol.HttpRequest)
+            {
+                return $"AxomHttpRequestHeader({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})";
+            }
+        }
+
+        return $"AxomHttpHeader({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})";
     }
 
     private static string WriteLambdaExpression(LoweredLambdaExpression lambda)

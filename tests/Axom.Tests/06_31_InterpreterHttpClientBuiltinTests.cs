@@ -61,7 +61,7 @@ public class InterpreterHttpClientBuiltinTests
     public void Http_extended_verb_and_request_decorator_builtins_produce_requests()
     {
         var sourceText = new SourceText(
-            "let client = http(\"http://example.test\")\nlet req = client |> put(\"/users/1\", \"body\") |> request_header(\"x-test\", \"ok\") |> request_text(\"replaced\")\nlet req2 = client |> patch(\"/users/2\", \"patch\")\nlet req3 = client |> delete(\"/users/3\")\nprint req\nprint req2\nprint req3",
+            "let client = http(\"http://example.test\") |> header(\"x-client\", \"yes\")\nlet req = client |> put(\"/users/1\", \"body\") |> header(\"x-test\", \"ok\") |> request_text(\"replaced\")\nlet req2 = client |> patch(\"/users/2\", \"patch\")\nlet req3 = client |> delete(\"/users/3\")\nprint req\nprint req2\nprint req3",
             "test.axom");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 

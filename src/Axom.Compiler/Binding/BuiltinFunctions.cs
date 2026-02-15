@@ -48,6 +48,18 @@ public static class BuiltinFunctions
         TypeSymbol.Http,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol Header = new(
+        "header",
+        new[]
+        {
+            new ParameterSymbol("target", GenericT),
+            new ParameterSymbol("name", TypeSymbol.String),
+            new ParameterSymbol("value", TypeSymbol.String)
+        },
+        new[] { GenericT },
+        GenericT,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol HttpWithTimeout = new(
         "http_timeout",
         new[]
@@ -571,6 +583,7 @@ public static class BuiltinFunctions
         [Println.Name] = Println,
         [Input.Name] = Input,
         [Http.Name] = Http,
+        [Header.Name] = Header,
         [HttpWithHeader.Name] = HttpWithHeader,
         [HttpWithTimeout.Name] = HttpWithTimeout,
         [HttpGet.Name] = HttpGet,
