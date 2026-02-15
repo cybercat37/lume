@@ -15,5 +15,6 @@ public class CodegenHttpClientBuiltinTests
         Assert.Contains("AxomHttpGet", result.GeneratedCode);
         Assert.Contains("AxomHttpSend", result.GeneratedCode);
         Assert.Contains("AxomHttpResponseValue", result.GeneratedCode);
+        Assert.Contains("AxomHttpErrorValue", result.GeneratedCode);
     }
 }

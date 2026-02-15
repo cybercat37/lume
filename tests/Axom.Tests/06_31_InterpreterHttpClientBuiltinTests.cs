@@ -41,6 +41,22 @@ public class InterpreterHttpClientBuiltinTests
         await runTask.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
+    [Fact]
+    public void Http_send_returns_typed_invalid_url_error_variant()
+    {
+        var sourceText = new SourceText(
+            "let sent = http(\"not-a-url\") |> get(\"/health\") |> send()\nprint match sent {\n  Ok(resp) -> \"ok\"\n  Error(err) -> match err {\n    InvalidUrl(msg) -> msg\n    Timeout(msg) -> msg\n    NetworkError(msg) -> msg\n    StatusError(msg) -> msg\n  }\n}",
+            "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var errors = result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors.Select(error => error.ToString())));
+        Assert.Equal("invalid url: not-a-url/health", result.Output.Trim());
+    }
+
     private static async Task WaitForHealthAsync(int port)
     {
         using var client = new HttpClient();

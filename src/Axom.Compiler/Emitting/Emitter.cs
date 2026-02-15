@@ -1260,7 +1260,7 @@ public sealed class Emitter
         var source = argumentExpressions[0];
         var transform = argumentExpressions[1];
 
-        return $"((Func<AxomResult<{resultType}>>)(() => {{ var __axomRes = {source}; return __axomRes.Tag == \"Ok\" ? AxomResult<{resultType}>.Ok(((Func<{sourceOkType}, {mapReturnType}>)({transform}))(({sourceOkType})__axomRes.Value!)) : AxomResult<{resultType}>.Error((string)__axomRes.Value!); }}))()";
+        return $"((Func<AxomResult<{resultType}>>)(() => {{ var __axomRes = {source}; return __axomRes.Tag == \"Ok\" ? AxomResult<{resultType}>.Ok(((Func<{sourceOkType}, {mapReturnType}>)({transform}))(({sourceOkType})__axomRes.Value!)) : AxomResult<{resultType}>.Error(__axomRes.Value); }}))()";
     }
 
     private static string WriteLambdaExpression(LoweredLambdaExpression lambda)
@@ -1692,6 +1692,21 @@ public sealed class Emitter
         builder.AppendLine("        public System.Collections.Generic.Dictionary<string, string> Headers { get; }");
         builder.AppendLine("    }");
         builder.AppendLine();
+        builder.AppendLine("    sealed class AxomHttpErrorValue");
+        builder.AppendLine("    {");
+        builder.AppendLine("        private AxomHttpErrorValue(string tag, object? value)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            Tag = tag;");
+        builder.AppendLine("            Value = value;");
+        builder.AppendLine("        }");
+        builder.AppendLine("        public string Tag { get; }");
+        builder.AppendLine("        public object? Value { get; }");
+        builder.AppendLine("        public static AxomHttpErrorValue InvalidUrl(string message) => new(\"InvalidUrl\", message);");
+        builder.AppendLine("        public static AxomHttpErrorValue Timeout(string message) => new(\"Timeout\", message);");
+        builder.AppendLine("        public static AxomHttpErrorValue NetworkError(string message) => new(\"NetworkError\", message);");
+        builder.AppendLine("        public static AxomHttpErrorValue StatusError(string message) => new(\"StatusError\", message);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
         builder.AppendLine("    static AxomHttpClientValue AxomHttpCreate(string baseUrl)");
         builder.AppendLine("    {");
         builder.AppendLine("        return new AxomHttpClientValue(baseUrl, new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), 30000);");
@@ -1730,7 +1745,7 @@ public sealed class Emitter
         builder.AppendLine("    {");
         builder.AppendLine("        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri))");
         builder.AppendLine("        {");
-        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(\"invalid url: \" + request.Url);");
+        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(AxomHttpErrorValue.InvalidUrl(\"invalid url: \" + request.Url));");
         builder.AppendLine("        }");
         builder.AppendLine();
         builder.AppendLine("        using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs) };");
@@ -1762,11 +1777,11 @@ public sealed class Emitter
         builder.AppendLine("        }");
         builder.AppendLine("        catch (System.Threading.Tasks.TaskCanceledException)");
         builder.AppendLine("        {");
-        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(\"timeout\");");
+        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(AxomHttpErrorValue.Timeout(\"request timed out\"));");
         builder.AppendLine("        }");
         builder.AppendLine("        catch (Exception ex)");
         builder.AppendLine("        {");
-        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(\"network error: \" + ex.Message);");
+        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(AxomHttpErrorValue.NetworkError(\"network error: \" + ex.Message));");
         builder.AppendLine("        }");
         builder.AppendLine("    }");
         builder.AppendLine();
@@ -1777,7 +1792,7 @@ public sealed class Emitter
         builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Ok(response);");
         builder.AppendLine("        }");
         builder.AppendLine();
-        builder.AppendLine("        return AxomResult<AxomHttpResponseValue>.Error($\"status mismatch: expected {statusCode}, got {response.StatusCode}\");");
+        builder.AppendLine("        return AxomResult<AxomHttpResponseValue>.Error(AxomHttpErrorValue.StatusError($\"status mismatch: expected {statusCode}, got {response.StatusCode}\"));");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomResult<string> AxomHttpResponseText(AxomHttpResponseValue response)");
@@ -1952,7 +1967,7 @@ public sealed class Emitter
             var t when t == TypeSymbol.Http => "AxomHttpClientValue",
             var t when t == TypeSymbol.HttpRequest => "AxomHttpRequestValue",
             var t when t == TypeSymbol.HttpResponse => "AxomHttpResponseValue",
-            var t when t == TypeSymbol.HttpError => "string",
+            var t when t == TypeSymbol.HttpError => "AxomHttpErrorValue",
             var t when t == TypeSymbol.Unit => "void",
             _ => EscapeIdentifier(type.Name)
         };
@@ -2099,7 +2114,7 @@ public sealed class Emitter
         builder.AppendLine("        Value = value;");
         builder.AppendLine("    }");
         builder.AppendLine("    public static AxomResult<T> Ok(T value) => new(\"Ok\", value);");
-        builder.AppendLine("    public static AxomResult<T> Error(string message) => new(\"Error\", message);");
+        builder.AppendLine("    public static AxomResult<T> Error(object? error) => new(\"Error\", error);");
         builder.AppendLine("    public override string ToString() => Tag == \"Ok\" ? $\"Ok({Value})\" : $\"Error({Value})\";");
         builder.AppendLine("}");
     }

@@ -29,4 +29,18 @@ public class HttpClientBuiltinTypeTests
 
         Assert.NotEmpty(result.Diagnostics.Where(d => d.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error));
     }
+
+    [Fact]
+    public void Http_error_payload_can_be_matched_by_variant()
+    {
+        var sourceText = new SourceText(
+            "let sent = http(\"not-a-url\") |> get(\"/health\") |> send()\nprint match sent {\n  Ok(resp) -> \"ok\"\n  Error(err) -> match err {\n    InvalidUrl(msg) -> msg\n    Timeout(msg) -> msg\n    NetworkError(msg) -> msg\n    StatusError(msg) -> msg\n  }\n}",
+            "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics.Where(d => d.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error));
+    }
 }

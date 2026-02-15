@@ -59,7 +59,7 @@ public sealed class TypeSymbol
     public static TypeSymbol Http { get; } = new("Http");
     public static TypeSymbol HttpRequest { get; } = new("Request");
     public static TypeSymbol HttpResponse { get; } = new("Response");
-    public static TypeSymbol HttpError { get; } = new("HttpError");
+    public static TypeSymbol HttpError { get; } = CreateHttpErrorType();
     public static TypeSymbol Error { get; } = new("Error");
     public static TypeSymbol Unit { get; } = new("Unit");
 
@@ -126,6 +126,17 @@ public sealed class TypeSymbol
     public static TypeSymbol Sum(string name)
     {
         return new TypeSymbol(name, sumVariants: Array.Empty<SumVariantSymbol>());
+    }
+
+    private static TypeSymbol CreateHttpErrorType()
+    {
+        var variants = new List<SumVariantSymbol>();
+        var type = new TypeSymbol("HttpError", sumVariants: variants);
+        variants.Add(new SumVariantSymbol("InvalidUrl", type, TypeSymbol.String));
+        variants.Add(new SumVariantSymbol("Timeout", type, TypeSymbol.String));
+        variants.Add(new SumVariantSymbol("NetworkError", type, TypeSymbol.String));
+        variants.Add(new SumVariantSymbol("StatusError", type, TypeSymbol.String));
+        return type;
     }
 
     public override string ToString() => Name;

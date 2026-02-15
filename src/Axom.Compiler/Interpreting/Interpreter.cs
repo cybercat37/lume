@@ -1057,7 +1057,7 @@ public sealed class Interpreter
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "send expects (Request request)."));
-                    return BuildHttpResponseResult(isSuccess: false, null, "invalid request");
+                    return BuildHttpResponseResult(isSuccess: false, null, BuildHttpNetworkError("invalid request"));
                 case "require":
                     if (arguments.Length == 2 && arguments[0] is HttpResponseValue requireResponse && arguments[1] is int expectedStatus)
                     {
@@ -1069,11 +1069,11 @@ public sealed class Interpreter
                         return BuildHttpResponseResult(
                             isSuccess: false,
                             null,
-                            $"status mismatch: expected {expectedStatus}, got {requireResponse.StatusCode}");
+                            BuildHttpStatusError($"status mismatch: expected {expectedStatus}, got {requireResponse.StatusCode}"));
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "require expects (Response response, Int statusCode)."));
-                    return BuildHttpResponseResult(isSuccess: false, null, "invalid require invocation");
+                    return BuildHttpResponseResult(isSuccess: false, null, BuildHttpStatusError("invalid require invocation"));
                 case "response_text":
                     if (arguments.Length == 1 && arguments[0] is HttpResponseValue responseText)
                     {
@@ -1081,7 +1081,7 @@ public sealed class Interpreter
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "response_text expects (Response response)."));
-                    return BuildHttpTextResult(isSuccess: false, null, "invalid response");
+                    return BuildHttpTextResult(isSuccess: false, null, BuildHttpStatusError("invalid response"));
                 case "route_param":
                     if (arguments.Length == 1 && arguments[0] is string routeParamName)
                     {
@@ -1883,7 +1883,7 @@ public sealed class Interpreter
         {
             if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri))
             {
-                return BuildHttpResponseResult(isSuccess: false, null, $"invalid url: {request.Url}");
+                return BuildHttpResponseResult(isSuccess: false, null, BuildHttpInvalidUrlError($"invalid url: {request.Url}"));
             }
 
             using var httpClient = new HttpClient
@@ -1918,11 +1918,11 @@ public sealed class Interpreter
             }
             catch (TaskCanceledException)
             {
-                return BuildHttpResponseResult(isSuccess: false, null, "timeout");
+                return BuildHttpResponseResult(isSuccess: false, null, BuildHttpTimeoutError("request timed out"));
             }
             catch (Exception ex)
             {
-                return BuildHttpResponseResult(isSuccess: false, null, $"network error: {ex.Message}");
+                return BuildHttpResponseResult(isSuccess: false, null, BuildHttpNetworkError($"network error: {ex.Message}"));
             }
         }
 
@@ -1952,7 +1952,7 @@ public sealed class Interpreter
             return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.String), error ?? "route error");
         }
 
-        private static object BuildHttpResponseResult(bool isSuccess, HttpResponseValue? value, string? error)
+        private static object BuildHttpResponseResult(bool isSuccess, HttpResponseValue? value, object? error)
         {
             var resultType = TypeSymbol.Result(TypeSymbol.HttpResponse, TypeSymbol.HttpError);
             var okVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
@@ -1962,10 +1962,10 @@ public sealed class Interpreter
                 return new SumValue(okVariant ?? new SumVariantSymbol("Ok", resultType, TypeSymbol.HttpResponse), value ?? new HttpResponseValue(0, string.Empty, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)));
             }
 
-            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.HttpError), error ?? "http error");
+            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.HttpError), error ?? BuildHttpNetworkError("http error"));
         }
 
-        private static object BuildHttpTextResult(bool isSuccess, string? value, string? error)
+        private static object BuildHttpTextResult(bool isSuccess, string? value, object? error)
         {
             var resultType = TypeSymbol.Result(TypeSymbol.String, TypeSymbol.HttpError);
             var okVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
@@ -1975,7 +1975,34 @@ public sealed class Interpreter
                 return new SumValue(okVariant ?? new SumVariantSymbol("Ok", resultType, TypeSymbol.String), value ?? string.Empty);
             }
 
-            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.HttpError), error ?? "http error");
+            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.HttpError), error ?? BuildHttpNetworkError("http error"));
+        }
+
+        private static SumValue BuildHttpInvalidUrlError(string message)
+        {
+            return BuildHttpErrorVariant("InvalidUrl", TypeSymbol.String, message);
+        }
+
+        private static SumValue BuildHttpTimeoutError(string message)
+        {
+            return BuildHttpErrorVariant("Timeout", TypeSymbol.String, message);
+        }
+
+        private static SumValue BuildHttpNetworkError(string message)
+        {
+            return BuildHttpErrorVariant("NetworkError", TypeSymbol.String, message);
+        }
+
+        private static SumValue BuildHttpStatusError(string message)
+        {
+            return BuildHttpErrorVariant("StatusError", TypeSymbol.String, message);
+        }
+
+        private static SumValue BuildHttpErrorVariant(string variantName, TypeSymbol payloadType, object payload)
+        {
+            var variant = TypeSymbol.HttpError.SumVariants?.FirstOrDefault(item => string.Equals(item.Name, variantName, StringComparison.Ordinal))
+                ?? new SumVariantSymbol(variantName, TypeSymbol.HttpError, payloadType);
+            return new SumValue(variant, payload);
         }
 
         private static object BuildFloatResult(bool isSuccess, double? value, string? error)

@@ -2452,6 +2452,11 @@ public sealed class Binder
             return new BoundSumTypeDeclaration(type, variants);
         }
 
+        if (type.SumVariants is not null)
+        {
+            return new BoundSumTypeDeclaration(type, type.SumVariants);
+        }
+
         return null;
     }
 
