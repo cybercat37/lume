@@ -48,7 +48,7 @@ public class HttpClientBuiltinTypeTests
     public void Http_request_builders_type_check_for_extended_verbs_and_decorators()
     {
         var sourceText = new SourceText(
-            "let client = http(\"http://127.0.0.1:8080\")\nlet putReq = client |> put(\"/users/1\", \"payload\") |> header(\"x-id\", \"1\") |> request_text(\"override\")\nlet patchReq = client |> patch(\"/users/1\", \"patch\")\nlet deleteReq = client |> delete(\"/users/1\")\nprint putReq\nprint patchReq\nprint deleteReq",
+            "let client = http(\"http://127.0.0.1:8080\")\nlet putReq = client |> put(\"/users/1\", \"payload\") |> header(\"x-id\", \"1\") |> request_text(\"override\") |> json(\"{\\\"id\\\":1}\") |> accept_json()\nlet patchReq = client |> patch(\"/users/1\", \"patch\")\nlet deleteReq = client |> delete(\"/users/1\")\nprint putReq\nprint patchReq\nprint deleteReq",
             "test.axom");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 

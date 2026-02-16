@@ -1149,6 +1149,43 @@ public sealed class Interpreter
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "request_text expects (Request request, String body)."));
                     return null;
+                case "json":
+                    if (arguments.Length == 2
+                        && arguments[0] is HttpRequestValue jsonRequest
+                        && arguments[1] is string jsonBody)
+                    {
+                        var jsonHeaders = new Dictionary<string, string>(jsonRequest.Headers, StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["Content-Type"] = "application/json"
+                        };
+                        return new HttpRequestValue(
+                            jsonRequest.Method,
+                            jsonRequest.Url,
+                            jsonHeaders,
+                            jsonBody,
+                            jsonRequest.TimeoutMs);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "json expects (Request request, String body)."));
+                    return null;
+                case "accept_json":
+                    if (arguments.Length == 1
+                        && arguments[0] is HttpRequestValue acceptJsonRequest)
+                    {
+                        var acceptHeaders = new Dictionary<string, string>(acceptJsonRequest.Headers, StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["Accept"] = "application/json"
+                        };
+                        return new HttpRequestValue(
+                            acceptJsonRequest.Method,
+                            acceptJsonRequest.Url,
+                            acceptHeaders,
+                            acceptJsonRequest.Body,
+                            acceptJsonRequest.TimeoutMs);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "accept_json expects (Request request)."));
+                    return null;
                 case "send":
                     if (arguments.Length == 1 && arguments[0] is HttpRequestValue request)
                     {
@@ -1991,14 +2028,24 @@ public sealed class Interpreter
             };
             using var message = new HttpRequestMessage(new HttpMethod(request.Method), uri);
 
+            request.Headers.TryGetValue("Content-Type", out var contentType);
+
             foreach (var header in request.Headers)
             {
+                if (string.Equals(header.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 message.Headers.TryAddWithoutValidation(header.Key, header.Value);
             }
 
             if (request.Body is not null)
             {
-                message.Content = new StringContent(request.Body, Encoding.UTF8, "text/plain");
+                message.Content = new StringContent(
+                    request.Body,
+                    Encoding.UTF8,
+                    string.IsNullOrWhiteSpace(contentType) ? "text/plain" : contentType);
             }
 
             try

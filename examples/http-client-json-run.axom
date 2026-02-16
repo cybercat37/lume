@@ -1,0 +1,8 @@
+println "HTTP JSON decorators"
+
+let request = http("http://api.example.test") 
+   |> post("/users", "seed") 
+   |> json("{\"name\":\"Ada\"}") 
+   |> accept_json()
+
+print request

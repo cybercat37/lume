@@ -2974,6 +2974,10 @@ public sealed class Binder
                 return BindBuiltinBinary(function, call, arguments, allowFloat: true);
             case "header":
                 return BindBuiltinHeader(function, call, arguments);
+            case "json":
+                return BindBuiltinRequestDecorator(function, call, arguments, expectedArgumentCount: 2, builtinName: "json");
+            case "accept_json":
+                return BindBuiltinRequestDecorator(function, call, arguments, expectedArgumentCount: 1, builtinName: "accept_json");
             default:
                 return null;
         }
@@ -3031,6 +3035,55 @@ public sealed class Binder
         }
 
         return new BoundCallExpression(new BoundFunctionExpression(function), arguments, targetType);
+    }
+
+    private BoundExpression BindBuiltinRequestDecorator(
+        FunctionSymbol function,
+        CallExpressionSyntax call,
+        IReadOnlyList<BoundExpression> arguments,
+        int expectedArgumentCount,
+        string builtinName)
+    {
+        if (arguments.Count != expectedArgumentCount)
+        {
+            var signature = expectedArgumentCount == 1
+                ? "(Request request)"
+                : "(Request request, String body)";
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                $"{builtinName}() expects {signature}."));
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+        }
+
+        var requestType = arguments[0].Type;
+        var hasTypeError = false;
+        if (requestType != TypeSymbol.HttpRequest && requestType != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Arguments[0].Span,
+                $"{builtinName}() expects Request as first argument but got '{requestType}'."));
+            hasTypeError = true;
+        }
+
+        if (expectedArgumentCount == 2)
+        {
+            var bodyType = arguments[1].Type;
+            if (bodyType != TypeSymbol.String && bodyType != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    call.Arguments[1].Span,
+                    $"{builtinName}() expects String body but got '{bodyType}'."));
+                hasTypeError = true;
+            }
+        }
+
+        return new BoundCallExpression(
+            new BoundFunctionExpression(function),
+            arguments,
+            hasTypeError ? TypeSymbol.Error : TypeSymbol.HttpRequest);
     }
 
     private BoundExpression BindBuiltinRange(

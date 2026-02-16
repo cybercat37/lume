@@ -7,7 +7,7 @@ public class CodegenHttpClientBuiltinTests
     {
         var compiler = new CompilerDriver();
         var result = compiler.Compile(
-            "let client = http(\"http://127.0.0.1:8080\") |> header(\"x-client\", \"yes\")\nlet request = client |> put(\"/health\", \"body\") |> header(\"x-test\", \"ok\") |> request_text(\"override\")\nlet request2 = client |> patch(\"/health\", \"patch\")\nlet request3 = client |> delete(\"/health\")\nlet request4 = client |> get(\"/health\")\nlet response = send(request)\nprint response\nprint request2\nprint request3\nprint request4",
+            "let client = http(\"http://127.0.0.1:8080\") |> header(\"x-client\", \"yes\")\nlet request = client |> put(\"/health\", \"body\") |> header(\"x-test\", \"ok\") |> request_text(\"override\") |> json(\"{\\\"ok\\\":true}\") |> accept_json()\nlet request2 = client |> patch(\"/health\", \"patch\")\nlet request3 = client |> delete(\"/health\")\nlet request4 = client |> get(\"/health\")\nlet response = send(request)\nprint response\nprint request2\nprint request3\nprint request4",
             "test.axom");
 
         Assert.True(result.Success);
@@ -18,6 +18,8 @@ public class CodegenHttpClientBuiltinTests
         Assert.Contains("AxomHttpDelete", result.GeneratedCode);
         Assert.Contains("AxomHttpRequestHeader", result.GeneratedCode);
         Assert.Contains("AxomHttpRequestText", result.GeneratedCode);
+        Assert.Contains("AxomHttpRequestJson", result.GeneratedCode);
+        Assert.Contains("AxomHttpAcceptJson", result.GeneratedCode);
         Assert.Contains("AxomHttpSend", result.GeneratedCode);
         Assert.Contains("AxomHttpResponseValue", result.GeneratedCode);
         Assert.Contains("AxomHttpErrorValue", result.GeneratedCode);

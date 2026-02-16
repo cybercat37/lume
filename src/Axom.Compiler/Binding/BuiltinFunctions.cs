@@ -152,6 +152,27 @@ public static class BuiltinFunctions
         TypeSymbol.HttpRequest,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol HttpRequestJson = new(
+        "json",
+        new[]
+        {
+            new ParameterSymbol("request", TypeSymbol.HttpRequest),
+            new ParameterSymbol("body", TypeSymbol.String)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.HttpRequest,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpAcceptJson = new(
+        "accept_json",
+        new[]
+        {
+            new ParameterSymbol("request", TypeSymbol.HttpRequest)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.HttpRequest,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol HttpSend = new(
         "send",
         new[]
@@ -593,6 +614,8 @@ public static class BuiltinFunctions
         [HttpDelete.Name] = HttpDelete,
         [HttpRequestHeader.Name] = HttpRequestHeader,
         [HttpRequestText.Name] = HttpRequestText,
+        [HttpRequestJson.Name] = HttpRequestJson,
+        [HttpAcceptJson.Name] = HttpAcceptJson,
         [HttpSend.Name] = HttpSend,
         [HttpRequire.Name] = HttpRequire,
         [HttpResponseText.Name] = HttpResponseText,

@@ -78,6 +78,57 @@ public class InterpreterHttpClientBuiltinTests
         Assert.Equal("Request { method: DELETE, url: http://example.test/users/3 }", lines[2]);
     }
 
+    [Fact]
+    public async Task Http_json_and_accept_json_decorators_apply_headers_and_body()
+    {
+        AxomHttpRequest? observed = null;
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+        var routes = new[]
+        {
+            new RouteEndpoint(
+                "GET",
+                "/health",
+                "inline",
+                (_, _) => Task.FromResult(AxomHttpResponse.Text(200, "ok from host"))),
+            new RouteEndpoint(
+                "POST",
+                "/echo",
+                "inline",
+                (request, _) =>
+                {
+                    observed = request;
+                    return Task.FromResult(AxomHttpResponse.Text(200, "ok"));
+                })
+        };
+
+        var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+        await WaitForHealthAsync(port);
+
+        var sourceText = new SourceText(
+            $"let sent = http(\"http://127.0.0.1:{port}\") |> post(\"/echo\", \"seed\") |> json(\"{{\\\"x\\\":1}}\") |> accept_json() |> send()\nprint match sent {{\n  Ok(resp) -> \"ok\"\n  Error(err) -> str(err)\n}}",
+            "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var errors = result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors.Select(error => error.ToString())));
+        Assert.Equal("ok", result.Output.Trim());
+
+        Assert.NotNull(observed);
+        Assert.Equal("{\"x\":1}", observed!.Body);
+        Assert.True(observed.Headers.TryGetValue("Content-Type", out var contentType));
+        Assert.StartsWith("application/json", contentType, StringComparison.OrdinalIgnoreCase);
+        Assert.True(observed.Headers.TryGetValue("Accept", out var accept));
+        Assert.Equal("application/json", accept);
+
+        cancellation.Cancel();
+        await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
     private static async Task WaitForHealthAsync(int port)
     {
         using var client = new HttpClient();

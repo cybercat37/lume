@@ -680,6 +680,8 @@ public sealed class Emitter
                     || string.Equals(function.Function.Name, "delete", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "request_header", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "request_text", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "json", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "accept_json", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "send", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "require", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "response_text", StringComparison.Ordinal)) => true,
@@ -1194,6 +1196,8 @@ public sealed class Emitter
                 "delete" => $"AxomHttpDelete({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "request_header" => $"AxomHttpRequestHeader({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
                 "request_text" => $"AxomHttpRequestText({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "json" => $"AxomHttpRequestJson({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "accept_json" => $"AxomHttpAcceptJson({argumentExpressions[0]})",
                 "send" => $"AxomHttpSend({argumentExpressions[0]})",
                 "require" => $"AxomHttpRequire({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "response_text" => $"AxomHttpResponseText({argumentExpressions[0]})",
@@ -1807,6 +1811,24 @@ public sealed class Emitter
         builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, new System.Collections.Generic.Dictionary<string, string>(request.Headers, StringComparer.OrdinalIgnoreCase), body, request.TimeoutMs);");
         builder.AppendLine("    }");
         builder.AppendLine();
+        builder.AppendLine("    static AxomHttpRequestValue AxomHttpRequestJson(AxomHttpRequestValue request, string body)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var headers = new System.Collections.Generic.Dictionary<string, string>(request.Headers, StringComparer.OrdinalIgnoreCase)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            [\"Content-Type\"] = \"application/json\"");
+        builder.AppendLine("        };");
+        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, headers, body, request.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpRequestValue AxomHttpAcceptJson(AxomHttpRequestValue request)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var headers = new System.Collections.Generic.Dictionary<string, string>(request.Headers, StringComparer.OrdinalIgnoreCase)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            [\"Accept\"] = \"application/json\"");
+        builder.AppendLine("        };");
+        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, headers, request.Body, request.TimeoutMs);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
         builder.AppendLine("    static AxomResult<AxomHttpResponseValue> AxomHttpSend(AxomHttpRequestValue request)");
         builder.AppendLine("    {");
         builder.AppendLine("        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri))");
@@ -1816,14 +1838,19 @@ public sealed class Emitter
         builder.AppendLine();
         builder.AppendLine("        using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs) };");
         builder.AppendLine("        using var message = new HttpRequestMessage(new HttpMethod(request.Method), uri);");
+        builder.AppendLine("        request.Headers.TryGetValue(\"Content-Type\", out var contentType);");
         builder.AppendLine("        foreach (var header in request.Headers)");
         builder.AppendLine("        {");
-        builder.AppendLine("            message.Headers.TryAddWithoutValidation(header.Key, header.Value);");
+        builder.AppendLine("            if (string.Equals(header.Key, \"Content-Type\", StringComparison.OrdinalIgnoreCase))");
+        builder.AppendLine("            {");
+        builder.AppendLine("                continue;");
+        builder.AppendLine("            }");
+            builder.AppendLine("            message.Headers.TryAddWithoutValidation(header.Key, header.Value);");
         builder.AppendLine("        }");
         builder.AppendLine();
         builder.AppendLine("        if (request.Body is not null)");
         builder.AppendLine("        {");
-        builder.AppendLine("            message.Content = new StringContent(request.Body, Encoding.UTF8, \"text/plain\");");
+        builder.AppendLine("            message.Content = new StringContent(request.Body, Encoding.UTF8, string.IsNullOrWhiteSpace(contentType) ? \"text/plain\" : contentType);");
         builder.AppendLine("        }");
         builder.AppendLine();
         builder.AppendLine("        try");
