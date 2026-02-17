@@ -129,6 +129,22 @@ public class InterpreterHttpClientBuiltinTests
         await runTask.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
+    [Fact]
+    public void Http_config_sugar_builds_client_used_by_request_pipeline()
+    {
+        var sourceText = new SourceText(
+            "let client = http { baseUrl: \"http://example.test\", headers: [\"x-client\": \"yes\"], timeout: 1800 }\nlet request = client |> get(\"/users/1\")\nprint request",
+            "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var errors = result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors.Select(error => error.ToString())));
+        Assert.Equal("Request { method: GET, url: http://example.test/users/1 }", result.Output.Trim());
+    }
+
     private static async Task WaitForHealthAsync(int port)
     {
         using var client = new HttpClient();

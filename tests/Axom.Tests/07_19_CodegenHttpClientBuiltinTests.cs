@@ -24,4 +24,18 @@ public class CodegenHttpClientBuiltinTests
         Assert.Contains("AxomHttpResponseValue", result.GeneratedCode);
         Assert.Contains("AxomHttpErrorValue", result.GeneratedCode);
     }
+
+    [Fact]
+    public void Compile_http_config_sugar_emits_http_create_and_decorators()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile(
+            "let client = http { baseUrl: \"http://127.0.0.1:8080\", headers: [\"x-client\": \"yes\"], timeout: 1500 }\nlet request = client |> get(\"/health\")\nprint request",
+            "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("AxomHttpCreate", result.GeneratedCode);
+        Assert.Contains("AxomHttpHeader", result.GeneratedCode);
+        Assert.Contains("AxomHttpTimeout", result.GeneratedCode);
+    }
 }

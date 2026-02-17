@@ -1,11 +1,7 @@
 println "HTTP client request builders"
 
-let client = http("http://api.example.test") 
-    |> header("x-client", "axom") 
-    |> http_timeout(1500)
+let client = http("http://api.example.test") |> header("x-client", "axom") |> http_timeout(1500)
 
-let request = client 
-    |> get("/health") 
-    |> header("x-trace", "demo-001")
+let request = client |> get("/health") |> header("x-trace", "demo-001")
 
 print request

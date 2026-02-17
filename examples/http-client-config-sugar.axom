@@ -1,0 +1,10 @@
+println "HTTP config sugar"
+
+let client = http {
+  baseUrl: "http://api.example.test",
+  headers: ["x-client": "axom"],
+  timeout: 1200
+}
+
+let request = client |> get("/health")
+print request

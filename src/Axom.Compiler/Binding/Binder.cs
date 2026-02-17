@@ -1104,6 +1104,11 @@ public sealed class Binder
     private BoundExpression BindRecordLiteralExpression(RecordLiteralExpressionSyntax record)
     {
         var name = record.IdentifierToken.Text;
+        if (string.Equals(name, "http", StringComparison.Ordinal))
+        {
+            return BindHttpConfigSugar(record);
+        }
+
         if (!recordDefinitions.TryGetValue(name, out var definition))
         {
             diagnostics.Add(Diagnostic.Error(
@@ -1225,6 +1230,149 @@ public sealed class Binder
             .ToList();
 
         return new BoundRecordLiteralExpression(definition.Type, assignments);
+    }
+
+    private BoundExpression BindHttpConfigSugar(RecordLiteralExpressionSyntax record)
+    {
+        BoundExpression? baseUrl = null;
+        BoundExpression? timeoutMs = null;
+        MapExpressionSyntax? headersMap = null;
+
+        var seenFields = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var entry in record.Entries)
+        {
+            if (entry is RecordSpreadSyntax spread)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    spread.Span,
+                    "http { ... } does not support spread entries."));
+                continue;
+            }
+
+            if (entry is not RecordFieldAssignmentSyntax field)
+            {
+                continue;
+            }
+
+            var fieldName = field.IdentifierToken.Text;
+            if (!seenFields.Add(fieldName))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    field.IdentifierToken.Span,
+                    $"Field '{fieldName}' is already set in http {{ ... }}."));
+                continue;
+            }
+
+            switch (fieldName)
+            {
+                case "baseUrl":
+                    baseUrl = BindExpression(field.Expression, TypeSymbol.String);
+                    if (baseUrl.Type != TypeSymbol.String && baseUrl.Type != TypeSymbol.Error)
+                    {
+                        diagnostics.Add(Diagnostic.Error(
+                            SourceText,
+                            field.Expression.Span,
+                            $"http {{ ... }} field 'baseUrl' expects String, got '{baseUrl.Type}'."));
+                    }
+                    break;
+                case "timeout":
+                case "timeoutMs":
+                    timeoutMs = BindExpression(field.Expression, TypeSymbol.Int);
+                    if (timeoutMs.Type != TypeSymbol.Int && timeoutMs.Type != TypeSymbol.Error)
+                    {
+                        diagnostics.Add(Diagnostic.Error(
+                            SourceText,
+                            field.Expression.Span,
+                            $"http {{ ... }} field '{fieldName}' expects Int, got '{timeoutMs.Type}'."));
+                    }
+                    break;
+                case "headers":
+                    if (field.Expression is not MapExpressionSyntax mapExpression)
+                    {
+                        diagnostics.Add(Diagnostic.Error(
+                            SourceText,
+                            field.Expression.Span,
+                            "http { ... } field 'headers' expects a map literal like [\"k\": \"v\"]."));
+                        _ = BindExpression(field.Expression);
+                        break;
+                    }
+
+                    headersMap = mapExpression;
+                    break;
+                case "retry":
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        field.IdentifierToken.Span,
+                        "http { ... } field 'retry' is not supported yet."));
+                    _ = BindExpression(field.Expression);
+                    break;
+                default:
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        field.IdentifierToken.Span,
+                        $"Unknown http {{ ... }} field '{fieldName}'. Supported fields: baseUrl, headers, timeout."));
+                    _ = BindExpression(field.Expression);
+                    break;
+            }
+        }
+
+        if (baseUrl is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                record.IdentifierToken.Span,
+                "http { ... } requires field 'baseUrl'."));
+            return new BoundCallExpression(
+                new BoundFunctionExpression(BuiltinFunctions.Http),
+                new[] { new BoundLiteralExpression(string.Empty, TypeSymbol.String) },
+                TypeSymbol.Error);
+        }
+
+        BoundExpression current = new BoundCallExpression(
+            new BoundFunctionExpression(BuiltinFunctions.Http),
+            new[] { baseUrl },
+            TypeSymbol.Http);
+
+        if (headersMap is not null)
+        {
+            foreach (var entry in headersMap.Entries)
+            {
+                var key = BindExpression(entry.Key, TypeSymbol.String);
+                var value = BindExpression(entry.Value, TypeSymbol.String);
+                if (key.Type != TypeSymbol.String && key.Type != TypeSymbol.Error)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        entry.Key.Span,
+                        $"http {{ ... }} headers keys must be String, got '{key.Type}'."));
+                }
+
+                if (value.Type != TypeSymbol.String && value.Type != TypeSymbol.Error)
+                {
+                    diagnostics.Add(Diagnostic.Error(
+                        SourceText,
+                        entry.Value.Span,
+                        $"http {{ ... }} headers values must be String, got '{value.Type}'."));
+                }
+
+                current = new BoundCallExpression(
+                    new BoundFunctionExpression(BuiltinFunctions.Header),
+                    new[] { current, key, value },
+                    TypeSymbol.Http);
+            }
+        }
+
+        if (timeoutMs is not null)
+        {
+            current = new BoundCallExpression(
+                new BoundFunctionExpression(BuiltinFunctions.HttpWithTimeout),
+                new[] { current, timeoutMs },
+                TypeSymbol.Http);
+        }
+
+        return current;
     }
 
     private BoundExpression BindRecordUpdateExpression(RecordUpdateExpressionSyntax recordUpdate)
