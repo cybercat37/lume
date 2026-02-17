@@ -55,6 +55,24 @@ Current `serve` behavior:
 - route handlers can set explicit status/body with `respond(status, body)`
 - route handlers can read request metadata with `request_method()` and `request_path()`
 
+### HTTP Client Baseline (Partial)
+
+Outbound HTTP client support is partial and currently focused on pipeline
+builders plus config sugar.
+
+```axom
+let client = http { baseUrl: "http://api.example.test", headers: ["x-client": "axom"], timeout: 1500 }
+let request = client |> get("/health") |> header("x-trace", "demo-001")
+print request
+```
+
+Current `http { ... }` fields:
+- `baseUrl` (required)
+- `headers` (optional map literal)
+- `timeout` / `timeoutMs` (optional milliseconds as `Int`)
+
+Planned follow-up keeps richer defaults and retry configuration.
+
 ### Install via NuGet (dotnet tool)
 
 If you want the CLI without cloning the repo, install the tool from NuGet:

@@ -171,11 +171,12 @@ LetStmt := "let" Identifier IntentAnnotation? "=" Expression
 - Route handlers can read query params using `query_param(name)`, `query_param_int(name)`, and `query_param_float(name)`.
 - Route handlers can override status/body with `respond(status, body)`.
 - Route handlers can read request context with `request_method()` and `request_path()`.
-- HTTP client v1 is planned as a pipeline-first stdlib module (`http`) with immutable client configuration.
+- HTTP client v1 is partial: baseline client/request builders are implemented and the
+  pipeline-first stdlib module (`http`) remains the target shape.
 - DB runtime APIs, typed SQL interpolation, and auth/security DSL are planned.
 - Reference docs: `docs/roadmap/http-db-plan.md`, `docs/proposals/http-db-reference.md`.
 
-### HTTP Client Module v1 (Planned Target)
+### HTTP Client Module v1 (Implemented Baseline + Planned Target)
 
 The `http` module is specified as a pipeline-first client API. It does not
 introduce an effect system (`HttpFx` is not part of the language or stdlib).
@@ -235,21 +236,28 @@ type HttpError {
 }
 ```
 
-Construction sugar:
+Construction sugar (baseline implemented):
 
 ```axom
 http {
   baseUrl: "https://api.example.com",
-  headers: { "x-app": "axom" },
-  timeout: 5s,
-  retry: Retry { max: 1 }
+  headers: ["x-app": "axom"],
+  timeout: 1500
 }
 ```
 
-`http { ... }` desugars to `Http { ... }` with defaults when omitted:
-- `headers = {}`
-- `timeout = 30s`
-- `retry = Retry { max: 0 }`
+Current implementation accepts:
+- required `baseUrl: String`
+- optional `headers: Map<String>` via map literal
+- optional `timeout` or `timeoutMs` as `Int`
+
+Current sugar desugars to the pipeline:
+- `http(baseUrl)`
+- `|> header(k, v)` for each `headers` entry
+- `|> http_timeout(ms)` when timeout is set
+
+Planned follow-up keeps richer defaults (`headers = {}`, `timeout = 30s`) and
+`retry = Retry { max: 0 }`.
 
 Client decorators (`Http -> Http`):
 - `bearer(token: String)`
