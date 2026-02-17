@@ -9,7 +9,7 @@ public class CliExamplesTests
     public void Run_interpolation_example_succeeds()
     {
         var repoRoot = FindRepoRoot();
-        var filePath = Path.Combine(repoRoot, "examples", "interpolation-format.axom");
+        var filePath = Path.Combine(repoRoot, "examples", "010_interpolation-format.axom");
         var outDir = Path.Combine(Path.GetTempPath(), $"axom_cli_examples_{Guid.NewGuid():N}");
         Directory.CreateDirectory(outDir);
 
