@@ -685,6 +685,8 @@ public sealed class Emitter
                     || string.Equals(function.Function.Name, "accept_json", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "send", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "require", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "status_range", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "require_range", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "response_text", StringComparison.Ordinal)) => true,
             LoweredCallExpression call => UsesHttpBuiltins(call.Callee) || call.Arguments.Any(UsesHttpBuiltins),
             LoweredUnaryExpression unary => UsesHttpBuiltins(unary.Operand),
@@ -1202,6 +1204,8 @@ public sealed class Emitter
                 "accept_json" => $"AxomHttpAcceptJson({argumentExpressions[0]})",
                 "send" => $"AxomHttpSend({argumentExpressions[0]})",
                 "require" => $"AxomHttpRequire({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "status_range" => $"AxomStatusRange({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "require_range" => $"AxomHttpRequireRange({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "response_text" => $"AxomHttpResponseText({argumentExpressions[0]})",
                 "route_param" => $"AxomResult<string>.Error(\"route_param is only available in serve route handlers\")",
                 "route_param_int" => $"AxomResult<int>.Error(\"route_param_int is only available in serve route handlers\")",
@@ -1748,6 +1752,17 @@ public sealed class Emitter
         builder.AppendLine("        public static AxomHttpErrorValue StatusError(string message) => new(\"StatusError\", message);");
         builder.AppendLine("    }");
         builder.AppendLine();
+        builder.AppendLine("    sealed class AxomStatusRangeValue");
+        builder.AppendLine("    {");
+        builder.AppendLine("        public AxomStatusRangeValue(int start, int end)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            Start = start;");
+        builder.AppendLine("            End = end;");
+        builder.AppendLine("        }");
+        builder.AppendLine("        public int Start { get; }");
+        builder.AppendLine("        public int End { get; }");
+        builder.AppendLine("    }");
+        builder.AppendLine();
         builder.AppendLine("    static AxomHttpClientValue AxomHttpCreate(string baseUrl)");
         builder.AppendLine("    {");
         builder.AppendLine("        return new AxomHttpClientValue(baseUrl, new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), 30000, 0);");
@@ -1905,6 +1920,23 @@ public sealed class Emitter
         builder.AppendLine("        }");
         builder.AppendLine();
         builder.AppendLine("        return AxomResult<AxomHttpResponseValue>.Error(AxomHttpErrorValue.StatusError($\"status mismatch: expected {statusCode}, got {response.StatusCode}\"));");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomStatusRangeValue AxomStatusRange(int start, int end)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var lower = Math.Min(start, end);");
+        builder.AppendLine("        var upper = Math.Max(start, end);");
+        builder.AppendLine("        return new AxomStatusRangeValue(lower, upper);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<AxomHttpResponseValue> AxomHttpRequireRange(AxomHttpResponseValue response, AxomStatusRangeValue statusRange)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        if (response.StatusCode >= statusRange.Start && response.StatusCode <= statusRange.End)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Ok(response);");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        return AxomResult<AxomHttpResponseValue>.Error(AxomHttpErrorValue.StatusError($\"status mismatch: expected {statusRange.Start}..{statusRange.End}, got {response.StatusCode}\"));");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomResult<string> AxomHttpResponseText(AxomHttpResponseValue response)");
@@ -2079,6 +2111,7 @@ public sealed class Emitter
             var t when t == TypeSymbol.Http => "AxomHttpClientValue",
             var t when t == TypeSymbol.HttpRequest => "AxomHttpRequestValue",
             var t when t == TypeSymbol.HttpResponse => "AxomHttpResponseValue",
+            var t when t == TypeSymbol.StatusRange => "AxomStatusRangeValue",
             var t when t == TypeSymbol.HttpError => "AxomHttpErrorValue",
             var t when t == TypeSymbol.Unit => "void",
             _ => EscapeIdentifier(type.Name)

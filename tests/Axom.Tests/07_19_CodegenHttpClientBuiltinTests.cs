@@ -39,4 +39,17 @@ public class CodegenHttpClientBuiltinTests
         Assert.Contains("AxomHttpTimeout", result.GeneratedCode);
         Assert.Contains("AxomHttpRetry", result.GeneratedCode);
     }
+
+    [Fact]
+    public void Compile_http_status_range_require_emits_status_range_helpers()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile(
+            "let request = http(\"http://127.0.0.1:8080\") |> get(\"/health\")\nlet sent = send(request)\nprint match sent {\n  Ok(resp) -> require_range(resp, 200..299)\n  Error(_) -> sent\n}",
+            "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("AxomStatusRange", result.GeneratedCode);
+        Assert.Contains("AxomHttpRequireRange", result.GeneratedCode);
+    }
 }

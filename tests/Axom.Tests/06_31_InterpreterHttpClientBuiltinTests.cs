@@ -42,6 +42,45 @@ public class InterpreterHttpClientBuiltinTests
     }
 
     [Fact]
+    public async Task Http_require_range_accepts_2xx_status_window()
+    {
+        var host = new AxomHttpHost();
+        using var cancellation = new CancellationTokenSource();
+        var port = GetFreePort();
+        var routes = new[]
+        {
+            new RouteEndpoint(
+                "GET",
+                "/created",
+                "inline",
+                (_, _) => Task.FromResult(AxomHttpResponse.Text(201, "created"))),
+            new RouteEndpoint(
+                "GET",
+                "/health",
+                "inline",
+                (_, _) => Task.FromResult(AxomHttpResponse.Text(200, "ok")))
+        };
+
+        var runTask = host.RunAsync("127.0.0.1", port, routes, cancellation.Token);
+        await WaitForHealthAsync(port);
+
+        var sourceText = new SourceText(
+            $"let sent = http(\"http://127.0.0.1:{port}\") |> get(\"/created\") |> send()\nprint match sent {{\n  Ok(resp) -> match require_range(resp, 200..299) {{\n    Ok(okResp) -> match response_text(okResp) {{\n      Ok(body) -> body\n      Error(err) -> str(err)\n    }}\n    Error(err) -> str(err)\n  }}\n  Error(err) -> str(err)\n}}",
+            "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var interpreter = new Interpreter();
+        var result = interpreter.Run(syntaxTree);
+
+        var errors = result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors.Select(error => error.ToString())));
+        Assert.Equal("created", result.Output.Trim());
+
+        cancellation.Cancel();
+        await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public void Http_send_returns_typed_invalid_url_error_variant()
     {
         var sourceText = new SourceText(

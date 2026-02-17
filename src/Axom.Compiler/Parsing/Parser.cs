@@ -1813,6 +1813,7 @@ public sealed class Parser
             TokenKind.LessOrEqual => 3,
             TokenKind.Greater => 3,
             TokenKind.GreaterOrEqual => 3,
+            TokenKind.DotDot => 3,
             TokenKind.AmpersandAmpersand => 2,
             TokenKind.PipePipe => 1,
             TokenKind.PipeGreater => 1,

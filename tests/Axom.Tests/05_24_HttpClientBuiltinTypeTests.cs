@@ -71,4 +71,18 @@ public class HttpClientBuiltinTypeTests
 
         Assert.Empty(result.Diagnostics.Where(d => d.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error));
     }
+
+    [Fact]
+    public void Http_status_range_and_require_range_type_check()
+    {
+        var sourceText = new SourceText(
+            "let sent = http(\"http://127.0.0.1:8080\") |> get(\"/health\") |> send()\nprint match sent {\n  Ok(resp) -> require_range(resp, 200..299)\n  Error(_) -> sent\n}",
+            "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics.Where(d => d.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error));
+    }
 }

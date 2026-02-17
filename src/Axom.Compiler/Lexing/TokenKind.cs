@@ -50,6 +50,7 @@ public enum TokenKind
     Colon,
     At,
     Dot,
+    DotDot,
     OpenParen,
     CloseParen,
     OpenBracket,

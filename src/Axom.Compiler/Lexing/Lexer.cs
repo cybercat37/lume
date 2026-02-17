@@ -188,6 +188,12 @@ public sealed class Lexer
                     return new SyntaxToken(TokenKind.Ellipsis, new TextSpan(start, 3), "...", null);
                 }
 
+                if (Peek(1) == '.')
+                {
+                    position += 2;
+                    return new SyntaxToken(TokenKind.DotDot, new TextSpan(start, 2), "..", null);
+                }
+
                 Next();
                 return new SyntaxToken(TokenKind.Dot, new TextSpan(start, 1), ".", null);
             case '(':

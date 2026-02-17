@@ -1626,6 +1626,27 @@ public sealed class Binder
         var right = BindExpression(binary.Right);
         var op = binary.OperatorToken.Kind;
 
+        if (op == TokenKind.DotDot)
+        {
+            if (left.Type == TypeSymbol.Int && right.Type == TypeSymbol.Int)
+            {
+                return new BoundCallExpression(
+                    new BoundFunctionExpression(BuiltinFunctions.HttpStatusRange),
+                    new[] { left, right },
+                    TypeSymbol.StatusRange);
+            }
+
+            if (left.Type != TypeSymbol.Error && right.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    binary.OperatorToken.Span,
+                    $"Operator '{binary.OperatorToken.Text}' is not defined for types '{left.Type}' and '{right.Type}'."));
+            }
+
+            return new BoundBinaryExpression(left, op, right, TypeSymbol.Error);
+        }
+
         if (left.Type == TypeSymbol.Bool && right.Type == TypeSymbol.Bool)
         {
             if (op is TokenKind.AmpersandAmpersand or TokenKind.PipePipe or TokenKind.EqualEqual or TokenKind.BangEqual)

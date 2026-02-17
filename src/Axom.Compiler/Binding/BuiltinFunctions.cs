@@ -205,6 +205,28 @@ public static class BuiltinFunctions
         TypeSymbol.Result(TypeSymbol.HttpResponse, TypeSymbol.HttpError),
         isBuiltin: true);
 
+    public static readonly FunctionSymbol HttpStatusRange = new(
+        "status_range",
+        new[]
+        {
+            new ParameterSymbol("start", TypeSymbol.Int),
+            new ParameterSymbol("end", TypeSymbol.Int)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.StatusRange,
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol HttpRequireRange = new(
+        "require_range",
+        new[]
+        {
+            new ParameterSymbol("response", TypeSymbol.HttpResponse),
+            new ParameterSymbol("statusRange", TypeSymbol.StatusRange)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.HttpResponse, TypeSymbol.HttpError),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol HttpResponseText = new(
         "response_text",
         new[]
@@ -630,6 +652,8 @@ public static class BuiltinFunctions
         [HttpAcceptJson.Name] = HttpAcceptJson,
         [HttpSend.Name] = HttpSend,
         [HttpRequire.Name] = HttpRequire,
+        [HttpStatusRange.Name] = HttpStatusRange,
+        [HttpRequireRange.Name] = HttpRequireRange,
         [HttpResponseText.Name] = HttpResponseText,
         [RouteParam.Name] = RouteParam,
         [RouteParamInt.Name] = RouteParamInt,

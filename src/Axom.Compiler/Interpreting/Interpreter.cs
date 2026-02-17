@@ -1226,6 +1226,32 @@ public sealed class Interpreter
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "require expects (Response response, Int statusCode)."));
                     return BuildHttpResponseResult(isSuccess: false, null, BuildHttpStatusError("invalid require invocation"));
+                case "status_range":
+                    if (arguments.Length == 2 && arguments[0] is int rangeStart && arguments[1] is int rangeEnd)
+                    {
+                        var lower = Math.Min(rangeStart, rangeEnd);
+                        var upper = Math.Max(rangeStart, rangeEnd);
+                        return new HttpStatusRangeValue(lower, upper);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "status_range expects (Int start, Int end)."));
+                    return null;
+                case "require_range":
+                    if (arguments.Length == 2 && arguments[0] is HttpResponseValue rangedResponse && arguments[1] is HttpStatusRangeValue statusRange)
+                    {
+                        if (rangedResponse.StatusCode >= statusRange.Start && rangedResponse.StatusCode <= statusRange.End)
+                        {
+                            return BuildHttpResponseResult(isSuccess: true, rangedResponse, null);
+                        }
+
+                        return BuildHttpResponseResult(
+                            isSuccess: false,
+                            null,
+                            BuildHttpStatusError($"status mismatch: expected {statusRange.Start}..{statusRange.End}, got {rangedResponse.StatusCode}"));
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "require_range expects (Response response, StatusRange statusRange)."));
+                    return BuildHttpResponseResult(isSuccess: false, null, BuildHttpStatusError("invalid require_range invocation"));
                 case "response_text":
                     if (arguments.Length == 1 && arguments[0] is HttpResponseValue responseText)
                     {
@@ -2361,6 +2387,23 @@ public sealed class Interpreter
             public override string ToString()
             {
                 return $"Response {{ status: {StatusCode}, body: {Body} }}";
+            }
+        }
+
+        private sealed class HttpStatusRangeValue
+        {
+            public int Start { get; }
+            public int End { get; }
+
+            public HttpStatusRangeValue(int start, int end)
+            {
+                Start = start;
+                End = end;
+            }
+
+            public override string ToString()
+            {
+                return $"StatusRange {{ start: {Start}, end: {End} }}";
             }
         }
 
