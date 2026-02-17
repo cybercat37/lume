@@ -69,13 +69,18 @@ Tests:
 
 ## M15: HTTP Client Stdlib v1
 
-Objective: ship the full pipeline-first HTTP client module described by the
-language spec, including immutable `Http` configuration, request/response
-decorators, and deterministic `Result`-based errors.
+Objective: complete the full pipeline-first HTTP client module described by the
+language spec, building on the implemented baseline.
 
-DoD:
+Status: Partial
+- Baseline client/request builders are implemented in interpreter + codegen lanes.
+- Shared-name overload behavior (for example `header`) is implemented for pipeline usage.
+- `http { ... }` config sugar is implemented for `baseUrl` (required), optional `headers`, and optional `timeout`/`timeoutMs` (Int milliseconds), desugaring to pipeline calls.
+- Remaining scope tracks the full spec target (status ranges, richer defaults, retry/config surface, full decode/require breadth, and expanded diagnostics hardening).
+
+Target DoD (for milestone completion):
 - Core records/sums are available: `Http`, `Retry`, `Request`, `Response`, `Method`, `HttpError`, `StatusRange`.
-- `http { ... }` construction sugar exists and desugars to `Http { ... }` with defaults (`headers = {}`, `timeout = 30s`, `retry.max = 0`).
+- `http { ... }` construction sugar supports the full planned shape with defaults (`headers = {}`, `timeout = 30s`, `retry.max = 0`).
 - Pipeline categories are available end-to-end:
   - `Http -> Http` decorators (`bearer`, `basic`, `retry`, `timeout`, `header`)
   - `Http -> Request` verbs (`get`, `delete`, `post`, `put`, `patch`)
@@ -87,7 +92,7 @@ DoD:
 - Overload resolution for shared builtin names (for example `header`) is type-directed from the left side of `|>`.
 - No effect-system surface is introduced for HTTP client (`HttpFx` is out of scope).
 
-Implementation tasks:
+Remaining implementation tasks:
 - Type system and parser work:
   - Add/enable required HTTP client types and syntax support (`http { ... }`, `StatusRange`, range sugar).
   - Keep defaults as desugaring behavior, not `Option`-encoded config state.
@@ -293,15 +298,15 @@ Tests to add:
 Acceptance gate:
 - Conflict-free route tree compiles and serves all registered endpoints.
 
-### M15 Backlog (HTTP Client Stdlib)
+### M15 Backlog (HTTP Client Stdlib, Remaining)
 
 Language and type surfaces:
-- Add/enable HTTP client types used by the spec (`Http`, `Retry`, `Request`, `Response`, `Method`, `HttpError`, `StatusRange`).
+- Complete/validate HTTP client types used by the full spec (`Http`, `Retry`, `Request`, `Response`, `Method`, `HttpError`, `StatusRange`).
 - Add/enable supporting value types used by the API surface (`Duration`, `Bytes`, `Uuid`, JSON-compatible payload representation).
 - Keep record declarations and literals as the canonical object model; avoid introducing parallel object forms.
 
 Parser and sugar:
-- Add `http { ... }` sugar and default-field desugaring.
+- Extend `http { ... }` sugar from current implemented subset to the full default-field model.
 - Add status-range sugar (`2xx`, `200..299`) mapped to `StatusRange` forms.
 - Ensure diagnostics point to source sugar sites.
 
