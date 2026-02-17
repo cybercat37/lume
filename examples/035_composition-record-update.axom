@@ -1,0 +1,48 @@
+println "Composition with record updates"
+
+type Address {
+  city: String
+  country: String
+}
+
+type Customer {
+  id: Int
+  name: String
+  address: Address
+}
+
+type PremiumProfile {
+  base: Customer
+  loyaltyPoints: Int
+}
+
+fn upgrade(customer: Customer) -> PremiumProfile {
+  return PremiumProfile {
+    base: customer,
+    loyaltyPoints: 100
+  }
+}
+
+fn move_city(profile: PremiumProfile, city: String) -> PremiumProfile {
+  let movedBase = profile.base with {
+    address: profile.base.address with {
+      city: city
+    }
+  }
+
+  return profile with {
+    base: movedBase
+  }
+}
+
+let customer = Customer {
+  id: 10,
+  name: "Nora",
+  address: Address { city: "Turin", country: "IT" }
+}
+
+let premium = upgrade(customer)
+let moved = move_city(premium, "Bologna")
+
+print premium.base.address.city
+print moved.base.address.city

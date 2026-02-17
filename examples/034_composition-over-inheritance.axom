@@ -1,0 +1,63 @@
+println "Composition over inheritance"
+
+type Address {
+  city: String
+  country: String
+}
+
+type Person {
+  id: Int
+  name: String
+  address: Address
+}
+
+type Employee {
+  person: Person
+  role: String
+  yearlySalary: Int
+}
+
+type Contractor {
+  person: Person
+  company: String
+  dailyRate: Int
+}
+
+type Worker {
+  Internal(Employee)
+  External(Contractor)
+}
+
+fn worker_name(worker: Worker) -> String {
+  return match worker {
+    Internal(e) -> e.person.name + " (employee)"
+    External(c) -> c.person.name + " (contractor)"
+  }
+}
+
+fn yearly_cost(worker: Worker) -> Int {
+  return match worker {
+    Internal(e) -> e.yearlySalary
+    External(c) -> c.dailyRate * 220
+  }
+}
+
+let ada = Person {
+  id: 1,
+  name: "Ada",
+  address: Address { city: "Milan", country: "IT" }
+}
+
+let sam = Person {
+  id: 2,
+  name: "Sam",
+  address: Address { city: "Rome", country: "IT" }
+}
+
+let team = [
+  Internal(Employee { person: ada, role: "Compiler Engineer", yearlySalary: 70000 }),
+  External(Contractor { person: sam, company: "ByteWorks", dailyRate: 420 })
+]
+
+let labels = map(team, fn(w: Worker) => worker_name(w) + " -> " + str(yearly_cost(w)))
+print labels
