@@ -1,0 +1,19 @@
+println "HTTP status range sugar"
+
+let sent = http("http://api.example.test") |> get("/health") |> send()
+
+print match sent {
+  Ok(resp) -> match require_range(resp, 2xx) {
+    Ok(_) -> "2xx ok"
+    Error(err) -> str(err)
+  }
+  Error(err) -> str(err)
+}
+
+print match sent {
+  Ok(resp) -> match require_range(resp, 200..299) {
+    Ok(_) -> "200..299 ok"
+    Error(err) -> str(err)
+  }
+  Error(err) -> str(err)
+}

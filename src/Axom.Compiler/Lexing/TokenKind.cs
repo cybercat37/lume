@@ -28,6 +28,7 @@ public enum TokenKind
     FalseKeyword,
     WithKeyword,
     NumberLiteral,
+    StatusClassLiteral,
     StringLiteral,
     EqualsToken,
     Bang,

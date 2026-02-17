@@ -72,6 +72,10 @@ Current `http { ... }` fields:
 - `timeout` / `timeoutMs` (optional milliseconds as `Int`)
 - `retry` (optional max attempts as `Int`)
 
+Status validation sugar (implemented):
+- `require_range(resp, 2xx)`
+- `require_range(resp, 200..299)`
+
 Planned follow-up keeps richer defaults and retry configuration.
 
 ### Install via NuGet (dotnet tool)

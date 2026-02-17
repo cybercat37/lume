@@ -831,6 +831,7 @@ public sealed class Parser
             case TokenKind.TrueKeyword:
             case TokenKind.FalseKeyword:
             case TokenKind.NumberLiteral:
+            case TokenKind.StatusClassLiteral:
             case TokenKind.StringLiteral:
                 return new LiteralExpressionSyntax(NextToken());
             case TokenKind.InputKeyword:

@@ -9,6 +9,7 @@ Outbound HTTP client examples:
 - `examples/031_http-client-config-sugar.axom` - `http { ... }` with `baseUrl`, `headers`, `timeout`, `retry`.
 - `examples/032_http-client-retry-run.axom` - explicit pipeline retry with `http_retry(...)`.
 - `examples/033_http-client-config-retry-run.axom` - config sugar variant with `timeoutMs` + `retry`.
+- `examples/036_http-status-range-sugar.axom` - status validation sugar with `2xx` and `200..299`.
 
 Run one example from source:
 

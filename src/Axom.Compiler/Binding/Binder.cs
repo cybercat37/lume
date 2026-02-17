@@ -1596,6 +1596,29 @@ public sealed class Binder
 
     private BoundExpression BindLiteralExpression(LiteralExpressionSyntax literal)
     {
+        if (literal.LiteralToken.Kind == TokenKind.StatusClassLiteral)
+        {
+            if (literal.LiteralToken.Value is int statusClass)
+            {
+                var start = statusClass * 100;
+                var end = start + 99;
+                return new BoundCallExpression(
+                    new BoundFunctionExpression(BuiltinFunctions.HttpStatusRange),
+                    new BoundExpression[]
+                    {
+                        new BoundLiteralExpression(start, TypeSymbol.Int),
+                        new BoundLiteralExpression(end, TypeSymbol.Int)
+                    },
+                    TypeSymbol.StatusRange);
+            }
+
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                literal.LiteralToken.Span,
+                "Invalid status class literal. Use values like 2xx, 4xx, or 5xx."));
+            return new BoundLiteralExpression(literal.LiteralToken.Value, TypeSymbol.Error);
+        }
+
         var value = literal.LiteralToken.Value;
         if (value is int)
         {

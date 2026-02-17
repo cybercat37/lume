@@ -76,6 +76,7 @@ Status: Partial
 - Baseline client/request builders are implemented in interpreter + codegen lanes.
 - Shared-name overload behavior (for example `header`) is implemented for pipeline usage.
 - `http { ... }` config sugar is implemented for `baseUrl` (required), optional `headers`, optional `timeout`/`timeoutMs` (Int milliseconds), and optional `retry` (Int max attempts), desugaring to pipeline calls.
+- Status-range sugar is implemented for both `2xx` and `200..299`, mapped to `StatusRange` for `require_range`.
 - Remaining scope tracks the full spec target (status ranges, richer defaults, typed retry/config surface, full decode/require breadth, and expanded diagnostics hardening).
 
 Target DoD (for milestone completion):
@@ -307,7 +308,7 @@ Language and type surfaces:
 
 Parser and sugar:
 - Extend `http { ... }` sugar from current implemented subset to the full default-field model.
-- Add status-range sugar (`2xx`, `200..299`) mapped to `StatusRange` forms.
+- Expand status-range diagnostics and edge-case coverage for `2xx` / `200..299` forms.
 - Ensure diagnostics point to source sugar sites.
 
 Binder and overload resolution:

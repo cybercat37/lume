@@ -291,7 +291,7 @@ Current HTTP+DB progress:
 - M13 (Implemented): `axom serve` and runtime host are implemented with explicit runtime request/response contracts, `GET`/`POST` route handling, deterministic status mapping (`404` fallback and route `500`), and graceful stop via Ctrl+C.
 - M14 (Implemented): route discovery/normalization and pre-boot conflict diagnostics are implemented, including overlap-reason details and dynamic filename validation.
 - M14 runtime bridge (Implemented): discovered routes execute Axom route files, expose dynamic/query params via `route_param*` and `query_param*` helpers, support `respond(status, body)`, expose request context (`request_method`, `request_path`), and return plain-text output.
-- M15 (Partial): outbound HTTP client has baseline client/request builders and `http { ... }` config sugar (`baseUrl`, `headers`, `timeout`/`timeoutMs`, `retry`); remaining scope is the full pipeline-first module defined in `docs/spec.md` and `docs/roadmap/http-db-plan.md`.
+- M15 (Partial): outbound HTTP client has baseline client/request builders, `http { ... }` config sugar (`baseUrl`, `headers`, `timeout`/`timeoutMs`, `retry`), and status-range sugar (`2xx`, `200..299`) for `require_range`; remaining scope is the full pipeline-first module defined in `docs/spec.md` and `docs/roadmap/http-db-plan.md`.
 - DX bootstrap (Implemented): `axom init <name>` scaffolds an API-first project with routes, `.gitignore`, Dockerfile, compose, Makefile + PowerShell endpoint-doc tooling, and onboarding README.
 
 See `docs/roadmap/http-db-plan.md` for objectives, DoD, implementation tasks,

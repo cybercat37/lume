@@ -85,4 +85,18 @@ public class HttpClientBuiltinTypeTests
 
         Assert.Empty(result.Diagnostics.Where(d => d.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error));
     }
+
+    [Fact]
+    public void Http_status_class_literal_sugar_type_checks()
+    {
+        var sourceText = new SourceText(
+            "let sent = http(\"http://127.0.0.1:8080\") |> get(\"/health\") |> send()\nprint match sent {\n  Ok(resp) -> require_range(resp, 2xx)\n  Error(_) -> sent\n}",
+            "test.axom");
+        var syntaxTree = SyntaxTree.Parse(sourceText);
+
+        var binder = new Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Empty(result.Diagnostics.Where(d => d.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error));
+    }
 }

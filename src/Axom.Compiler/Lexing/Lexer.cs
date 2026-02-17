@@ -71,6 +71,15 @@ public sealed class Lexer
 
         if (char.IsDigit(current))
         {
+            if ((Peek(1) == 'x' || Peek(1) == 'X')
+                && (Peek(2) == 'x' || Peek(2) == 'X')
+                && !IsIdentifierPart(Peek(3)))
+            {
+                position += 3;
+                var text = sourceText.Text.Substring(start, 3);
+                return new SyntaxToken(TokenKind.StatusClassLiteral, new TextSpan(start, 3), text, current - '0');
+            }
+
             return LexNumberLiteral();
         }
 

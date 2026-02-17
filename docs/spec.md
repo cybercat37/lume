@@ -309,15 +309,14 @@ type StatusRange {
 }
 ```
 
-Sugar forms are planned:
+Sugar forms:
 - `2xx`
 - `200..299`
 
-Validation helpers:
-- `require(code: Int, includeBody?: Bool): Response -> Result<Response, HttpError>`
-- `require(range: StatusRange, includeBody?: Bool): Response -> Result<Response, HttpError>`
-- Non-matching status returns `StatusError(status, bodyOpt)`.
-- `bodyOpt` is populated only when `includeBody = true` and conversion to `String` succeeds.
+Validation helpers (implemented baseline):
+- `require(response: Response, code: Int) -> Result<Response, HttpError>`
+- `require_range(response: Response, range: StatusRange) -> Result<Response, HttpError>`
+- Non-matching status returns `StatusError` with a descriptive mismatch message.
 
 Body decoding (`Response -> Result<T, HttpError>`):
 - `json<T>()`
@@ -341,8 +340,8 @@ fn load_user(h: Http, id: Uuid) -> Result<User, HttpError> {
     |> get("/users/{id}", { id })
     |> send()?
 
-  let ok = require(2xx)(resp)?
-  json<User>()(ok)
+  let ok = require_range(resp, 2xx)?
+  response_text(ok)
 }
 ```
 

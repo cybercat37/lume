@@ -45,6 +45,7 @@ dotnet run --project src/axom -- run examples/001_demo-run.axom
 - `examples/033_http-client-config-retry-run.axom`
 - `examples/034_composition-over-inheritance.axom`
 - `examples/035_composition-record-update.axom`
+- `examples/036_http-status-range-sugar.axom`
 
 ## Structured example folders
 

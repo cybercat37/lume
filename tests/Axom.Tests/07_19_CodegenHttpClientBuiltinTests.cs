@@ -52,4 +52,17 @@ public class CodegenHttpClientBuiltinTests
         Assert.Contains("AxomStatusRange", result.GeneratedCode);
         Assert.Contains("AxomHttpRequireRange", result.GeneratedCode);
     }
+
+    [Fact]
+    public void Compile_http_status_class_literal_emits_status_range_call()
+    {
+        var compiler = new CompilerDriver();
+        var result = compiler.Compile(
+            "let request = http(\"http://127.0.0.1:8080\") |> get(\"/health\")\nlet sent = send(request)\nprint match sent {\n  Ok(resp) -> require_range(resp, 2xx)\n  Error(_) -> sent\n}",
+            "test.axom");
+
+        Assert.True(result.Success);
+        Assert.Contains("AxomStatusRange(200, 299)", result.GeneratedCode);
+        Assert.Contains("AxomHttpRequireRange", result.GeneratedCode);
+    }
 }
