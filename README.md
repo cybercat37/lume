@@ -135,7 +135,7 @@ print "after scope"
 ```
 
 `defer` schedules expression/block cleanup at scope exit (LIFO), including early `return`.
-See runnable example: `examples/defer-scope-spawn-run.axom`.
+See runnable example: `examples/027_defer-scope-spawn-run.axom`.
 
 **Aspects (`@logging`)**
 

@@ -1,4 +1,24 @@
-# HTTP Serve Example
+# HTTP Examples
+
+## Quick index
+
+Outbound HTTP client examples:
+
+- `examples/029_http-client-run.axom` - base client + headers + timeout via pipeline.
+- `examples/030_http-client-json-run.axom` - `post` + `json` + `accept_json` decorators.
+- `examples/031_http-client-config-sugar.axom` - `http { ... }` with `baseUrl`, `headers`, `timeout`, `retry`.
+- `examples/032_http-client-retry-run.axom` - explicit pipeline retry with `http_retry(...)`.
+- `examples/033_http-client-config-retry-run.axom` - config sugar variant with `timeoutMs` + `retry`.
+
+Run one example from source:
+
+```bash
+dotnet run --project src/axom -- run examples/033_http-client-config-retry-run.axom
+```
+
+---
+
+## HTTP serve example
 
 Run:
 

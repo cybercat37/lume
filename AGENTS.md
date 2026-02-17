@@ -27,7 +27,7 @@ Preferred entry points are the Makefile targets or `dotnet` commands.
   - `dotnet run --project src/axom -- check path/to/file.axom --cache`
 - `make compile FILE=path/to/file.axom`
 - `make run FILE=path/to/file.axom`
-- `make demo-example` (runs `examples/demo-run.axom`)
+- `make demo-example` (runs `examples/001_demo-run.axom`)
 ### Test
 - `make test` (wraps `dotnet test`)
 - `make test-hardening` (golden + snapshot tests)
