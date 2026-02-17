@@ -1236,6 +1236,7 @@ public sealed class Binder
     {
         BoundExpression? baseUrl = null;
         BoundExpression? timeoutMs = null;
+        BoundExpression? retryMax = null;
         MapExpressionSyntax? headersMap = null;
 
         var seenFields = new HashSet<string>(StringComparer.Ordinal);
@@ -1302,17 +1303,20 @@ public sealed class Binder
                     headersMap = mapExpression;
                     break;
                 case "retry":
-                    diagnostics.Add(Diagnostic.Error(
-                        SourceText,
-                        field.IdentifierToken.Span,
-                        "http { ... } field 'retry' is not supported yet."));
-                    _ = BindExpression(field.Expression);
+                    retryMax = BindExpression(field.Expression, TypeSymbol.Int);
+                    if (retryMax.Type != TypeSymbol.Int && retryMax.Type != TypeSymbol.Error)
+                    {
+                        diagnostics.Add(Diagnostic.Error(
+                            SourceText,
+                            field.Expression.Span,
+                            $"http {{ ... }} field 'retry' expects Int, got '{retryMax.Type}'."));
+                    }
                     break;
                 default:
                     diagnostics.Add(Diagnostic.Error(
                         SourceText,
                         field.IdentifierToken.Span,
-                        $"Unknown http {{ ... }} field '{fieldName}'. Supported fields: baseUrl, headers, timeout."));
+                        $"Unknown http {{ ... }} field '{fieldName}'. Supported fields: baseUrl, headers, timeout, retry."));
                     _ = BindExpression(field.Expression);
                     break;
             }
@@ -1369,6 +1373,14 @@ public sealed class Binder
             current = new BoundCallExpression(
                 new BoundFunctionExpression(BuiltinFunctions.HttpWithTimeout),
                 new[] { current, timeoutMs },
+                TypeSymbol.Http);
+        }
+
+        if (retryMax is not null)
+        {
+            current = new BoundCallExpression(
+                new BoundFunctionExpression(BuiltinFunctions.HttpWithRetry),
+                new[] { current, retryMax },
                 TypeSymbol.Http);
         }
 

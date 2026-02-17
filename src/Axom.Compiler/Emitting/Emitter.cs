@@ -673,6 +673,7 @@ public sealed class Emitter
                     || string.Equals(function.Function.Name, "header", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "http_header", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "http_timeout", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "http_retry", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "get", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "post", StringComparison.Ordinal)
                     || string.Equals(function.Function.Name, "put", StringComparison.Ordinal)
@@ -1189,6 +1190,7 @@ public sealed class Emitter
                 "header" => WriteHeaderCall(call, argumentExpressions),
                 "http_header" => $"AxomHttpHeader({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
                 "http_timeout" => $"AxomHttpTimeout({argumentExpressions[0]}, {argumentExpressions[1]})",
+                "http_retry" => $"AxomHttpRetry({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "get" => $"AxomHttpGet({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "post" => $"AxomHttpPost({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
                 "put" => $"AxomHttpPut({argumentExpressions[0]}, {argumentExpressions[1]}, {argumentExpressions[2]})",
@@ -1686,32 +1688,36 @@ public sealed class Emitter
     {
         builder.AppendLine("    sealed class AxomHttpClientValue");
         builder.AppendLine("    {");
-        builder.AppendLine("        public AxomHttpClientValue(string baseUrl, System.Collections.Generic.Dictionary<string, string> headers, int timeoutMs)");
+        builder.AppendLine("        public AxomHttpClientValue(string baseUrl, System.Collections.Generic.Dictionary<string, string> headers, int timeoutMs, int retryMax)");
         builder.AppendLine("        {");
         builder.AppendLine("            BaseUrl = baseUrl;");
         builder.AppendLine("            Headers = headers;");
         builder.AppendLine("            TimeoutMs = timeoutMs;");
+        builder.AppendLine("            RetryMax = retryMax;");
         builder.AppendLine("        }");
         builder.AppendLine("        public string BaseUrl { get; }");
         builder.AppendLine("        public System.Collections.Generic.Dictionary<string, string> Headers { get; }");
         builder.AppendLine("        public int TimeoutMs { get; }");
+        builder.AppendLine("        public int RetryMax { get; }");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    sealed class AxomHttpRequestValue");
         builder.AppendLine("    {");
-        builder.AppendLine("        public AxomHttpRequestValue(string method, string url, System.Collections.Generic.Dictionary<string, string> headers, string? body, int timeoutMs)");
+        builder.AppendLine("        public AxomHttpRequestValue(string method, string url, System.Collections.Generic.Dictionary<string, string> headers, string? body, int timeoutMs, int retryMax)");
         builder.AppendLine("        {");
         builder.AppendLine("            Method = method;");
         builder.AppendLine("            Url = url;");
         builder.AppendLine("            Headers = headers;");
         builder.AppendLine("            Body = body;");
         builder.AppendLine("            TimeoutMs = timeoutMs;");
+        builder.AppendLine("            RetryMax = retryMax;");
         builder.AppendLine("        }");
         builder.AppendLine("        public string Method { get; }");
         builder.AppendLine("        public string Url { get; }");
         builder.AppendLine("        public System.Collections.Generic.Dictionary<string, string> Headers { get; }");
         builder.AppendLine("        public string? Body { get; }");
         builder.AppendLine("        public int TimeoutMs { get; }");
+        builder.AppendLine("        public int RetryMax { get; }");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    sealed class AxomHttpResponseValue");
@@ -1744,7 +1750,7 @@ public sealed class Emitter
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpClientValue AxomHttpCreate(string baseUrl)");
         builder.AppendLine("    {");
-        builder.AppendLine("        return new AxomHttpClientValue(baseUrl, new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), 30000);");
+        builder.AppendLine("        return new AxomHttpClientValue(baseUrl, new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), 30000, 0);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpClientValue AxomHttpHeader(AxomHttpClientValue client, string name, string value)");
@@ -1753,48 +1759,54 @@ public sealed class Emitter
         builder.AppendLine("        {");
         builder.AppendLine("            [name] = value");
         builder.AppendLine("        };");
-        builder.AppendLine("        return new AxomHttpClientValue(client.BaseUrl, headers, client.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpClientValue(client.BaseUrl, headers, client.TimeoutMs, client.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpClientValue AxomHttpTimeout(AxomHttpClientValue client, int timeoutMs)");
         builder.AppendLine("    {");
         builder.AppendLine("        var normalized = timeoutMs <= 0 ? 1 : timeoutMs;");
-        builder.AppendLine("        return new AxomHttpClientValue(client.BaseUrl, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), normalized);");
+        builder.AppendLine("        return new AxomHttpClientValue(client.BaseUrl, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), normalized, client.RetryMax);");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomHttpClientValue AxomHttpRetry(AxomHttpClientValue client, int maxAttempts)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var normalized = maxAttempts < 0 ? 0 : maxAttempts;");
+        builder.AppendLine("        return new AxomHttpClientValue(client.BaseUrl, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), client.TimeoutMs, normalized);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpRequestValue AxomHttpGet(AxomHttpClientValue client, string path)");
         builder.AppendLine("    {");
         builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
         builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
-        builder.AppendLine("        return new AxomHttpRequestValue(\"GET\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), null, client.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"GET\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), null, client.TimeoutMs, client.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpRequestValue AxomHttpPost(AxomHttpClientValue client, string path, string body)");
         builder.AppendLine("    {");
         builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
         builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
-        builder.AppendLine("        return new AxomHttpRequestValue(\"POST\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"POST\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs, client.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpRequestValue AxomHttpPut(AxomHttpClientValue client, string path, string body)");
         builder.AppendLine("    {");
         builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
         builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
-        builder.AppendLine("        return new AxomHttpRequestValue(\"PUT\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"PUT\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs, client.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpRequestValue AxomHttpPatch(AxomHttpClientValue client, string path, string body)");
         builder.AppendLine("    {");
         builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
         builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
-        builder.AppendLine("        return new AxomHttpRequestValue(\"PATCH\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"PATCH\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), body, client.TimeoutMs, client.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpRequestValue AxomHttpDelete(AxomHttpClientValue client, string path)");
         builder.AppendLine("    {");
         builder.AppendLine("        var normalizedPath = path.StartsWith(\"/\", StringComparison.Ordinal) ? path : \"/\" + path;");
         builder.AppendLine("        var url = client.BaseUrl.EndsWith(\"/\", StringComparison.Ordinal) ? client.BaseUrl.TrimEnd('/') + normalizedPath : client.BaseUrl + normalizedPath;");
-        builder.AppendLine("        return new AxomHttpRequestValue(\"DELETE\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), null, client.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpRequestValue(\"DELETE\", url, new System.Collections.Generic.Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase), null, client.TimeoutMs, client.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpRequestValue AxomHttpRequestHeader(AxomHttpRequestValue request, string name, string value)");
@@ -1803,12 +1815,12 @@ public sealed class Emitter
         builder.AppendLine("        {");
         builder.AppendLine("            [name] = value");
         builder.AppendLine("        };");
-        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, headers, request.Body, request.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, headers, request.Body, request.TimeoutMs, request.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpRequestValue AxomHttpRequestText(AxomHttpRequestValue request, string body)");
         builder.AppendLine("    {");
-        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, new System.Collections.Generic.Dictionary<string, string>(request.Headers, StringComparer.OrdinalIgnoreCase), body, request.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, new System.Collections.Generic.Dictionary<string, string>(request.Headers, StringComparer.OrdinalIgnoreCase), body, request.TimeoutMs, request.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpRequestValue AxomHttpRequestJson(AxomHttpRequestValue request, string body)");
@@ -1817,7 +1829,7 @@ public sealed class Emitter
         builder.AppendLine("        {");
         builder.AppendLine("            [\"Content-Type\"] = \"application/json\"");
         builder.AppendLine("        };");
-        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, headers, body, request.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, headers, body, request.TimeoutMs, request.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomHttpRequestValue AxomHttpAcceptJson(AxomHttpRequestValue request)");
@@ -1826,7 +1838,7 @@ public sealed class Emitter
         builder.AppendLine("        {");
         builder.AppendLine("            [\"Accept\"] = \"application/json\"");
         builder.AppendLine("        };");
-        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, headers, request.Body, request.TimeoutMs);");
+        builder.AppendLine("        return new AxomHttpRequestValue(request.Method, request.Url, headers, request.Body, request.TimeoutMs, request.RetryMax);");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomResult<AxomHttpResponseValue> AxomHttpSend(AxomHttpRequestValue request)");
@@ -1836,46 +1848,53 @@ public sealed class Emitter
         builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(AxomHttpErrorValue.InvalidUrl(\"invalid url: \" + request.Url));");
         builder.AppendLine("        }");
         builder.AppendLine();
-        builder.AppendLine("        using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs) };");
-        builder.AppendLine("        using var message = new HttpRequestMessage(new HttpMethod(request.Method), uri);");
-        builder.AppendLine("        request.Headers.TryGetValue(\"Content-Type\", out var contentType);");
-        builder.AppendLine("        foreach (var header in request.Headers)");
+        builder.AppendLine("        var attempts = Math.Max(1, request.RetryMax + 1);");
+        builder.AppendLine("        AxomHttpErrorValue? lastError = null;");
+        builder.AppendLine("        for (var attempt = 0; attempt < attempts; attempt++)");
         builder.AppendLine("        {");
-        builder.AppendLine("            if (string.Equals(header.Key, \"Content-Type\", StringComparison.OrdinalIgnoreCase))");
+        builder.AppendLine("            using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs) };");
+        builder.AppendLine("            using var message = new HttpRequestMessage(new HttpMethod(request.Method), uri);");
+        builder.AppendLine("            request.Headers.TryGetValue(\"Content-Type\", out var contentType);");
+        builder.AppendLine("            foreach (var header in request.Headers)");
         builder.AppendLine("            {");
-        builder.AppendLine("                continue;");
+        builder.AppendLine("                if (string.Equals(header.Key, \"Content-Type\", StringComparison.OrdinalIgnoreCase))");
+        builder.AppendLine("                {");
+        builder.AppendLine("                    continue;");
+        builder.AppendLine("                }");
+            builder.AppendLine("                message.Headers.TryAddWithoutValidation(header.Key, header.Value);");
         builder.AppendLine("            }");
-            builder.AppendLine("            message.Headers.TryAddWithoutValidation(header.Key, header.Value);");
+        builder.AppendLine();
+        builder.AppendLine("            if (request.Body is not null)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                message.Content = new StringContent(request.Body, Encoding.UTF8, string.IsNullOrWhiteSpace(contentType) ? \"text/plain\" : contentType);");
+        builder.AppendLine("            }");
+        builder.AppendLine();
+        builder.AppendLine("            try");
+        builder.AppendLine("            {");
+        builder.AppendLine("                var response = httpClient.SendAsync(message).GetAwaiter().GetResult();");
+        builder.AppendLine("                var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();");
+        builder.AppendLine("                var headers = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);");
+        builder.AppendLine("                foreach (var header in response.Headers)");
+        builder.AppendLine("                {");
+        builder.AppendLine("                    headers[header.Key] = string.Join(\",\", header.Value);");
+        builder.AppendLine("                }");
+        builder.AppendLine("                foreach (var header in response.Content.Headers)");
+        builder.AppendLine("                {");
+        builder.AppendLine("                    headers[header.Key] = string.Join(\",\", header.Value);");
+        builder.AppendLine("                }");
+        builder.AppendLine("                return AxomResult<AxomHttpResponseValue>.Ok(new AxomHttpResponseValue((int)response.StatusCode, body, headers));");
+        builder.AppendLine("            }");
+        builder.AppendLine("            catch (System.Threading.Tasks.TaskCanceledException)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                lastError = AxomHttpErrorValue.Timeout(\"request timed out\");");
+        builder.AppendLine("            }");
+        builder.AppendLine("            catch (Exception ex)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                lastError = AxomHttpErrorValue.NetworkError(\"network error: \" + ex.Message);");
+        builder.AppendLine("            }");
         builder.AppendLine("        }");
         builder.AppendLine();
-        builder.AppendLine("        if (request.Body is not null)");
-        builder.AppendLine("        {");
-        builder.AppendLine("            message.Content = new StringContent(request.Body, Encoding.UTF8, string.IsNullOrWhiteSpace(contentType) ? \"text/plain\" : contentType);");
-        builder.AppendLine("        }");
-        builder.AppendLine();
-        builder.AppendLine("        try");
-        builder.AppendLine("        {");
-        builder.AppendLine("            var response = httpClient.SendAsync(message).GetAwaiter().GetResult();");
-        builder.AppendLine("            var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();");
-        builder.AppendLine("            var headers = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);");
-        builder.AppendLine("            foreach (var header in response.Headers)");
-        builder.AppendLine("            {");
-        builder.AppendLine("                headers[header.Key] = string.Join(\",\", header.Value);");
-        builder.AppendLine("            }");
-        builder.AppendLine("            foreach (var header in response.Content.Headers)");
-        builder.AppendLine("            {");
-        builder.AppendLine("                headers[header.Key] = string.Join(\",\", header.Value);");
-        builder.AppendLine("            }");
-        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Ok(new AxomHttpResponseValue((int)response.StatusCode, body, headers));");
-        builder.AppendLine("        }");
-        builder.AppendLine("        catch (System.Threading.Tasks.TaskCanceledException)");
-        builder.AppendLine("        {");
-        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(AxomHttpErrorValue.Timeout(\"request timed out\"));");
-        builder.AppendLine("        }");
-        builder.AppendLine("        catch (Exception ex)");
-        builder.AppendLine("        {");
-        builder.AppendLine("            return AxomResult<AxomHttpResponseValue>.Error(AxomHttpErrorValue.NetworkError(\"network error: \" + ex.Message));");
-        builder.AppendLine("        }");
+        builder.AppendLine("        return AxomResult<AxomHttpResponseValue>.Error(lastError ?? AxomHttpErrorValue.NetworkError(\"network error\"));");
         builder.AppendLine("    }");
         builder.AppendLine();
         builder.AppendLine("    static AxomResult<AxomHttpResponseValue> AxomHttpRequire(AxomHttpResponseValue response, int statusCode)");

@@ -71,6 +71,17 @@ public static class BuiltinFunctions
         TypeSymbol.Http,
         isBuiltin: true);
 
+    public static readonly FunctionSymbol HttpWithRetry = new(
+        "http_retry",
+        new[]
+        {
+            new ParameterSymbol("client", TypeSymbol.Http),
+            new ParameterSymbol("maxAttempts", TypeSymbol.Int)
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Http,
+        isBuiltin: true);
+
     public static readonly FunctionSymbol HttpGet = new(
         "get",
         new[]
@@ -607,6 +618,7 @@ public static class BuiltinFunctions
         [Header.Name] = Header,
         [HttpWithHeader.Name] = HttpWithHeader,
         [HttpWithTimeout.Name] = HttpWithTimeout,
+        [HttpWithRetry.Name] = HttpWithRetry,
         [HttpGet.Name] = HttpGet,
         [HttpPost.Name] = HttpPost,
         [HttpPut.Name] = HttpPut,

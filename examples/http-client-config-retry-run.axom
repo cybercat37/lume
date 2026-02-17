@@ -1,11 +1,11 @@
-println "HTTP config sugar"
+println "HTTP config sugar with retry"
 
 let client = http {
   baseUrl: "http://api.example.test",
   headers: ["x-client": "axom"],
-  timeout: 1200,
+  timeoutMs: 1500,
   retry: 2
 }
 
-let request = client |> get("/health")
+let request = client |> get("/users/1")
 print request

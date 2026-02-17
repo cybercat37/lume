@@ -998,7 +998,7 @@ public sealed class Interpreter
                 case "http":
                     if (arguments.Length == 1 && arguments[0] is string baseUrl)
                     {
-                        return new HttpClientValue(baseUrl, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), 30000);
+                        return new HttpClientValue(baseUrl, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), 30000, 0);
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "http expects (String baseUrl)."));
@@ -1013,7 +1013,7 @@ public sealed class Interpreter
                         {
                             [clientHeaderName] = clientHeaderValue
                         };
-                        return new HttpClientValue(headerClient.BaseUrl, clientHeaders, headerClient.TimeoutMs);
+                        return new HttpClientValue(headerClient.BaseUrl, clientHeaders, headerClient.TimeoutMs, headerClient.RetryMax);
                     }
 
                     if (arguments.Length == 3
@@ -1030,7 +1030,8 @@ public sealed class Interpreter
                             headerRequest.Url,
                             requestHeaders,
                             headerRequest.Body,
-                            headerRequest.TimeoutMs);
+                            headerRequest.TimeoutMs,
+                            headerRequest.RetryMax);
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "header expects (Http|Request target, String name, String value)."));
@@ -1045,7 +1046,7 @@ public sealed class Interpreter
                         {
                             [headerName] = headerValue
                         };
-                        return new HttpClientValue(clientWithHeader.BaseUrl, mergedHeaders, clientWithHeader.TimeoutMs);
+                        return new HttpClientValue(clientWithHeader.BaseUrl, mergedHeaders, clientWithHeader.TimeoutMs, clientWithHeader.RetryMax);
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "http_header expects (Http client, String name, String value)."));
@@ -1056,10 +1057,21 @@ public sealed class Interpreter
                         && arguments[1] is int timeoutMs)
                     {
                         var normalized = timeoutMs <= 0 ? 1 : timeoutMs;
-                        return new HttpClientValue(clientWithTimeout.BaseUrl, clientWithTimeout.Headers, normalized);
+                        return new HttpClientValue(clientWithTimeout.BaseUrl, clientWithTimeout.Headers, normalized, clientWithTimeout.RetryMax);
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "http_timeout expects (Http client, Int timeoutMs)."));
+                    return null;
+                case "http_retry":
+                    if (arguments.Length == 2
+                        && arguments[0] is HttpClientValue clientWithRetry
+                        && arguments[1] is int maxAttempts)
+                    {
+                        var normalized = maxAttempts < 0 ? 0 : maxAttempts;
+                        return new HttpClientValue(clientWithRetry.BaseUrl, clientWithRetry.Headers, clientWithRetry.TimeoutMs, normalized);
+                    }
+
+                    diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "http_retry expects (Http client, Int maxAttempts)."));
                     return null;
                 case "get":
                     if (arguments.Length == 2
@@ -1129,7 +1141,8 @@ public sealed class Interpreter
                             requestWithHeader.Url,
                             mergedHeaders,
                             requestWithHeader.Body,
-                            requestWithHeader.TimeoutMs);
+                            requestWithHeader.TimeoutMs,
+                            requestWithHeader.RetryMax);
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "request_header expects (Request request, String name, String value)."));
@@ -1144,7 +1157,8 @@ public sealed class Interpreter
                             requestWithText.Url,
                             new Dictionary<string, string>(requestWithText.Headers, StringComparer.OrdinalIgnoreCase),
                             requestBody,
-                            requestWithText.TimeoutMs);
+                            requestWithText.TimeoutMs,
+                            requestWithText.RetryMax);
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "request_text expects (Request request, String body)."));
@@ -1163,7 +1177,8 @@ public sealed class Interpreter
                             jsonRequest.Url,
                             jsonHeaders,
                             jsonBody,
-                            jsonRequest.TimeoutMs);
+                            jsonRequest.TimeoutMs,
+                            jsonRequest.RetryMax);
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "json expects (Request request, String body)."));
@@ -1181,7 +1196,8 @@ public sealed class Interpreter
                             acceptJsonRequest.Url,
                             acceptHeaders,
                             acceptJsonRequest.Body,
-                            acceptJsonRequest.TimeoutMs);
+                            acceptJsonRequest.TimeoutMs,
+                            acceptJsonRequest.RetryMax);
                     }
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "accept_json expects (Request request)."));
@@ -2012,7 +2028,8 @@ public sealed class Interpreter
                 requestUrl,
                 new Dictionary<string, string>(client.Headers, StringComparer.OrdinalIgnoreCase),
                 body,
-                client.TimeoutMs);
+                client.TimeoutMs,
+                client.RetryMax);
         }
 
         private static object SendRequest(HttpRequestValue request)
@@ -2022,54 +2039,61 @@ public sealed class Interpreter
                 return BuildHttpResponseResult(isSuccess: false, null, BuildHttpInvalidUrlError($"invalid url: {request.Url}"));
             }
 
-            using var httpClient = new HttpClient
+            var attempts = Math.Max(1, request.RetryMax + 1);
+            object? lastError = null;
+            for (var attempt = 0; attempt < attempts; attempt++)
             {
-                Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs)
-            };
-            using var message = new HttpRequestMessage(new HttpMethod(request.Method), uri);
-
-            request.Headers.TryGetValue("Content-Type", out var contentType);
-
-            foreach (var header in request.Headers)
-            {
-                if (string.Equals(header.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                using var httpClient = new HttpClient
                 {
-                    continue;
+                    Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs)
+                };
+                using var message = new HttpRequestMessage(new HttpMethod(request.Method), uri);
+
+                request.Headers.TryGetValue("Content-Type", out var contentType);
+
+                foreach (var header in request.Headers)
+                {
+                    if (string.Equals(header.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    message.Headers.TryAddWithoutValidation(header.Key, header.Value);
                 }
 
-                message.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                if (request.Body is not null)
+                {
+                    message.Content = new StringContent(
+                        request.Body,
+                        Encoding.UTF8,
+                        string.IsNullOrWhiteSpace(contentType) ? "text/plain" : contentType);
+                }
+
+                try
+                {
+                    var response = httpClient.SendAsync(message).GetAwaiter().GetResult();
+                    var responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    var headers = response.Headers
+                        .Concat(response.Content.Headers)
+                        .ToDictionary(
+                            header => header.Key,
+                            header => string.Join(",", header.Value),
+                            StringComparer.OrdinalIgnoreCase);
+
+                    var responseValue = new HttpResponseValue((int)response.StatusCode, responseBody, headers);
+                    return BuildHttpResponseResult(isSuccess: true, responseValue, null);
+                }
+                catch (TaskCanceledException)
+                {
+                    lastError = BuildHttpTimeoutError("request timed out");
+                }
+                catch (Exception ex)
+                {
+                    lastError = BuildHttpNetworkError($"network error: {ex.Message}");
+                }
             }
 
-            if (request.Body is not null)
-            {
-                message.Content = new StringContent(
-                    request.Body,
-                    Encoding.UTF8,
-                    string.IsNullOrWhiteSpace(contentType) ? "text/plain" : contentType);
-            }
-
-            try
-            {
-                var response = httpClient.SendAsync(message).GetAwaiter().GetResult();
-                var responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                var headers = response.Headers
-                    .Concat(response.Content.Headers)
-                    .ToDictionary(
-                        header => header.Key,
-                        header => string.Join(",", header.Value),
-                        StringComparer.OrdinalIgnoreCase);
-
-                var responseValue = new HttpResponseValue((int)response.StatusCode, responseBody, headers);
-                return BuildHttpResponseResult(isSuccess: true, responseValue, null);
-            }
-            catch (TaskCanceledException)
-            {
-                return BuildHttpResponseResult(isSuccess: false, null, BuildHttpTimeoutError("request timed out"));
-            }
-            catch (Exception ex)
-            {
-                return BuildHttpResponseResult(isSuccess: false, null, BuildHttpNetworkError($"network error: {ex.Message}"));
-            }
+            return BuildHttpResponseResult(isSuccess: false, null, lastError ?? BuildHttpNetworkError("network error"));
         }
 
         private static object BuildIntResult(bool isSuccess, int? value, string? error)
@@ -2274,17 +2298,19 @@ public sealed class Interpreter
             public string BaseUrl { get; }
             public IReadOnlyDictionary<string, string> Headers { get; }
             public int TimeoutMs { get; }
+            public int RetryMax { get; }
 
-            public HttpClientValue(string baseUrl, IReadOnlyDictionary<string, string> headers, int timeoutMs)
+            public HttpClientValue(string baseUrl, IReadOnlyDictionary<string, string> headers, int timeoutMs, int retryMax)
             {
                 BaseUrl = baseUrl;
                 Headers = headers;
                 TimeoutMs = timeoutMs;
+                RetryMax = retryMax;
             }
 
             public override string ToString()
             {
-                return $"Http {{ baseUrl: {BaseUrl}, headers: {Headers.Count}, timeoutMs: {TimeoutMs} }}";
+                return $"Http {{ baseUrl: {BaseUrl}, headers: {Headers.Count}, timeoutMs: {TimeoutMs}, retryMax: {RetryMax} }}";
             }
         }
 
@@ -2295,19 +2321,22 @@ public sealed class Interpreter
             public IReadOnlyDictionary<string, string> Headers { get; }
             public string? Body { get; }
             public int TimeoutMs { get; }
+            public int RetryMax { get; }
 
             public HttpRequestValue(
                 string method,
                 string url,
                 IReadOnlyDictionary<string, string> headers,
                 string? body,
-                int timeoutMs)
+                int timeoutMs,
+                int retryMax)
             {
                 Method = method;
                 Url = url;
                 Headers = headers;
                 Body = body;
                 TimeoutMs = timeoutMs;
+                RetryMax = retryMax;
             }
 
             public override string ToString()

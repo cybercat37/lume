@@ -1,0 +1,6 @@
+println "HTTP client retry pipeline"
+
+let client = http("http://api.example.test") |> header("x-client", "axom") |> http_timeout(1200) |> http_retry(2)
+let request = client |> get("/health") |> header("x-trace", "retry-demo")
+
+print request

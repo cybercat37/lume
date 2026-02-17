@@ -75,8 +75,8 @@ language spec, building on the implemented baseline.
 Status: Partial
 - Baseline client/request builders are implemented in interpreter + codegen lanes.
 - Shared-name overload behavior (for example `header`) is implemented for pipeline usage.
-- `http { ... }` config sugar is implemented for `baseUrl` (required), optional `headers`, and optional `timeout`/`timeoutMs` (Int milliseconds), desugaring to pipeline calls.
-- Remaining scope tracks the full spec target (status ranges, richer defaults, retry/config surface, full decode/require breadth, and expanded diagnostics hardening).
+- `http { ... }` config sugar is implemented for `baseUrl` (required), optional `headers`, optional `timeout`/`timeoutMs` (Int milliseconds), and optional `retry` (Int max attempts), desugaring to pipeline calls.
+- Remaining scope tracks the full spec target (status ranges, richer defaults, typed retry/config surface, full decode/require breadth, and expanded diagnostics hardening).
 
 Target DoD (for milestone completion):
 - Core records/sums are available: `Http`, `Retry`, `Request`, `Response`, `Method`, `HttpError`, `StatusRange`.

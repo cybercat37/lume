@@ -30,12 +30,13 @@ public class CodegenHttpClientBuiltinTests
     {
         var compiler = new CompilerDriver();
         var result = compiler.Compile(
-            "let client = http { baseUrl: \"http://127.0.0.1:8080\", headers: [\"x-client\": \"yes\"], timeout: 1500 }\nlet request = client |> get(\"/health\")\nprint request",
+            "let client = http { baseUrl: \"http://127.0.0.1:8080\", headers: [\"x-client\": \"yes\"], timeout: 1500, retry: 2 }\nlet request = client |> get(\"/health\")\nprint request",
             "test.axom");
 
         Assert.True(result.Success);
         Assert.Contains("AxomHttpCreate", result.GeneratedCode);
         Assert.Contains("AxomHttpHeader", result.GeneratedCode);
         Assert.Contains("AxomHttpTimeout", result.GeneratedCode);
+        Assert.Contains("AxomHttpRetry", result.GeneratedCode);
     }
 }

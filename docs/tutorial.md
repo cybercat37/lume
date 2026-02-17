@@ -70,6 +70,7 @@ Current `http { ... }` fields:
 - `baseUrl` (required)
 - `headers` (optional map literal)
 - `timeout` / `timeoutMs` (optional milliseconds as `Int`)
+- `retry` (optional max attempts as `Int`)
 
 Planned follow-up keeps richer defaults and retry configuration.
 

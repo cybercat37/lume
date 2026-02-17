@@ -62,7 +62,7 @@ public class HttpClientBuiltinTypeTests
     public void Http_config_sugar_type_checks_and_desugars_to_http_pipeline()
     {
         var sourceText = new SourceText(
-            "let client = http { baseUrl: \"http://127.0.0.1:8080\", headers: [\"x-test\": \"ok\"], timeout: 1500 }\nlet request = client |> get(\"/health\")\nprint request",
+            "let client = http { baseUrl: \"http://127.0.0.1:8080\", headers: [\"x-test\": \"ok\"], timeout: 1500, retry: 2 }\nlet request = client |> get(\"/health\")\nprint request",
             "test.axom");
         var syntaxTree = SyntaxTree.Parse(sourceText);
 

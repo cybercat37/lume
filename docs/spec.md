@@ -250,11 +250,13 @@ Current implementation accepts:
 - required `baseUrl: String`
 - optional `headers: Map<String>` via map literal
 - optional `timeout` or `timeoutMs` as `Int`
+- optional `retry` as `Int` max retry attempts
 
 Current sugar desugars to the pipeline:
 - `http(baseUrl)`
 - `|> header(k, v)` for each `headers` entry
 - `|> http_timeout(ms)` when timeout is set
+- `|> http_retry(maxAttempts)` when retry is set
 
 Planned follow-up keeps richer defaults (`headers = {}`, `timeout = 30s`) and
 `retry = Retry { max: 0 }`.
