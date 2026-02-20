@@ -237,6 +237,39 @@ public static class BuiltinFunctions
         TypeSymbol.Result(TypeSymbol.String, TypeSymbol.HttpError),
         isBuiltin: true);
 
+    public static readonly FunctionSymbol DbExec = new(
+        "db_exec",
+        new[]
+        {
+            new ParameterSymbol("sql", TypeSymbol.String),
+            new ParameterSymbol("params", TypeSymbol.Map(TypeSymbol.String))
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol DbQuery = new(
+        "db_query",
+        new[]
+        {
+            new ParameterSymbol("sql", TypeSymbol.String),
+            new ParameterSymbol("params", TypeSymbol.Map(TypeSymbol.String))
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.List(TypeSymbol.Map(TypeSymbol.String)), TypeSymbol.String),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol DbScalar = new(
+        "db_scalar",
+        new[]
+        {
+            new ParameterSymbol("sql", TypeSymbol.String),
+            new ParameterSymbol("params", TypeSymbol.Map(TypeSymbol.String))
+        },
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol RouteParam = new(
         "route_param",
         new[] { new ParameterSymbol("name", TypeSymbol.String) },
@@ -655,6 +688,9 @@ public static class BuiltinFunctions
         [HttpStatusRange.Name] = HttpStatusRange,
         [HttpRequireRange.Name] = HttpRequireRange,
         [HttpResponseText.Name] = HttpResponseText,
+        [DbExec.Name] = DbExec,
+        [DbQuery.Name] = DbQuery,
+        [DbScalar.Name] = DbScalar,
         [RouteParam.Name] = RouteParam,
         [RouteParamInt.Name] = RouteParamInt,
         [RouteParamFloat.Name] = RouteParamFloat,

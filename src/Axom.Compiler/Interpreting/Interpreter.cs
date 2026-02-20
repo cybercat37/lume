@@ -12,6 +12,7 @@ using Axom.Compiler.Diagnostics;
 using Axom.Compiler.Interop;
 using Axom.Compiler.Lowering;
 using Axom.Compiler.Parsing;
+using Axom.Runtime.Db;
 
 namespace Axom.Compiler.Interpreting;
 
@@ -1260,6 +1261,12 @@ public sealed class Interpreter
 
                     diagnostics.Add(Diagnostic.Error(string.Empty, 1, 1, "response_text expects (Response response)."));
                     return BuildHttpTextResult(isSuccess: false, null, BuildHttpStatusError("invalid response"));
+                case "db_exec":
+                    return EvaluateDbExec(arguments);
+                case "db_query":
+                    return EvaluateDbQuery(arguments);
+                case "db_scalar":
+                    return EvaluateDbScalar(arguments);
                 case "route_param":
                     if (arguments.Length == 1 && arguments[0] is string routeParamName)
                     {
@@ -2212,6 +2219,118 @@ public sealed class Interpreter
             }
 
             return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.String), error ?? "route error");
+        }
+
+        private static object EvaluateDbExec(object?[] arguments)
+        {
+            if (!TryParseDbArguments(arguments, out var sql, out var parameters, out var parseError))
+            {
+                return BuildIntResult(isSuccess: false, null, parseError);
+            }
+
+            return DbBuiltinGateway.TryExec(sql!, parameters, out var rows, out var error)
+                ? BuildIntResult(isSuccess: true, rows, null)
+                : BuildIntResult(isSuccess: false, null, error ?? "db exec failed");
+        }
+
+        private static object EvaluateDbQuery(object?[] arguments)
+        {
+            if (!TryParseDbArguments(arguments, out var sql, out var parameters, out var parseError))
+            {
+                return BuildDbRowsResult(isSuccess: false, null, parseError);
+            }
+
+            if (!DbBuiltinGateway.TryQuery(sql!, parameters, out var rows, out var error))
+            {
+                return BuildDbRowsResult(isSuccess: false, null, error ?? "db query failed");
+            }
+
+            var payload = rows
+                .Select(row =>
+                {
+                    var mapped = new Dictionary<string, object?>(StringComparer.Ordinal);
+                    foreach (var (key, value) in row)
+                    {
+                        mapped[key] = value is null ? string.Empty : FormatValue(value);
+                    }
+
+                    return (object?)mapped;
+                })
+                .ToList();
+
+            return BuildDbRowsResult(isSuccess: true, payload, null);
+        }
+
+        private static object EvaluateDbScalar(object?[] arguments)
+        {
+            if (!TryParseDbArguments(arguments, out var sql, out var parameters, out var parseError))
+            {
+                return BuildStringResult(isSuccess: false, null, parseError);
+            }
+
+            if (!DbBuiltinGateway.TryScalar(sql!, parameters, out var value, out var error))
+            {
+                return BuildStringResult(isSuccess: false, null, error ?? "db scalar failed");
+            }
+
+            var text = value is null ? string.Empty : FormatValue(value);
+            return BuildStringResult(isSuccess: true, text, null);
+        }
+
+        private static bool TryParseDbArguments(
+            object?[] arguments,
+            out string? sql,
+            out IReadOnlyDictionary<string, object?> parameters,
+            out string? error)
+        {
+            sql = null;
+            parameters = new Dictionary<string, object?>(StringComparer.Ordinal);
+            error = null;
+
+            if (arguments.Length is not (1 or 2))
+            {
+                error = "db builtin expects (String sql) or (String sql, Map<String, String> params)";
+                return false;
+            }
+
+            if (arguments[0] is not string sqlText)
+            {
+                error = "db builtin sql must be String";
+                return false;
+            }
+
+            sql = sqlText;
+
+            if (arguments.Length == 1)
+            {
+                return true;
+            }
+
+            if (arguments[1] is not Dictionary<string, object?> map)
+            {
+                error = "db builtin params must be Map<String, String>";
+                return false;
+            }
+
+            parameters = map.ToDictionary(
+                pair => pair.Key,
+                pair => (object?)(pair.Value is string text ? text : (pair.Value is null ? null : FormatValue(pair.Value))),
+                StringComparer.Ordinal);
+            return true;
+        }
+
+        private static object BuildDbRowsResult(bool isSuccess, IReadOnlyList<object?>? rows, string? error)
+        {
+            var payloadType = TypeSymbol.List(TypeSymbol.Map(TypeSymbol.String));
+            var resultType = TypeSymbol.Result(payloadType, TypeSymbol.String);
+            var okVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Ok", StringComparison.Ordinal));
+            var errorVariant = resultType.SumVariants?.FirstOrDefault(variant => string.Equals(variant.Name, "Error", StringComparison.Ordinal));
+            if (isSuccess)
+            {
+                return new SumValue(okVariant ?? new SumVariantSymbol("Ok", resultType, payloadType), rows ?? new List<object?>());
+            }
+
+            return new SumValue(errorVariant ?? new SumVariantSymbol("Error", resultType, TypeSymbol.String), error ?? "db query error");
         }
 
         private static object? BuildTimeoutResult(TypeSymbol? returnType, int timeoutMilliseconds, object? fallback)

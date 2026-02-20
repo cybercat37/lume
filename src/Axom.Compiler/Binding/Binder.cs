@@ -2878,6 +2878,11 @@ public sealed class Binder
             return new BoundJoinExpression(target, target.Type.TaskResultType);
         }
 
+        if (TryBindDbMemberCall(call, out var dbMemberCall))
+        {
+            return dbMemberCall;
+        }
+
         if (call.Callee is FieldAccessExpressionSyntax sendFieldAccess &&
             string.Equals(sendFieldAccess.IdentifierToken.Text, "send", StringComparison.Ordinal))
         {
@@ -3167,6 +3172,12 @@ public sealed class Binder
     {
         switch (function.Name)
         {
+            case "db_exec":
+                return BindBuiltinDbCall(function, call, arguments, TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String));
+            case "db_query":
+                return BindBuiltinDbCall(function, call, arguments, TypeSymbol.Result(TypeSymbol.List(TypeSymbol.Map(TypeSymbol.String)), TypeSymbol.String));
+            case "db_scalar":
+                return BindBuiltinDbCall(function, call, arguments, TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String));
             case "range":
                 return BindBuiltinRange(function, call, arguments);
             case "sum":
@@ -3185,6 +3196,88 @@ public sealed class Binder
             default:
                 return null;
         }
+    }
+
+    private bool TryBindDbMemberCall(CallExpressionSyntax call, out BoundExpression expression)
+    {
+        expression = new BoundLiteralExpression(null, TypeSymbol.Error);
+
+        if (call.Callee is not FieldAccessExpressionSyntax dbMemberCall
+            || dbMemberCall.Target is not NameExpressionSyntax dbName
+            || !string.Equals(dbName.IdentifierToken.Text, "db", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var builtin = dbMemberCall.IdentifierToken.Text switch
+        {
+            "exec" => BuiltinFunctions.DbExec,
+            "query" => BuiltinFunctions.DbQuery,
+            "scalar" => BuiltinFunctions.DbScalar,
+            _ => null
+        };
+
+        if (builtin is null)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                dbMemberCall.Span,
+                $"Unknown db member '{dbMemberCall.IdentifierToken.Text}'. Supported members: exec, query, scalar."));
+            expression = new BoundCallExpression(new BoundFunctionExpression(BuiltinFunctions.DbExec), Array.Empty<BoundExpression>(), TypeSymbol.Error);
+            return true;
+        }
+
+        var arguments = call.Arguments.Select(argument => BindExpression(argument)).ToList();
+        var bound = BindBuiltinCall(builtin, call, arguments)
+            ?? new BoundCallExpression(new BoundFunctionExpression(builtin), arguments, builtin.ReturnType);
+
+        expression = bound;
+        return true;
+    }
+
+    private BoundExpression BindBuiltinDbCall(
+        FunctionSymbol function,
+        CallExpressionSyntax call,
+        IReadOnlyList<BoundExpression> arguments,
+        TypeSymbol returnType)
+    {
+        if (arguments.Count != 1 && arguments.Count != 2)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                $"{function.Name}() expects (String sql) or (String sql, Map<String, String> params)."));
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+        }
+
+        var hasTypeError = false;
+        if (arguments[0].Type != TypeSymbol.String && arguments[0].Type != TypeSymbol.Error)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Arguments[0].Span,
+                $"{function.Name}() expects String sql as first argument but got '{arguments[0].Type}'."));
+            hasTypeError = true;
+        }
+
+        if (arguments.Count == 2)
+        {
+            var paramsType = arguments[1].Type;
+            var expectedParamsType = TypeSymbol.Map(TypeSymbol.String);
+            if (paramsType != expectedParamsType && paramsType != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    call.Arguments[1].Span,
+                    $"{function.Name}() expects Map<String, String> params as second argument but got '{paramsType}'."));
+                hasTypeError = true;
+            }
+        }
+
+        return new BoundCallExpression(
+            new BoundFunctionExpression(function),
+            arguments,
+            hasTypeError ? TypeSymbol.Error : returnType);
     }
 
     private BoundExpression BindBuiltinHeader(
