@@ -251,7 +251,7 @@ public static class DbParameterMasker
 
     private static string MaskValue(string name, object? value)
     {
-        if (SensitiveNames.Contains(name))
+        if (SensitiveNames.Contains(NormalizeSensitiveKey(name)))
         {
             return "***";
         }
@@ -272,5 +272,15 @@ public static class DbParameterMasker
         }
 
         return Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "<unprintable>";
+    }
+
+    private static string NormalizeSensitiveKey(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return string.Empty;
+        }
+
+        return name.TrimStart('@', ':', '$');
     }
 }
