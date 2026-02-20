@@ -140,6 +140,9 @@ Tests:
 
 Objective: add safe, parameterized database access with typed error channel.
 
+Design reference: `docs/roadmap/db-schema-dsl.md` (model-first schema DSL and migration generation).
+Observability reference: `docs/roadmap/query-observability-performance-instrumentation.md` (passive, opt-in diagnostics only).
+
 DoD:
 - DB connection configuration and lifecycle are available.
 - `db.exec` and `db.query` support parameterized SQL only.
@@ -150,11 +153,15 @@ Implementation tasks:
 - Add runtime adapters and pooling policy.
 - Add binder checks that prevent unsafe raw concatenation helpers.
 - Add transaction baseline API (`begin/commit/rollback` or scoped helper).
+- Add opt-in query observability controls as specified by the observability RFC.
+- Add query fingerprinting (`query_id`) for aggregation and slow-log deduplication.
+- Keep instrumentation strictly passive and semantically transparent, per RFC constraints.
 
 Tests:
 - Integration tests with ephemeral DB container.
 - Retryable vs non-retryable error mapping tests.
 - Transaction rollback and isolation smoke tests.
+- Observability tests proving default silence, explicit opt-in logging/profiling, and no execution-semantic drift when instrumentation is toggled.
 
 ## M18: Typed SQL Interpolation v1
 
@@ -231,6 +238,7 @@ DoD:
 Implementation tasks:
 - Expand fuzzing and negative tests for routing/auth/sql parsing.
 - Add benchmarks for route matching and SQL binding.
+- Add deterministic observability benchmark lane for logging/profiling overhead under explicit opt-in flags.
 - Improve diagnostics wording and fix-it guidance.
 - Finalize versioning and packaging updates.
 

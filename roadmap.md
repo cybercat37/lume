@@ -271,11 +271,14 @@ Proposal backlog:
 - M14: file-based routing v1 + conflict diagnostics
 - M15: HTTP client stdlib v1 (pipeline-first full spec)
 - M16: auth foundation (`@public`, `@auth`) + 401/403 contract
-- M17: DB runtime v1 (parameterized query/exec)
+- M17: DB runtime v1 (parameterized query/exec) + opt-in passive query observability
 - M18: typed SQL interpolation v1 (`sql"..."`, typed params)
 - M19: security DSL (`security {}` + provider binding)
 - M20: customer docs bundle + protected `/docs`
 - M21: hardening/performance/DX/release
+
+M17 observability constraints are defined in the canonical RFC:
+- `docs/roadmap/query-observability-performance-instrumentation.md`
 
 M15 target scope (normative direction):
 - `Http` is an immutable configuration record, composed with `|>`.
