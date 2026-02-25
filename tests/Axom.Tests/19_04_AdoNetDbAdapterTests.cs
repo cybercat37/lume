@@ -137,6 +137,27 @@ public class AdoNetDbAdapterTests
         Assert.Contains("Missing SQL parameter 'id'", ex.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Adapter_expands_record_projection_when_resolver_is_configured()
+    {
+        using var fixture = SqliteFixture.Create();
+        var resolver = new DictionarySqlRecordProjectionResolver(
+            new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+            {
+                ["User"] = new[] { "id", "name" }
+            });
+
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection, recordProjectionResolver: resolver);
+        adapter.Exec("create table users (id integer primary key, name text not null)");
+        adapter.Exec("insert into users (id, name) values (1, 'Ada')");
+
+        var rows = adapter.Query("select {User} from users where id = {id}", new Dictionary<string, object?> { ["id"] = 1 });
+
+        Assert.Single(rows);
+        Assert.Equal(1L, rows[0]["id"]);
+        Assert.Equal("Ada", rows[0]["name"]);
+    }
+
     private sealed class TestSink : IDbObservabilitySink
     {
         public List<DbQueryLogEntry> Entries { get; } = new();

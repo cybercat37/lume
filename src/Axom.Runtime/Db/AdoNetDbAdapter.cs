@@ -7,13 +7,16 @@ public sealed class AdoNetDbAdapter
 {
     private readonly Func<DbConnection> connectionFactory;
     private readonly DbObservabilityRuntime observability;
+    private readonly ISqlRecordProjectionResolver? recordProjectionResolver;
 
     public AdoNetDbAdapter(
         Func<DbConnection> connectionFactory,
-        DbObservabilityRuntime? observability = null)
+        DbObservabilityRuntime? observability = null,
+        ISqlRecordProjectionResolver? recordProjectionResolver = null)
     {
         this.connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         this.observability = observability ?? new DbObservabilityRuntime();
+        this.recordProjectionResolver = recordProjectionResolver;
     }
 
     public int Exec(string sql, IReadOnlyDictionary<string, object?>? parameters = null)
@@ -92,11 +95,11 @@ public sealed class AdoNetDbAdapter
         return (T)Convert.ChangeType(value, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    private static (string sql, IReadOnlyDictionary<string, object?> parameters) BindSqlTemplate(
+    private (string sql, IReadOnlyDictionary<string, object?> parameters) BindSqlTemplate(
         string sql,
         IReadOnlyDictionary<string, object?>? parameters)
     {
-        if (SqlTemplateBinder.TryBind(sql, parameters, out var boundSql, out var boundParameters, out var error))
+        if (SqlTemplateBinder.TryBind(sql, parameters, recordProjectionResolver, out var boundSql, out var boundParameters, out var error))
         {
             return (boundSql, boundParameters);
         }

@@ -10,6 +10,7 @@ public static partial class SqlTemplateBinder
     public static bool TryBind(
         string sql,
         IReadOnlyDictionary<string, object?>? parameters,
+        ISqlRecordProjectionResolver? recordProjectionResolver,
         out string boundSql,
         out IReadOnlyDictionary<string, object?> boundParameters,
         out string? error)
@@ -78,8 +79,21 @@ public static partial class SqlTemplateBinder
 
             if (char.IsUpper(placeholder[0]))
             {
-                error = $"Record mapping placeholder '{{{placeholder}}}' is not implemented yet.";
-                return false;
+                if (recordProjectionResolver is null)
+                {
+                    error = $"Record mapping placeholder '{{{placeholder}}}' requires a record projection resolver.";
+                    return false;
+                }
+
+                if (!recordProjectionResolver.TryResolve(placeholder, out var columns) || columns.Count == 0)
+                {
+                    error = $"Unknown SQL record placeholder '{{{placeholder}}}'.";
+                    return false;
+                }
+
+                builder.Append(string.Join(", ", columns));
+                i = end;
+                continue;
             }
 
             if (!TryResolveParameter(parameters, placeholder, out var value))
@@ -99,6 +113,16 @@ public static partial class SqlTemplateBinder
             ? (parameters ?? new Dictionary<string, object?>(StringComparer.Ordinal))
             : usedParameters;
         return true;
+    }
+
+    public static bool TryBind(
+        string sql,
+        IReadOnlyDictionary<string, object?>? parameters,
+        out string boundSql,
+        out IReadOnlyDictionary<string, object?> boundParameters,
+        out string? error)
+    {
+        return TryBind(sql, parameters, recordProjectionResolver: null, out boundSql, out boundParameters, out error);
     }
 
     private static bool TryResolveParameter(IReadOnlyDictionary<string, object?>? parameters, string name, out object? value)

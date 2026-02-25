@@ -63,6 +63,30 @@ public class SqlTemplateBinderTests
             out var error);
 
         Assert.False(ok);
-        Assert.Contains("Record mapping placeholder '{User}' is not implemented yet", error, StringComparison.Ordinal);
+        Assert.Contains("requires a record projection resolver", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Try_bind_expands_record_placeholder_with_projection_resolver()
+    {
+        var resolver = new DictionarySqlRecordProjectionResolver(
+            new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+            {
+                ["User"] = new[] { "id", "name" }
+            });
+
+        var ok = SqlTemplateBinder.TryBind(
+            "select {User} from users where id = {id}",
+            new Dictionary<string, object?> { ["id"] = 1 },
+            resolver,
+            out var boundSql,
+            out var boundParameters,
+            out var error);
+
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.Equal("select id, name from users where id = @id", boundSql);
+        Assert.Single(boundParameters);
+        Assert.Equal(1, boundParameters["id"]);
     }
 }
