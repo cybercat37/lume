@@ -1,0 +1,25 @@
+println "DB builtins (db.exec/query/scalar)"
+
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> v
+  Error(e) -> e
+}
+
+let inserted = db.exec("insert into users (id, name) values (@id, @name)", ["id": "1", "name": "Ada"])
+print match inserted {
+  Ok(v) -> v
+  Error(e) -> e
+}
+
+let rows = db.query("select name from users where id = @id", ["id": "1"])
+print match rows {
+  Ok(_) -> "query ok"
+  Error(e) -> e
+}
+
+let scalar = db.scalar("select name from users where id = @id", ["id": "1"])
+print match scalar {
+  Ok(v) -> v
+  Error(e) -> e
+}

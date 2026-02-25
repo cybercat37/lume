@@ -343,6 +343,32 @@ dotnet run --project src/axom -- run path/to/file.axom
 make demo-example
 ```
 
+### DB Examples (SQLite)
+
+Set runtime DB bootstrap env vars before running DB examples:
+
+```bash
+export AXOM_DB_PROVIDER=sqlite
+export AXOM_DB_CONNECTION_STRING="Data Source=/tmp/axom-example.db"
+rm -f /tmp/axom-example.db
+```
+
+Run examples:
+
+```bash
+dotnet run --project src/axom -- run examples/037_db-builtins-run.axom
+rm -f /tmp/axom-example.db
+dotnet run --project src/axom -- run examples/038_sql-template-params-run.axom
+```
+
+`{Record}` projection example requires record-column mapping:
+
+```bash
+export AXOM_DB_RECORD_PROJECTIONS="User:id,name"
+rm -f /tmp/axom-example.db
+dotnet run --project src/axom -- run examples/039_sql-record-projection-run.axom
+```
+
 ### Serve HTTP (Bootstrap)
 
 ```bash
