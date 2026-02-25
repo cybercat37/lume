@@ -2,6 +2,7 @@ using Axom.Compiler;
 using Axom.Compiler.Http.Routing;
 using Axom.Runtime.Db;
 using Axom.Runtime.Http;
+using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -339,7 +340,11 @@ public class Program
 
         if (plan && !quiet)
         {
-            Console.WriteLine("plan_output=not_available_in_mvp");
+            if (!TryPrintPlanOutput(sqlLiterals, verbose, out var planError))
+            {
+                Console.Error.WriteLine(planError ?? "Failed to generate query plan output.");
+                return 1;
+            }
         }
 
         if (snapshot)
@@ -413,6 +418,99 @@ public class Program
         var snapshotPath = Path.Combine(".axom", "query-metrics.json");
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(snapshotPath, json);
+    }
+
+    private static bool TryPrintPlanOutput(IReadOnlyList<string> sqlLiterals, bool verbose, out string? error)
+    {
+        error = null;
+
+        var provider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
+        var connectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+
+        if (string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(connectionString))
+        {
+            error = "--plan requires AXOM_DB_PROVIDER and AXOM_DB_CONNECTION_STRING.";
+            return false;
+        }
+
+        if (!string.Equals(provider, "sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            error = $"--plan currently supports only sqlite provider. Received '{provider}'.";
+            return false;
+        }
+
+        try
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            foreach (var sql in sqlLiterals)
+            {
+                var trimmed = sql.TrimStart();
+                if (trimmed.Length == 0)
+                {
+                    continue;
+                }
+
+                if (sql.Contains('{'))
+                {
+                    if (verbose)
+                    {
+                        Console.WriteLine($"plan skipped=query_template query_id={DbQueryFingerprint.CreateQueryId(sql)}");
+                    }
+
+                    continue;
+                }
+
+                if (!CanExplainSql(trimmed))
+                {
+                    if (verbose)
+                    {
+                        Console.WriteLine($"plan skipped=statement_kind query_id={DbQueryFingerprint.CreateQueryId(sql)}");
+                    }
+
+                    continue;
+                }
+
+                using var command = connection.CreateCommand();
+                command.CommandText = "EXPLAIN QUERY PLAN " + sql;
+
+                using var reader = command.ExecuteReader();
+                var queryId = DbQueryFingerprint.CreateQueryId(sql);
+                Console.WriteLine($"plan query_id={queryId}");
+
+                var hasRows = false;
+                while (reader.Read())
+                {
+                    hasRows = true;
+                    var detail = reader.FieldCount > 3 && !reader.IsDBNull(3)
+                        ? Convert.ToString(reader.GetValue(3))
+                        : string.Empty;
+                    Console.WriteLine($"plan detail={detail}");
+                }
+
+                if (!hasRows)
+                {
+                    Console.WriteLine("plan detail=<empty>");
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static bool CanExplainSql(string sql)
+    {
+        return sql.StartsWith("select", StringComparison.OrdinalIgnoreCase)
+            || sql.StartsWith("with", StringComparison.OrdinalIgnoreCase)
+            || sql.StartsWith("delete", StringComparison.OrdinalIgnoreCase)
+            || sql.StartsWith("update", StringComparison.OrdinalIgnoreCase)
+            || sql.StartsWith("insert", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int InitProject(string[] args, string usage)
