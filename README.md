@@ -287,11 +287,17 @@ Current HTTP + DB track status (Early/Partial):
 - Route handlers can return explicit HTTP responses via `respond(status, body)`.
 - Route handlers can read request method/path via `request_method()` and `request_path()`.
 - Route handlers can read query values via `query_param*` helpers.
-- HTTP client, DB runtime, typed SQL interpolation, and auth/security DSL are planned in the M13-M21 track.
+- DB runtime baseline is available with `db.exec(...)`, `db.query(...)`, and `db.scalar(...)` builtins wired through a provider adapter.
+- CLI/runtime DB bootstrap is environment-driven (`AXOM_DB_PROVIDER=sqlite`, `AXOM_DB_CONNECTION_STRING=...`).
+- DB query observability is opt-in and environment-controlled (`AXOM_DB_LOG*`, `AXOM_DB_PROFILE`, `AXOM_DB_PLAN*`, `AXOM_DB_SLOW_MS`).
+- Typed SQL module (`sql"""..."""`, `{param}`, `{Record}`, `.one/.all/.exec`, `transaction {}`) and build-time verification (`axom db verify`) are the next M18 lane.
+- HTTP client and auth/security DSL remain in the M13-M21 track.
 
 Design references:
 - `docs/proposals/http-db-reference.md` (vision/reference)
 - `docs/roadmap/http-db-plan.md` (implementation plan)
+- `sql.md` (SQL-first module RFC)
+- `docs/roadmap/query-observability-performance-instrumentation.md` (observability RFC)
 
 ## Building and Running
 

@@ -1,10 +1,11 @@
 # DB Schema DSL (Model-First) Draft
 
-This draft defines a schema-first DSL that acts as the source of truth for DB structure.
-Migrations are generated from schema diffs, and SQL validation can run against an ephemeral
-database built from those migrations.
+Status: exploratory alternative, not the canonical M17/M18 direction.
 
-Goal: catch query/schema mistakes before runtime by shifting failure to `axom check`.
+Canonical SQL module direction is documented in `sql.md` (SQL-first, no ORM/DSL semantics,
+minimal query API, and build-time verification).
+
+This file preserves a model-first tooling option for future evaluation.
 
 Observability reference: `docs/roadmap/query-observability-performance-instrumentation.md`.
 
@@ -16,6 +17,9 @@ Observability reference: `docs/roadmap/query-observability-performance-instrumen
 - Treat destructive changes as explicit/manual by default.
 
 ## Source of truth
+
+Note: this section describes the model-first alternative. In the canonical SQL-first lane,
+SQL files (`db/migrations/*.sql`) remain the source of truth as defined in `sql.md`.
 
 - Schema file: `db/schema.axom`
 - Migration folder: `db/migrations/`
@@ -109,6 +113,9 @@ Marked as manual review (or blocked unless `--allow-destructive`):
 
 ## Compile-time SQL validation target
 
+Note: canonical command direction is `axom db verify` (see `sql.md`).
+`axom db check` entries below are transitional naming retained for compatibility planning.
+
 Primary mode: live DB validation in `axom check`.
 
 Planned flow:
@@ -122,7 +129,7 @@ Fallback mode (`--offline`) can use snapshot-only validation when DB tooling is 
 
 Performance and plan output are opt-in during validation:
 
-- `axom db check` MUST be silent about performance by default.
+- `axom db verify` MUST be silent about performance by default.
 - Additional report/plan/snapshot behavior follows the canonical observability RFC.
 - SQL text MUST remain hidden unless verbose output is requested.
 
@@ -133,12 +140,11 @@ Performance and plan output are opt-in during validation:
 - `axom db migrate`
 - `axom db rollback --steps <n>`
 - `axom db verify` (checks checksum drift)
-- `axom db check`
-- `axom db check --report`
-- `axom db check --plan`
-- `axom db check --snapshot` (experimental)
-- `axom db check --compare`
-- `axom check --db-live` (compatibility path while `axom db check` stabilizes)
+- `axom db verify --report`
+- `axom db verify --plan`
+- `axom db verify --snapshot` (experimental)
+- `axom db verify --compare`
+- `axom db check` / `axom check --db-live` (compatibility aliases while `verify` naming stabilizes)
 
 ## Out-of-scope for first iteration
 

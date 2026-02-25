@@ -142,17 +142,20 @@ Objective: add safe, parameterized database access with typed error channel.
 
 Design reference: `docs/roadmap/db-schema-dsl.md` (model-first schema DSL and migration generation).
 Observability reference: `docs/roadmap/query-observability-performance-instrumentation.md` (passive, opt-in diagnostics only).
+SQL module reference: `sql.md` (SQL-first module and build-time verification direction).
 
 DoD:
 - DB connection configuration and lifecycle are available.
 - `db.exec` and `db.query` support parameterized SQL only.
 - DB errors map to a stable `DbError` model.
+- Runtime DB bootstrap can be configured deterministically from environment.
 
 Implementation tasks:
 - Pick first driver/backend (recommended PostgreSQL via Npgsql).
 - Add runtime adapters and pooling policy.
 - Add binder checks that prevent unsafe raw concatenation helpers.
 - Add transaction baseline API (`begin/commit/rollback` or scoped helper).
+- Align the DB runtime lane with SQL-first constraints from `sql.md` (SQL as source of truth, no ORM/query-builder semantics).
 - Add opt-in query observability controls as specified by the observability RFC.
 - Add query fingerprinting (`query_id`) for aggregation and slow-log deduplication.
 - Keep instrumentation strictly passive and semantically transparent, per RFC constraints.
@@ -167,17 +170,25 @@ Tests:
 
 Objective: ship `sql"..."` with typed parameters and baseline typed result inference.
 
+Normative direction (see `sql.md`):
+- Primary literal form is `sql"""..."""` with two extensions only: `{param}` binding and `{Record}` row mapping.
+- Minimal query APIs are `.one()`, `.all()`, `.exec()`.
+- `transaction {}` is explicit and remains the only canonical transaction surface.
+- Build-time verification is `axom db verify` against ephemeral databases.
+
 DoD:
-- Parser supports SQL literal tokenization and interpolation markers.
-- `@{p:T}` parameter typing is compile-time checked.
+- Parser supports SQL literal tokenization and `{param}` / `{Record}` markers.
+- Parameter binding is compile-time checked and always parameterized (never concatenated).
 - Runtime receives prepared SQL + typed parameter metadata.
-- Baseline `Sql[Row]` works; `Sql[T]` from `{T}` projection is enabled for flat records.
+- Baseline row-to-record mapping is available for flat records.
+- `axom db verify` validates query binding/mapping against ephemeral DBs at build-time.
 
 Implementation tasks:
-- Add new syntax nodes for SQL literals and typed holes.
-- Add binder inference rules (`Sql[Row]` fallback, `Sql[T]` where unambiguous).
-- Add mapping runtime for by-name record projection.
-- Add compile-time diagnostics for unknown fields and incompatible projections.
+- Add new syntax nodes for SQL literals and markers.
+- Add binder rules for `{param}` binding and `{Record}` mapping contracts.
+- Add mapping runtime for by-name row-to-record projection.
+- Add compile-time diagnostics for unknown fields, incompatible projections, and invalid parameter references.
+- Add `axom db verify` command lane for migration apply + query validation on ephemeral DB.
 
 Tests:
 - Parser/binder diagnostics snapshots.

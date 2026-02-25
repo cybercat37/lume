@@ -192,15 +192,15 @@ Both produce the same `query_id`.
 
 ### Default
 
-`axom db check` MUST perform:
+`axom db verify` MUST perform:
 
 - Migration application on ephemeral DB
 - Query prepare/describe validation
 - Type mapping validation
 
-`axom db check` MUST produce no performance output by default.
+`axom db verify` MUST produce no performance output by default.
 
-`axom db check --report` MUST output aggregated metrics:
+`axom db verify --report` MUST output aggregated metrics:
 
 - total queries validated
 - top N slowest queries
@@ -209,7 +209,7 @@ Both produce the same `query_id`.
 
 SQL text MUST NOT be included unless `--verbose` is set.
 
-`axom db check --plan` MAY include execution plan output during validation.
+`axom db verify --plan` MAY include execution plan output during validation.
 
 Plan output MUST be explicitly requested.
 
@@ -217,7 +217,7 @@ Plan output MUST be explicitly requested.
 
 If enabled via:
 
-`axom db check --snapshot`
+`axom db verify --snapshot`
 
 Axom SHOULD generate:
 
@@ -232,7 +232,10 @@ Contains:
 
 Future builds MAY compare against snapshot:
 
-`axom db check --compare`
+`axom db verify --compare`
+
+Compatibility note: `axom db check` MAY be kept as an alias during transition, but
+documentation SHOULD treat `axom db verify` as the canonical command name.
 
 Comparison behavior SHOULD be:
 

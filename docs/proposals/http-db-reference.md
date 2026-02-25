@@ -4,6 +4,8 @@ Status: Reference document (vision and proposal backlog), not source of truth fo
 current implementation status. For delivery sequence and executable scope, use
 `docs/roadmap/http-db-plan.md` and `roadmap.md`. For DB query observability
 constraints, use `docs/roadmap/query-observability-performance-instrumentation.md`.
+For SQL module semantics (`sql"""..."""`, `{param}`, `{Record}`, `.one/.all/.exec`,
+`transaction {}`, `axom db verify`), use `sql.md`.
 
 ---
 

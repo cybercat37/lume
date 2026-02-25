@@ -173,8 +173,10 @@ LetStmt := "let" Identifier IntentAnnotation? "=" Expression
 - Route handlers can read request context with `request_method()` and `request_path()`.
 - HTTP client v1 is partial: baseline client/request builders are implemented and the
   pipeline-first stdlib module (`http`) remains the target shape.
-- DB runtime APIs, typed SQL interpolation, and auth/security DSL are planned.
-- Reference docs: `docs/roadmap/http-db-plan.md`, `docs/proposals/http-db-reference.md`.
+- DB runtime v1 is partial: `db.exec(...)`, `db.query(...)`, and `db.scalar(...)` are available with provider bootstrap through environment configuration.
+- Typed SQL module (`sql"""..."""` with `{param}` and `{Record}`) and build-time SQL verification are planned.
+- Auth/security DSL remains planned.
+- Reference docs: `docs/roadmap/http-db-plan.md`, `docs/proposals/http-db-reference.md`, `sql.md`, `docs/roadmap/query-observability-performance-instrumentation.md`.
 
 ### HTTP Client Module v1 (Implemented Baseline + Planned Target)
 

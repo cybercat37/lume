@@ -10,6 +10,7 @@ Sources used for consolidation:
 - README.md
 - AGENTS.md
 - docs/proposals/http-db-reference.md
+- sql.md
 
 Detailed implementation plan for HTTP/DB expansion:
 - docs/roadmap/http-db-plan.md
@@ -272,13 +273,16 @@ Proposal backlog:
 - M15: HTTP client stdlib v1 (pipeline-first full spec)
 - M16: auth foundation (`@public`, `@auth`) + 401/403 contract
 - M17: DB runtime v1 (parameterized query/exec) + opt-in passive query observability
-- M18: typed SQL interpolation v1 (`sql"..."`, typed params)
+- M18: typed SQL module v1 (`sql"""..."""`, `{param}`, `{Record}`, `.one/.all/.exec`, `transaction {}`)
 - M19: security DSL (`security {}` + provider binding)
 - M20: customer docs bundle + protected `/docs`
 - M21: hardening/performance/DX/release
 
 M17 observability constraints are defined in the canonical RFC:
 - `docs/roadmap/query-observability-performance-instrumentation.md`
+
+M18 SQL-first constraints are defined in the canonical RFC:
+- `sql.md`
 
 M15 target scope (normative direction):
 - `Http` is an immutable configuration record, composed with `|>`.
@@ -295,6 +299,7 @@ Current HTTP+DB progress:
 - M14 (Implemented): route discovery/normalization and pre-boot conflict diagnostics are implemented, including overlap-reason details and dynamic filename validation.
 - M14 runtime bridge (Implemented): discovered routes execute Axom route files, expose dynamic/query params via `route_param*` and `query_param*` helpers, support `respond(status, body)`, expose request context (`request_method`, `request_path`), and return plain-text output.
 - M15 (Partial): outbound HTTP client has baseline client/request builders, `http { ... }` config sugar (`baseUrl`, `headers`, `timeout`/`timeoutMs`, `retry`), and status-range sugar (`2xx`, `200..299`) for `require_range`; remaining scope is the full pipeline-first module defined in `docs/spec.md` and `docs/roadmap/http-db-plan.md`.
+- M17 (Partial): DB runtime baseline is available via `db.exec(...)`, `db.query(...)`, and `db.scalar(...)` with provider bootstrap from environment (`AXOM_DB_PROVIDER`, `AXOM_DB_CONNECTION_STRING`) and opt-in observability flags.
 - DX bootstrap (Implemented): `axom init <name>` scaffolds an API-first project with routes, `.gitignore`, Dockerfile, compose, Makefile + PowerShell endpoint-doc tooling, and onboarding README.
 
 See `docs/roadmap/http-db-plan.md` for objectives, DoD, implementation tasks,
