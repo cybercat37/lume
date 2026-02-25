@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 
 namespace Axom.Tests;
 
+[Collection("DbGatewayTests")]
 public class InterpreterDbBuiltinTests
 {
     [Fact]

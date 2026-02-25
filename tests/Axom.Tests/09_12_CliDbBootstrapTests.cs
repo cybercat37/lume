@@ -1,0 +1,99 @@
+using Axom.Compiler.Interpreting;
+using Axom.Compiler.Parsing;
+using Axom.Compiler.Text;
+using Axom.Runtime.Db;
+
+namespace Axom.Tests;
+
+[Collection("DbGatewayTests")]
+public class CliDbBootstrapTests
+{
+    [Fact]
+    public void Configure_from_environment_returns_false_when_unset()
+    {
+        var previousProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
+        var previousConnection = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", null);
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", null);
+
+            var configured = Axom.Cli.DbRuntimeBootstrap.ConfigureFromEnvironment(new StringWriter());
+
+            Assert.False(configured);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", previousProvider);
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", previousConnection);
+            DbBuiltinGateway.Reset();
+        }
+    }
+
+    [Fact]
+    public void Configure_from_environment_sets_db_gateway_for_interpreter_builtins()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "axom_cli_db_bootstrap", Guid.NewGuid().ToString("N", System.Globalization.CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(tempRoot);
+        var dbPath = Path.Combine(tempRoot, "test.db");
+
+        var previousProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
+        var previousConnection = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+        var previousLog = Environment.GetEnvironmentVariable("AXOM_DB_LOG");
+        var previousLogSql = Environment.GetEnvironmentVariable("AXOM_DB_LOG_SQL");
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", "sqlite");
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", $"Data Source={dbPath}");
+            Environment.SetEnvironmentVariable("AXOM_DB_LOG", "all");
+            Environment.SetEnvironmentVariable("AXOM_DB_LOG_SQL", "0");
+
+            var logs = new StringWriter();
+            var configured = Axom.Cli.DbRuntimeBootstrap.ConfigureFromEnvironment(logs);
+            Assert.True(configured);
+
+            const string source = """
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+let inserted = db.exec("insert into users (id, name) values (@id, @name)", ["id": "1", "name": "Ada"])
+print match inserted {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+let scalar = db.scalar("select name from users where id = @id", ["id": "1"])
+print match scalar {
+  Ok(v) -> v
+  Error(e) -> e
+}
+""";
+
+            var interpreter = new Interpreter();
+            var result = interpreter.Run(SyntaxTree.Parse(new SourceText(source, "test.axom")));
+
+            Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error);
+            Assert.Equal("0\n1\nAda", result.Output);
+
+            var logOutput = logs.ToString();
+            Assert.Contains("db query_id=", logOutput, StringComparison.Ordinal);
+            Assert.DoesNotContain("db sql=", logOutput, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", previousProvider);
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", previousConnection);
+            Environment.SetEnvironmentVariable("AXOM_DB_LOG", previousLog);
+            Environment.SetEnvironmentVariable("AXOM_DB_LOG_SQL", previousLogSql);
+            DbBuiltinGateway.Reset();
+
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+}

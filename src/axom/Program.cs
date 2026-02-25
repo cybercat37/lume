@@ -9,6 +9,8 @@ public class Program
 {
     public static int Main(string[] args)
     {
+        DbRuntimeBootstrap.ConfigureFromEnvironment();
+
         const string usage =
             "Usage: axom <build|run|check|serve|init> <file.axom|project-name> [options]\n" +
             "\n" +
