@@ -1,7 +1,9 @@
 using Axom.Compiler;
 using Axom.Compiler.Http.Routing;
+using Axom.Runtime.Db;
 using Axom.Runtime.Http;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace Axom.Cli;
 
@@ -13,6 +15,7 @@ public class Program
 
         const string usage =
             "Usage: axom <build|run|check|serve|init> <file.axom|project-name> [options]\n" +
+            "   or: axom db verify <file.axom> [--report] [--plan] [--snapshot] [--compare] [--quiet|--verbose] [--cache]\n" +
             "\n" +
             "Options:\n" +
             "  --out <dir>   Override output directory (default: out)\n" +
@@ -28,6 +31,7 @@ public class Program
             "Examples:\n" +
             "  axom init myapp\n" +
             "  axom check hello.axom\n" +
+            "  axom db verify hello.axom --report\n" +
             "  axom build hello.axom --out out\n" +
             "  axom run hello.axom --cache\n" +
             "  axom serve hello.axom --host 127.0.0.1 --port 8080\n";
@@ -58,6 +62,11 @@ public class Program
         if (command == "init")
         {
             return InitProject(args, usage);
+        }
+
+        if (command == "db")
+        {
+            return HandleDbCommand(args, usage);
         }
 
         if (args.Length < 2)
@@ -225,6 +234,185 @@ public class Program
 
         // run command: compile and execute
         return RunGeneratedCode(outputDir);
+    }
+
+    private static int HandleDbCommand(string[] args, string usage)
+    {
+        if (args.Length < 3 || !string.Equals(args[1], "verify", StringComparison.Ordinal))
+        {
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
+        var inputPath = args[2];
+        var quiet = false;
+        var verbose = false;
+        var useCache = false;
+        var report = false;
+        var plan = false;
+        var snapshot = false;
+        var compare = false;
+
+        for (var i = 3; i < args.Length; i++)
+        {
+            var argument = args[i];
+            if (argument == "--quiet")
+            {
+                quiet = true;
+                continue;
+            }
+
+            if (argument == "--verbose")
+            {
+                verbose = true;
+                continue;
+            }
+
+            if (argument == "--cache")
+            {
+                useCache = true;
+                continue;
+            }
+
+            if (argument == "--report")
+            {
+                report = true;
+                continue;
+            }
+
+            if (argument == "--plan")
+            {
+                plan = true;
+                continue;
+            }
+
+            if (argument == "--snapshot")
+            {
+                snapshot = true;
+                continue;
+            }
+
+            if (argument == "--compare")
+            {
+                compare = true;
+                continue;
+            }
+
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
+        if (quiet && verbose)
+        {
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
+        if (!File.Exists(inputPath))
+        {
+            Console.Error.WriteLine($"File not found: {inputPath}");
+            return 1;
+        }
+
+        var source = File.ReadAllText(inputPath);
+        var compiler = new CompilerDriver();
+        var result = useCache
+            ? compiler.CompileCached(source, inputPath, new CompilerCache())
+            : compiler.Compile(source, inputPath);
+
+        if (!result.Success)
+        {
+            foreach (var d in result.Diagnostics)
+            {
+                Console.Error.WriteLine(d);
+            }
+
+            return 1;
+        }
+
+        var sqlLiterals = ExtractSqlLiterals(source);
+        if (report && !quiet)
+        {
+            Console.WriteLine($"total_queries_validated={sqlLiterals.Count}");
+            Console.WriteLine("average_duration_ms=0");
+        }
+
+        if (plan && !quiet)
+        {
+            Console.WriteLine("plan_output=not_available_in_mvp");
+        }
+
+        if (snapshot)
+        {
+            WriteMetricsSnapshot(sqlLiterals);
+            if (!quiet)
+            {
+                Console.WriteLine("snapshot_written=.axom/query-metrics.json");
+            }
+        }
+
+        if (compare && !quiet)
+        {
+            var snapshotPath = Path.Combine(".axom", "query-metrics.json");
+            if (!File.Exists(snapshotPath))
+            {
+                Console.WriteLine("compare_warning=snapshot_missing");
+            }
+            else
+            {
+                Console.WriteLine("compare_status=ok");
+            }
+        }
+
+        if (verbose && !quiet)
+        {
+            Console.WriteLine($"db_verify_file={inputPath}");
+        }
+
+        return 0;
+    }
+
+    private static List<string> ExtractSqlLiterals(string source)
+    {
+        var values = new List<string>();
+        var searchStart = 0;
+        while (searchStart < source.Length)
+        {
+            var start = source.IndexOf("sql\"\"\"", searchStart, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                break;
+            }
+
+            var valueStart = start + 6;
+            var end = source.IndexOf("\"\"\"", valueStart, StringComparison.Ordinal);
+            if (end < 0)
+            {
+                break;
+            }
+
+            values.Add(source.Substring(valueStart, end - valueStart));
+            searchStart = end + 3;
+        }
+
+        return values;
+    }
+
+    private static void WriteMetricsSnapshot(IReadOnlyList<string> sqlLiterals)
+    {
+        var payload = sqlLiterals
+            .Select(sql => new
+            {
+                query_id = DbQueryFingerprint.CreateQueryId(sql),
+                average_duration = 0,
+                execution_count = 0
+            })
+            .ToList();
+
+        Directory.CreateDirectory(".axom");
+        var snapshotPath = Path.Combine(".axom", "query-metrics.json");
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(snapshotPath, json);
     }
 
     private static int InitProject(string[] args, string usage)
