@@ -38,9 +38,10 @@ public sealed class AdoNetDbAdapter
 
     private int ExecuteNonQueryCore(string sql, IReadOnlyDictionary<string, object?>? parameters)
     {
+        var (boundSql, boundParameters) = BindSqlTemplate(sql, parameters);
         using var connection = connectionFactory();
         connection.Open();
-        using var command = CreateCommand(connection, sql, parameters);
+        using var command = CreateCommand(connection, boundSql, boundParameters);
         return command.ExecuteNonQuery();
     }
 
@@ -48,9 +49,10 @@ public sealed class AdoNetDbAdapter
         string sql,
         IReadOnlyDictionary<string, object?>? parameters)
     {
+        var (boundSql, boundParameters) = BindSqlTemplate(sql, parameters);
         using var connection = connectionFactory();
         connection.Open();
-        using var command = CreateCommand(connection, sql, parameters);
+        using var command = CreateCommand(connection, boundSql, boundParameters);
         using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
 
         var rows = new List<IReadOnlyDictionary<string, object?>>();
@@ -71,9 +73,10 @@ public sealed class AdoNetDbAdapter
 
     private T? ExecuteScalarCore<T>(string sql, IReadOnlyDictionary<string, object?>? parameters)
     {
+        var (boundSql, boundParameters) = BindSqlTemplate(sql, parameters);
         using var connection = connectionFactory();
         connection.Open();
-        using var command = CreateCommand(connection, sql, parameters);
+        using var command = CreateCommand(connection, boundSql, boundParameters);
 
         var value = command.ExecuteScalar();
         if (value is null || value is DBNull)
@@ -87,6 +90,18 @@ public sealed class AdoNetDbAdapter
         }
 
         return (T)Convert.ChangeType(value, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static (string sql, IReadOnlyDictionary<string, object?> parameters) BindSqlTemplate(
+        string sql,
+        IReadOnlyDictionary<string, object?>? parameters)
+    {
+        if (SqlTemplateBinder.TryBind(sql, parameters, out var boundSql, out var boundParameters, out var error))
+        {
+            return (boundSql, boundParameters);
+        }
+
+        throw new ArgumentException(error ?? "Invalid SQL template.", nameof(sql));
     }
 
     private static DbCommand CreateCommand(

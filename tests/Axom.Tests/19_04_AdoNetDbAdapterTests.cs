@@ -125,6 +125,18 @@ public class AdoNetDbAdapterTests
         Assert.Equal(1.0, snapshot.ErrorRate);
     }
 
+    [Fact]
+    public void Adapter_fails_fast_when_sql_template_parameter_is_missing()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            adapter.Query("select * from users where id = {id}"));
+
+        Assert.Contains("Missing SQL parameter 'id'", ex.Message, StringComparison.Ordinal);
+    }
+
     private sealed class TestSink : IDbObservabilitySink
     {
         public List<DbQueryLogEntry> Entries { get; } = new();

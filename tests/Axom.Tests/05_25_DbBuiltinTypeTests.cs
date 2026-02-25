@@ -32,9 +32,11 @@ print c
 let a = sql"""select 1""".exec()
 let b = sql"""select 1""".all()
 let c = sql"""select 1""".one()
+let d = sql"""select {id}""".one(["id": "1"])
 print a
 print b
 print c
+print d
 """";
 
         var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
@@ -87,6 +89,6 @@ print c
 
         Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
-            && diagnostic.Message.Contains("does not take arguments", StringComparison.Ordinal));
+            && diagnostic.Message.Contains("expects Map<String, String>", StringComparison.Ordinal));
     }
 }

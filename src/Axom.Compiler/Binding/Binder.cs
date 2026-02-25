@@ -3275,13 +3275,31 @@ public sealed class Binder
             return false;
         }
 
-        if (call.Arguments.Count != 0)
+        if (call.Arguments.Count > 1)
         {
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
                 call.Span,
-                $"{methodName}() on sql literals does not take arguments."));
+                $"{methodName}() on sql literals accepts at most one params map argument."));
             expression = new BoundCallExpression(new BoundFunctionExpression(builtin), Array.Empty<BoundExpression>(), TypeSymbol.Error);
+            return true;
+        }
+
+        if (call.Arguments.Count == 1)
+        {
+            var paramsExpression = BindExpression(call.Arguments[0]);
+            var expectedParamsType = TypeSymbol.Map(TypeSymbol.String);
+            if (paramsExpression.Type != expectedParamsType && paramsExpression.Type != TypeSymbol.Error)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    call.Arguments[0].Span,
+                    $"{methodName}() on sql literals expects Map<String, String> params when an argument is provided."));
+                expression = new BoundCallExpression(new BoundFunctionExpression(builtin), new[] { target, paramsExpression }, TypeSymbol.Error);
+                return true;
+            }
+
+            expression = new BoundCallExpression(new BoundFunctionExpression(builtin), new[] { target, paramsExpression }, builtin.ReturnType);
             return true;
         }
 
