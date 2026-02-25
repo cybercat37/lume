@@ -58,6 +58,54 @@ print match scalar {
     }
 
     [Fact]
+    public void Sql_literal_methods_execute_through_configured_adapter()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+        DbBuiltinGateway.Configure(adapter);
+
+        try
+        {
+            const string source = """"
+let created = sql"""
+create table users (id integer primary key, name text not null)
+""".exec()
+print match created {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let inserted = sql"""
+insert into users (id, name) values (1, 'Ada')
+""".exec()
+print match inserted {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let scalar = sql"""
+select name from users where id = 1
+""".one()
+print match scalar {
+  Ok(v) -> v
+  Error(e) -> e
+}
+"""";
+
+            var syntaxTree = SyntaxTree.Parse(new SourceText(source, "test.axom"));
+            var interpreter = new Interpreter();
+            var result = interpreter.Run(syntaxTree);
+
+            Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error);
+            Assert.Equal("0\n1\nAda", result.Output);
+        }
+        finally
+        {
+            DbBuiltinGateway.Reset();
+        }
+    }
+
+    [Fact]
     public void Db_builtins_return_error_when_adapter_is_not_configured()
     {
         DbBuiltinGateway.Reset();

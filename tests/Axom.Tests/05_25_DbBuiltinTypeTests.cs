@@ -26,6 +26,26 @@ print c
     }
 
     [Fact]
+    public void Sql_literal_method_calls_bind_without_diagnostics_for_valid_signatures()
+    {
+        const string sourceText = """"
+let a = sql"""select 1""".exec()
+let b = sql"""select 1""".all()
+let c = sql"""select 1""".one()
+print a
+print b
+print c
+"""";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+
+        var result = binder.Bind(syntaxTree);
+
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error);
+    }
+
+    [Fact]
     public void Db_exec_reports_type_error_for_non_string_sql()
     {
         const string sourceText = "print db.exec(123)";
@@ -53,5 +73,20 @@ print c
         Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
             && diagnostic.Message.Contains("db_query() expects Map<String, String>", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Sql_literal_method_call_with_arguments_reports_diagnostic()
+    {
+        const string sourceText = "print sql\"\"\"select 1\"\"\".exec(1)";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+            && diagnostic.Message.Contains("does not take arguments", StringComparison.Ordinal));
     }
 }

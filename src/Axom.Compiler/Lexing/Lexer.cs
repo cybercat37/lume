@@ -51,6 +51,11 @@ public sealed class Lexer
         var start = position;
         var current = Current();
 
+        if (current == 's' && Peek(1) == 'q' && Peek(2) == 'l' && Peek(3) == '"' && Peek(4) == '"' && Peek(5) == '"')
+        {
+            return LexSqlStringLiteral();
+        }
+
         if (IsIdentifierStart(current))
         {
             while (IsIdentifierPart(Current()))
@@ -297,6 +302,34 @@ public sealed class Lexer
         var span = new TextSpan(start, Math.Max(1, position - start));
         diagnostics.Add(Diagnostic.Error(sourceText, span, "Unterminated string literal."));
         return new SyntaxToken(TokenKind.StringLiteral, span, sourceText.Text.Substring(start, span.Length), builder.ToString());
+    }
+
+    private SyntaxToken LexSqlStringLiteral()
+    {
+        var start = position;
+        position += 6;
+
+        var valueStart = position;
+        while (!IsAtEnd())
+        {
+            if (Current() == '"' && Peek(1) == '"' && Peek(2) == '"')
+            {
+                var value = sourceText.Text.Substring(valueStart, position - valueStart);
+                position += 3;
+                var text = sourceText.Text.Substring(start, position - start);
+                return new SyntaxToken(
+                    TokenKind.StringLiteral,
+                    new TextSpan(start, position - start),
+                    text,
+                    value);
+            }
+
+            Next();
+        }
+
+        var span = new TextSpan(start, Math.Max(1, position - start));
+        diagnostics.Add(Diagnostic.Error(sourceText, span, "Unterminated sql string literal."));
+        return new SyntaxToken(TokenKind.StringLiteral, span, sourceText.Text.Substring(start, span.Length), sourceText.Text.Substring(valueStart));
     }
 
     private SyntaxToken LexNumberLiteral()

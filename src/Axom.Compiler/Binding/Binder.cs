@@ -2878,6 +2878,11 @@ public sealed class Binder
             return new BoundJoinExpression(target, target.Type.TaskResultType);
         }
 
+        if (TryBindSqlQueryMethodCall(call, out var sqlQueryMethodCall))
+        {
+            return sqlQueryMethodCall;
+        }
+
         if (TryBindDbMemberCall(call, out var dbMemberCall))
         {
             return dbMemberCall;
@@ -3232,6 +3237,55 @@ public sealed class Binder
             ?? new BoundCallExpression(new BoundFunctionExpression(builtin), arguments, builtin.ReturnType);
 
         expression = bound;
+        return true;
+    }
+
+    private bool TryBindSqlQueryMethodCall(CallExpressionSyntax call, out BoundExpression expression)
+    {
+        expression = new BoundLiteralExpression(null, TypeSymbol.Error);
+
+        if (call.Callee is not FieldAccessExpressionSyntax methodCall)
+        {
+            return false;
+        }
+
+        var methodName = methodCall.IdentifierToken.Text;
+        var builtin = methodName switch
+        {
+            "exec" => BuiltinFunctions.DbExec,
+            "all" => BuiltinFunctions.DbQuery,
+            "one" => BuiltinFunctions.DbScalar,
+            _ => null
+        };
+
+        if (builtin is null)
+        {
+            return false;
+        }
+
+        if (methodCall.Target is NameExpressionSyntax dbName
+            && string.Equals(dbName.IdentifierToken.Text, "db", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var target = BindExpression(methodCall.Target);
+        if (target.Type != TypeSymbol.String)
+        {
+            return false;
+        }
+
+        if (call.Arguments.Count != 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                $"{methodName}() on sql literals does not take arguments."));
+            expression = new BoundCallExpression(new BoundFunctionExpression(builtin), Array.Empty<BoundExpression>(), TypeSymbol.Error);
+            return true;
+        }
+
+        expression = new BoundCallExpression(new BoundFunctionExpression(builtin), new[] { target }, builtin.ReturnType);
         return true;
     }
 
