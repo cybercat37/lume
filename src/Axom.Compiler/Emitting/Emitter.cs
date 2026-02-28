@@ -18,11 +18,12 @@ public sealed class Emitter
         var requiresRangeBuiltin = RequiresRangeBuiltin(program);
         var requiresRandomResultRuntime = RequiresRandomResultRuntime(program);
         var requiresHttpBuiltins = RequiresHttpBuiltins(program);
+        var requiresDbBuiltins = RequiresDbBuiltins(program);
         var requiresFormat = RequiresFormat(program);
         var requiresStringify = RequiresStringify(program) || requiresFormat || requiresFunctionLogging;
         var builder = new StringBuilder();
         builder.AppendLine("using System;");
-        if (RequiresCollections(program))
+        if (RequiresCollections(program) || requiresDbBuiltins)
         {
             builder.AppendLine("using System.Collections.Generic;");
         }
@@ -62,10 +63,11 @@ public sealed class Emitter
 
         if (RequiresChannels(program)
             || RequiresDotNetInterop(program)
-            || requiresRandomBuiltins
-            || requiresRandomResultRuntime
-            || requiresHttpBuiltins
-            || requiresFunctionTimeout)
+             || requiresRandomBuiltins
+             || requiresRandomResultRuntime
+             || requiresHttpBuiltins
+             || requiresDbBuiltins
+             || requiresFunctionTimeout)
         {
             WriteAxomResultRuntime(builder);
             builder.AppendLine();
@@ -117,6 +119,12 @@ public sealed class Emitter
         if (requiresHttpBuiltins)
         {
             WriteHttpHelpers(builder);
+            builder.AppendLine();
+        }
+
+        if (requiresDbBuiltins)
+        {
+            WriteDbHelpers(builder);
             builder.AppendLine();
         }
 
@@ -190,6 +198,11 @@ public sealed class Emitter
     private static bool RequiresHttpBuiltins(LoweredProgram program)
     {
         return program.Statements.Any(UsesHttpBuiltins) || program.Functions.Any(function => UsesHttpBuiltins(function.Body));
+    }
+
+    private static bool RequiresDbBuiltins(LoweredProgram program)
+    {
+        return program.Statements.Any(UsesDbBuiltins) || program.Functions.Any(function => UsesDbBuiltins(function.Body));
     }
 
     private static bool RequiresRandomResultRuntime(LoweredProgram program)
@@ -333,6 +346,20 @@ public sealed class Emitter
             LoweredExpressionStatement expressionStatement => UsesHttpBuiltins(expressionStatement.Expression),
             LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesHttpBuiltins(returnStatement.Expression),
             LoweredIfStatement ifStatement => UsesHttpBuiltins(ifStatement.Condition) || UsesHttpBuiltins(ifStatement.Then) || (ifStatement.Else is not null && UsesHttpBuiltins(ifStatement.Else)),
+            _ => false
+        };
+    }
+
+    private static bool UsesDbBuiltins(LoweredStatement statement)
+    {
+        return statement switch
+        {
+            LoweredBlockStatement block => block.Statements.Any(UsesDbBuiltins),
+            LoweredVariableDeclaration declaration => UsesDbBuiltins(declaration.Initializer),
+            LoweredPrintStatement print => UsesDbBuiltins(print.Expression),
+            LoweredExpressionStatement expressionStatement => UsesDbBuiltins(expressionStatement.Expression),
+            LoweredReturnStatement returnStatement => returnStatement.Expression is not null && UsesDbBuiltins(returnStatement.Expression),
+            LoweredIfStatement ifStatement => UsesDbBuiltins(ifStatement.Condition) || UsesDbBuiltins(ifStatement.Then) || (ifStatement.Else is not null && UsesDbBuiltins(ifStatement.Else)),
             _ => false
         };
     }
@@ -714,6 +741,48 @@ public sealed class Emitter
             LoweredDotNetCallExpression dotNet => UsesHttpBuiltins(dotNet.TypeNameExpression)
                 || UsesHttpBuiltins(dotNet.MethodNameExpression)
                 || dotNet.Arguments.Any(UsesHttpBuiltins),
+            _ => false
+        };
+    }
+
+    private static bool UsesDbBuiltins(LoweredExpression expression)
+    {
+        return expression switch
+        {
+            LoweredCallExpression call when call.Callee is LoweredFunctionExpression function
+                && function.Function.IsBuiltin
+                && (string.Equals(function.Function.Name, "db_exec", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "db_query", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "db_scalar", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "db_begin", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "db_commit", StringComparison.Ordinal)
+                    || string.Equals(function.Function.Name, "db_rollback", StringComparison.Ordinal)) => true,
+            LoweredCallExpression call => UsesDbBuiltins(call.Callee) || call.Arguments.Any(UsesDbBuiltins),
+            LoweredUnaryExpression unary => UsesDbBuiltins(unary.Operand),
+            LoweredBinaryExpression binary => UsesDbBuiltins(binary.Left) || UsesDbBuiltins(binary.Right),
+            LoweredAssignmentExpression assignment => UsesDbBuiltins(assignment.Expression),
+            LoweredBlockExpression block => block.Statements.Any(UsesDbBuiltins) || UsesDbBuiltins(block.Result),
+            LoweredLambdaExpression lambda => UsesDbBuiltins(lambda.Body),
+            LoweredFieldAccessExpression fieldAccess => UsesDbBuiltins(fieldAccess.Target),
+            LoweredRecordLiteralExpression record => record.Fields.Any(field => UsesDbBuiltins(field.Expression)),
+            LoweredSumConstructorExpression sum => sum.Payload is not null && UsesDbBuiltins(sum.Payload),
+            LoweredIsTupleExpression isTuple => UsesDbBuiltins(isTuple.Target),
+            LoweredIsSumExpression isSum => UsesDbBuiltins(isSum.Target),
+            LoweredIsRecordExpression isRecord => UsesDbBuiltins(isRecord.Target),
+            LoweredSumTagExpression sumTag => UsesDbBuiltins(sumTag.Target),
+            LoweredSumValueExpression sumValue => UsesDbBuiltins(sumValue.Target),
+            LoweredUnwrapExpression unwrap => UsesDbBuiltins(unwrap.Target),
+            LoweredSpawnExpression spawn => UsesDbBuiltins(spawn.Body),
+            LoweredJoinExpression join => UsesDbBuiltins(join.Expression),
+            LoweredIndexExpression index => UsesDbBuiltins(index.Target) || UsesDbBuiltins(index.Index),
+            LoweredTupleExpression tuple => tuple.Elements.Any(UsesDbBuiltins),
+            LoweredListExpression list => list.Elements.Any(UsesDbBuiltins),
+            LoweredMapExpression map => map.Entries.Any(entry => UsesDbBuiltins(entry.Key) || UsesDbBuiltins(entry.Value)),
+            LoweredChannelSendExpression send => UsesDbBuiltins(send.Sender) || UsesDbBuiltins(send.Value),
+            LoweredChannelReceiveExpression recv => UsesDbBuiltins(recv.Receiver),
+            LoweredDotNetCallExpression dotNet => UsesDbBuiltins(dotNet.TypeNameExpression)
+                || UsesDbBuiltins(dotNet.MethodNameExpression)
+                || dotNet.Arguments.Any(UsesDbBuiltins),
             _ => false
         };
     }
@@ -1207,6 +1276,12 @@ public sealed class Emitter
                 "status_range" => $"AxomStatusRange({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "require_range" => $"AxomHttpRequireRange({argumentExpressions[0]}, {argumentExpressions[1]})",
                 "response_text" => $"AxomHttpResponseText({argumentExpressions[0]})",
+                "db_exec" => $"AxomDbExec({string.Join(", ", argumentExpressions)})",
+                "db_query" => $"AxomDbQuery({string.Join(", ", argumentExpressions)})",
+                "db_scalar" => $"AxomDbScalar({string.Join(", ", argumentExpressions)})",
+                "db_begin" => "AxomDbBegin()",
+                "db_commit" => "AxomDbCommit()",
+                "db_rollback" => "AxomDbRollback()",
                 "route_param" => $"AxomResult<string>.Error(\"route_param is only available in serve route handlers\")",
                 "route_param_int" => $"AxomResult<int>.Error(\"route_param_int is only available in serve route handlers\")",
                 "route_param_float" => $"AxomResult<double>.Error(\"route_param_float is only available in serve route handlers\")",
@@ -1942,6 +2017,54 @@ public sealed class Emitter
         builder.AppendLine("    static AxomResult<string> AxomHttpResponseText(AxomHttpResponseValue response)");
         builder.AppendLine("    {");
         builder.AppendLine("        return AxomResult<string>.Ok(response.Body);");
+        builder.AppendLine("    }");
+    }
+
+    private static void WriteDbHelpers(StringBuilder builder)
+    {
+        builder.AppendLine("    static AxomResult<int> AxomDbExec(string sql)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<int>.Error(\"db builtins are not yet available in codegen run mode; use interpreter mode with 'axom run' while this is being implemented\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<int> AxomDbExec(string sql, Dictionary<string, string> parameters)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<int>.Error(\"db builtins are not yet available in codegen run mode; use interpreter mode with 'axom run' while this is being implemented\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<List<Dictionary<string, string>>> AxomDbQuery(string sql)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<List<Dictionary<string, string>>>.Error(\"db builtins are not yet available in codegen run mode; use interpreter mode with 'axom run' while this is being implemented\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<List<Dictionary<string, string>>> AxomDbQuery(string sql, Dictionary<string, string> parameters)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<List<Dictionary<string, string>>>.Error(\"db builtins are not yet available in codegen run mode; use interpreter mode with 'axom run' while this is being implemented\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<string> AxomDbScalar(string sql)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<string>.Error(\"db builtins are not yet available in codegen run mode; use interpreter mode with 'axom run' while this is being implemented\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<string> AxomDbScalar(string sql, Dictionary<string, string> parameters)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<string>.Error(\"db builtins are not yet available in codegen run mode; use interpreter mode with 'axom run' while this is being implemented\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<int> AxomDbBegin()");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<int>.Error(\"db transactions are not yet available in codegen run mode; use interpreter mode with 'axom run' while this is being implemented\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<int> AxomDbCommit()");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<int>.Error(\"db transactions are not yet available in codegen run mode; use interpreter mode with 'axom run' while this is being implemented\");");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static AxomResult<int> AxomDbRollback()");
+        builder.AppendLine("    {");
+        builder.AppendLine("        return AxomResult<int>.Error(\"db transactions are not yet available in codegen run mode; use interpreter mode with 'axom run' while this is being implemented\");");
         builder.AppendLine("    }");
     }
 
