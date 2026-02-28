@@ -91,4 +91,82 @@ print d
             diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
             && diagnostic.Message.Contains("expects Map<String, String>", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void Sql_literal_with_param_placeholder_requires_params_map()
+    {
+        const string sourceText = "print sql\"\"\"select * from users where id = {id}\"\"\".one()";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+            && diagnostic.Message.Contains("requires a params map", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Sql_literal_map_argument_must_include_all_parameter_placeholders()
+    {
+        const string sourceText = "print sql\"\"\"select * from users where id = {id} and org = {org}\"\"\".all([\"id\": \"1\"])";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+            && diagnostic.Message.Contains("missing SQL placeholders", StringComparison.Ordinal)
+            && diagnostic.Message.Contains("org", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Sql_literal_record_placeholder_requires_declared_record_type()
+    {
+        const string sourceText = "print sql\"\"\"select {User} from users\"\"\".all()";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+            && diagnostic.Message.Contains("Unknown SQL record placeholder '{User}'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Sql_literal_record_placeholder_binds_when_record_type_is_declared()
+    {
+        const string sourceText = """"
+type User { id: Int, name: String }
+let rows = sql"""select {User} from users""".all()
+print rows
+"""";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+            diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+            && diagnostic.Message.Contains("Unknown SQL record placeholder", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Sql_literal_exec_rejects_record_projection_placeholder()
+    {
+        const string sourceText = """"
+type User { id: Int, name: String }
+print sql"""update users set name='x' returning {User}""".exec()
+"""";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+            && diagnostic.Message.Contains("exec() cannot use record projection placeholders", StringComparison.Ordinal));
+    }
 }

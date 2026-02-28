@@ -3275,6 +3275,8 @@ public sealed class Binder
             return false;
         }
 
+        var hasTemplateError = ValidateSqlLiteralTemplateCall(methodName, target, call);
+
         if (call.Arguments.Count > 1)
         {
             diagnostics.Add(Diagnostic.Error(
@@ -3299,12 +3301,178 @@ public sealed class Binder
                 return true;
             }
 
-            expression = new BoundCallExpression(new BoundFunctionExpression(builtin), new[] { target, paramsExpression }, builtin.ReturnType);
+            expression = new BoundCallExpression(
+                new BoundFunctionExpression(builtin),
+                new[] { target, paramsExpression },
+                hasTemplateError ? TypeSymbol.Error : builtin.ReturnType);
             return true;
         }
 
-        expression = new BoundCallExpression(new BoundFunctionExpression(builtin), new[] { target }, builtin.ReturnType);
+        expression = new BoundCallExpression(
+            new BoundFunctionExpression(builtin),
+            new[] { target },
+            hasTemplateError ? TypeSymbol.Error : builtin.ReturnType);
         return true;
+    }
+
+    private bool ValidateSqlLiteralTemplateCall(
+        string methodName,
+        BoundExpression target,
+        CallExpressionSyntax call)
+    {
+        if (target is not BoundLiteralExpression { Value: string sqlText })
+        {
+            return false;
+        }
+
+        var placeholders = ExtractSqlPlaceholders(sqlText);
+        if (placeholders.Count == 0)
+        {
+            return false;
+        }
+
+        var hasError = false;
+        var parameterNames = placeholders
+            .Where(placeholder => !placeholder.IsRecord)
+            .Select(placeholder => placeholder.Name)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var recordNames = placeholders
+            .Where(placeholder => placeholder.IsRecord)
+            .Select(placeholder => placeholder.Name)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (parameterNames.Count > 0 && call.Arguments.Count == 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                $"{methodName}() requires a params map when SQL contains parameter placeholders: {string.Join(", ", parameterNames)}."));
+            hasError = true;
+        }
+
+        if (parameterNames.Count > 0 && call.Arguments.Count == 1 && call.Arguments[0] is MapExpressionSyntax map)
+        {
+            var providedKeys = map.Entries
+                .Select(entry => TryGetMapKeyLiteral(entry.Key))
+                .Where(static key => !string.IsNullOrWhiteSpace(key))
+                .Select(key => NormalizeSqlParameterKey(key!))
+                .Distinct(StringComparer.Ordinal)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var missing = parameterNames
+                .Where(name => !providedKeys.Contains(name))
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToList();
+            if (missing.Count > 0)
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    call.Arguments[0].Span,
+                    $"{methodName}() params map is missing SQL placeholders: {string.Join(", ", missing)}."));
+                hasError = true;
+            }
+        }
+
+        foreach (var recordName in recordNames)
+        {
+            if (!recordDefinitions.ContainsKey(recordName))
+            {
+                diagnostics.Add(Diagnostic.Error(
+                    SourceText,
+                    call.Span,
+                    $"Unknown SQL record placeholder '{{{recordName}}}'. Declare type '{recordName}' before using it in sql literals."));
+                hasError = true;
+            }
+        }
+
+        if (recordNames.Count > 0 && string.Equals(methodName, "exec", StringComparison.Ordinal))
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                "exec() cannot use record projection placeholders like {Record}. Use one() or all() for projected rows."));
+            hasError = true;
+        }
+
+        return hasError;
+    }
+
+    private static List<(string Name, bool IsRecord)> ExtractSqlPlaceholders(string sql)
+    {
+        var placeholders = new List<(string Name, bool IsRecord)>();
+        var inSingleQuotedString = false;
+
+        for (var index = 0; index < sql.Length; index++)
+        {
+            var current = sql[index];
+            if (inSingleQuotedString)
+            {
+                if (current == '\'' && index + 1 < sql.Length && sql[index + 1] == '\'')
+                {
+                    index++;
+                    continue;
+                }
+
+                if (current == '\'')
+                {
+                    inSingleQuotedString = false;
+                }
+
+                continue;
+            }
+
+            if (current == '\'')
+            {
+                inSingleQuotedString = true;
+                continue;
+            }
+
+            if (current != '{')
+            {
+                continue;
+            }
+
+            var end = sql.IndexOf('}', index + 1);
+            if (end <= index + 1)
+            {
+                continue;
+            }
+
+            var name = sql.Substring(index + 1, end - index - 1).Trim();
+            if (name.Length == 0)
+            {
+                index = end;
+                continue;
+            }
+
+            if (!name.All(ch => char.IsLetterOrDigit(ch) || ch == '_') || !char.IsLetter(name[0]) && name[0] != '_')
+            {
+                index = end;
+                continue;
+            }
+
+            placeholders.Add((name, char.IsUpper(name[0])));
+            index = end;
+        }
+
+        return placeholders;
+    }
+
+    private static string? TryGetMapKeyLiteral(ExpressionSyntax keyExpression)
+    {
+        if (keyExpression is not LiteralExpressionSyntax literal)
+        {
+            return null;
+        }
+
+        return literal.LiteralToken.Value as string;
+    }
+
+    private static string NormalizeSqlParameterKey(string key)
+    {
+        return key.Trim().TrimStart('@', ':', '$');
     }
 
     private BoundExpression BindBuiltinDbCall(
