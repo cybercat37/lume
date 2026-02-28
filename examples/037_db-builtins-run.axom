@@ -2,13 +2,13 @@ println "DB builtins (db.exec/query/scalar)"
 
 let created = db.exec("create table users (id integer primary key, name text not null)")
 print match created {
-  Ok(v) -> v
+  Ok(v) -> str(v)
   Error(e) -> e
 }
 
 let inserted = db.exec("insert into users (id, name) values (@id, @name)", ["id": "1", "name": "Ada"])
 print match inserted {
-  Ok(v) -> v
+  Ok(v) -> str(v)
   Error(e) -> e
 }
 

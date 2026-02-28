@@ -648,4 +648,91 @@ public class CliDbVerifyCommandTests
             }
         }
     }
+
+    [Fact]
+    public void Db_verify_fails_when_query_depends_on_seed_without_seeds_flag()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        var migrationsDir = Path.Combine(tempDir, "db", "migrations");
+        var seedsDir = Path.Combine(tempDir, "db", "seeds");
+        Directory.CreateDirectory(migrationsDir);
+        Directory.CreateDirectory(seedsDir);
+        File.WriteAllText(Path.Combine(migrationsDir, "001_create_users.sql"), "create table users (id integer primary key, name text not null);");
+        File.WriteAllText(Path.Combine(seedsDir, "001_create_view.sql"), "create view seeded_users as select id, name from users;");
+
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select name from seeded_users\"\"\".all()");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("db verify failed", error.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Db_verify_applies_seed_scripts_when_seeds_flag_is_enabled()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        var migrationsDir = Path.Combine(tempDir, "db", "migrations");
+        var seedsDir = Path.Combine(tempDir, "db", "seeds");
+        Directory.CreateDirectory(migrationsDir);
+        Directory.CreateDirectory(seedsDir);
+        File.WriteAllText(Path.Combine(migrationsDir, "001_create_users.sql"), "create table users (id integer primary key, name text not null);");
+        File.WriteAllText(Path.Combine(seedsDir, "001_create_view.sql"), "create view seeded_users as select id, name from users;");
+
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select name from seeded_users\"\"\".all()");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--seeds", "--report" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("total_queries_validated=1", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
 }

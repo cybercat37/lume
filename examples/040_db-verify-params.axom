@@ -1,0 +1,9 @@
+type User { id: Int, name: String }
+
+let rows = sql"""
+select id, name
+from users
+where id = {id}
+""".all(["id": "1"])
+
+print rows

@@ -20,7 +20,7 @@ public class Program
 
         const string usage =
             "Usage: axom <build|run|check|serve|init> <file.axom|project-name> [options]\n" +
-            "   or: axom db <verify|check> <file.axom> [--report] [--plan] [--snapshot] [--compare] [--quiet|--verbose] [--cache]\n" +
+            "   or: axom db <verify|check> <file.axom> [--report] [--plan] [--snapshot] [--compare] [--seeds] [--quiet|--verbose] [--cache]\n" +
             "\n" +
             "Options:\n" +
             "  --out <dir>   Override output directory (default: out)\n" +
@@ -37,6 +37,7 @@ public class Program
             "  axom init myapp\n" +
             "  axom check hello.axom\n" +
             "  axom db verify hello.axom --report\n" +
+            "  axom db verify hello.axom --seeds\n" +
             "  axom db check hello.axom --report\n" +
             "  axom build hello.axom --out out\n" +
             "  axom run hello.axom --cache\n" +
@@ -266,6 +267,7 @@ public class Program
         var plan = false;
         var snapshot = false;
         var compare = false;
+        var seeds = false;
         Dictionary<string, string>? currentPlanHashes = null;
         List<PreparedSqlQuery>? preparedQueries = null;
 
@@ -314,6 +316,12 @@ public class Program
                 continue;
             }
 
+            if (argument == "--seeds")
+            {
+                seeds = true;
+                continue;
+            }
+
             Console.Error.WriteLine(usage);
             return 1;
         }
@@ -350,6 +358,7 @@ public class Program
         if (!TryValidateSqlAgainstEphemeralDatabase(
                 inputPath,
                 sqlLiterals,
+                includeSeeds: seeds,
                 includePlan: plan,
                 emitPlanOutput: plan && !quiet,
                 verbose,
@@ -561,6 +570,7 @@ public class Program
     private static bool TryValidateSqlAgainstEphemeralDatabase(
         string inputPath,
         IReadOnlyList<string> sqlLiterals,
+        bool includeSeeds,
         bool includePlan,
         bool emitPlanOutput,
         bool verbose,
@@ -588,7 +598,7 @@ public class Program
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
 
-            if (!TryApplyMigrations(connection, inputPath, out var migrationError))
+            if (!TryApplyMigrations(connection, inputPath, includeSeeds, out var migrationError))
             {
                 error = migrationError;
                 return false;
@@ -711,7 +721,11 @@ public class Program
         }
     }
 
-    private static bool TryApplyMigrations(SqliteConnection connection, string inputPath, out string? error)
+    private static bool TryApplyMigrations(
+        SqliteConnection connection,
+        string inputPath,
+        bool includeSeeds,
+        out string? error)
     {
         error = null;
 
@@ -722,17 +736,38 @@ public class Program
         }
 
         var migrationsDir = Path.Combine(sourceDir, "db", "migrations");
-        if (!Directory.Exists(migrationsDir))
+        if (!TryApplySqlScripts(connection, migrationsDir, "migration", out error))
+        {
+            return false;
+        }
+
+        if (!includeSeeds)
         {
             return true;
         }
 
-        var migrationFiles = Directory
-            .GetFiles(migrationsDir, "*.sql")
+        var seedsDir = Path.Combine(sourceDir, "db", "seeds");
+        return TryApplySqlScripts(connection, seedsDir, "seed", out error);
+    }
+
+    private static bool TryApplySqlScripts(
+        SqliteConnection connection,
+        string directory,
+        string scriptKind,
+        out string? error)
+    {
+        error = null;
+        if (!Directory.Exists(directory))
+        {
+            return true;
+        }
+
+        var files = Directory
+            .GetFiles(directory, "*.sql")
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
 
-        foreach (var file in migrationFiles)
+        foreach (var file in files)
         {
             try
             {
@@ -748,7 +783,7 @@ public class Program
             }
             catch (Exception ex)
             {
-                error = $"Failed to apply migration '{Path.GetFileName(file)}': {ex.Message}";
+                error = $"Failed to apply {scriptKind} '{Path.GetFileName(file)}': {ex.Message}";
                 return false;
             }
         }

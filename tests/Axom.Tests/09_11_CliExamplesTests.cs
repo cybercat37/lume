@@ -77,6 +77,73 @@ public class CliExamplesTests
         }
     }
 
+    [Fact]
+    public void Db_verify_sql_template_example_succeeds()
+    {
+        var repoRoot = FindRepoRoot();
+        var filePath = Path.Combine(repoRoot, "examples", "040_db-verify-params.axom");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(repoRoot);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--report" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("total_queries_validated=1", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+        }
+    }
+
+    [Fact]
+    public void Db_verify_sql_record_projection_example_succeeds_with_projection_mapping()
+    {
+        var repoRoot = FindRepoRoot();
+        var filePath = Path.Combine(repoRoot, "examples", "041_db-verify-record.axom");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var previousProjections = Environment.GetEnvironmentVariable("AXOM_DB_RECORD_PROJECTIONS");
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_RECORD_PROJECTIONS", "User:id,name");
+            Directory.SetCurrentDirectory(repoRoot);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--report" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("total_queries_validated=1", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_RECORD_PROJECTIONS", previousProjections);
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+        }
+    }
+
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

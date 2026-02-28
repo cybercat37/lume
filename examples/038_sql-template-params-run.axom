@@ -4,7 +4,7 @@ let created = sql"""
 create table users (id integer primary key, name text not null)
 """.exec()
 print match created {
-  Ok(v) -> v
+  Ok(v) -> str(v)
   Error(e) -> e
 }
 
@@ -12,7 +12,7 @@ let inserted = sql"""
 insert into users (id, name) values ({id}, {name})
 """.exec(["id": "2", "name": "Bob"])
 print match inserted {
-  Ok(v) -> v
+  Ok(v) -> str(v)
   Error(e) -> e
 }
 

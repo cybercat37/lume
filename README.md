@@ -483,12 +483,14 @@ axom db verify path/to/file.axom --report
 axom db verify path/to/file.axom --snapshot
 axom db verify path/to/file.axom --compare
 axom db verify path/to/file.axom --plan
+axom db verify path/to/file.axom --seeds
 ```
 
 Notes:
 
 - `--plan` currently uses provider-native `EXPLAIN QUERY PLAN` for `sqlite`.
 - `db/migrations/*.sql` next to the input file are applied on an ephemeral verification DB before query validation.
+- `--seeds` also applies `db/seeds/*.sql` (lexicographic order) on the same ephemeral DB before query validation.
 - `--snapshot` writes `.axom/query-metrics.json`.
 - `--compare` compares current query fingerprints against snapshot fingerprints and warns on plan-hash drift when available.
 - `{Record}` placeholders in runtime SQL currently require `AXOM_DB_RECORD_PROJECTIONS` mapping (example: `User:id,name`).
