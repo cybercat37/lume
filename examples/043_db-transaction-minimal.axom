@@ -1,0 +1,49 @@
+println "DB transaction minimal"
+
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let begin1 = db.begin()
+print match begin1 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let inserted1 = db.exec("insert into users (id, name) values (1, 'Ada')")
+print match inserted1 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let rollback1 = db.rollback()
+print match rollback1 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let begin2 = db.begin()
+print match begin2 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let inserted2 = db.exec("insert into users (id, name) values (2, 'Bob')")
+print match inserted2 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let commit2 = db.commit()
+print match commit2 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let total = db.scalar("select count(*) from users")
+print match total {
+  Ok(v) -> v
+  Error(e) -> e
+}

@@ -1106,7 +1106,35 @@ public class Program
             }
 
             // Copy generated Program.cs
-            File.Copy(Path.Combine(outputDir, "Program.cs"), Path.Combine(tempDir, "TempRun", "Program.cs"), true);
+            var generatedProgramPath = Path.Combine(outputDir, "Program.cs");
+            var tempProgramPath = Path.Combine(tempDir, "TempRun", "Program.cs");
+            File.Copy(generatedProgramPath, tempProgramPath, true);
+
+            var generatedSource = File.ReadAllText(generatedProgramPath);
+            if (generatedSource.Contains("using Microsoft.Data.Sqlite;", StringComparison.Ordinal))
+            {
+                var addPackageProcess = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "dotnet",
+                        Arguments = "add package Microsoft.Data.Sqlite --version 8.0.8",
+                        WorkingDirectory = Path.Combine(tempDir, "TempRun"),
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false
+                    }
+                };
+
+                addPackageProcess.Start();
+                addPackageProcess.WaitForExit();
+
+                if (addPackageProcess.ExitCode != 0)
+                {
+                    Console.Error.WriteLine("Failed to add Microsoft.Data.Sqlite package for generated run project.");
+                    return 1;
+                }
+            }
 
             // Build and run
             var runProcess = new Process
