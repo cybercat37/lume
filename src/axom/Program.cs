@@ -5,6 +5,7 @@ using Axom.Runtime.Http;
 using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Axom.Cli;
 
@@ -358,14 +359,15 @@ public class Program
 
         if (compare && !quiet)
         {
-            var snapshotPath = Path.Combine(".axom", "query-metrics.json");
-            if (!File.Exists(snapshotPath))
+            var currentQueryIds = sqlLiterals
+                .Select(DbQueryFingerprint.CreateQueryId)
+                .Distinct(StringComparer.Ordinal)
+                .ToHashSet(StringComparer.Ordinal);
+
+            if (!TryPrintSnapshotComparison(currentQueryIds, verbose, out var compareError))
             {
-                Console.WriteLine("compare_warning=snapshot_missing");
-            }
-            else
-            {
-                Console.WriteLine("compare_status=ok");
+                Console.Error.WriteLine(compareError ?? "Failed to compare query metrics snapshot.");
+                return 1;
             }
         }
 
@@ -418,6 +420,75 @@ public class Program
         var snapshotPath = Path.Combine(".axom", "query-metrics.json");
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(snapshotPath, json);
+    }
+
+    private static bool TryPrintSnapshotComparison(IReadOnlySet<string> currentQueryIds, bool verbose, out string? error)
+    {
+        error = null;
+        var snapshotPath = Path.Combine(".axom", "query-metrics.json");
+        if (!File.Exists(snapshotPath))
+        {
+            Console.WriteLine("compare_warning=snapshot_missing");
+            return true;
+        }
+
+        HashSet<string> snapshotQueryIds;
+        try
+        {
+            var json = File.ReadAllText(snapshotPath);
+            var entries = JsonSerializer.Deserialize<List<QueryMetricSnapshotEntry>>(json) ?? new List<QueryMetricSnapshotEntry>();
+            snapshotQueryIds = entries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.QueryId))
+                .Select(entry => entry.QueryId!)
+                .Distinct(StringComparer.Ordinal)
+                .ToHashSet(StringComparer.Ordinal);
+        }
+        catch (Exception ex)
+        {
+            error = $"Invalid snapshot file '{snapshotPath}': {ex.Message}";
+            return false;
+        }
+
+        var added = currentQueryIds
+            .Where(queryId => !snapshotQueryIds.Contains(queryId))
+            .OrderBy(queryId => queryId, StringComparer.Ordinal)
+            .ToList();
+        var removed = snapshotQueryIds
+            .Where(queryId => !currentQueryIds.Contains(queryId))
+            .OrderBy(queryId => queryId, StringComparer.Ordinal)
+            .ToList();
+
+        if (added.Count == 0 && removed.Count == 0)
+        {
+            Console.WriteLine("compare_status=ok");
+            return true;
+        }
+
+        if (added.Count > 0)
+        {
+            Console.WriteLine($"compare_warning=query_added count={added.Count}");
+            if (verbose)
+            {
+                foreach (var queryId in added)
+                {
+                    Console.WriteLine($"compare_added_query_id={queryId}");
+                }
+            }
+        }
+
+        if (removed.Count > 0)
+        {
+            Console.WriteLine($"compare_warning=query_removed count={removed.Count}");
+            if (verbose)
+            {
+                foreach (var queryId in removed)
+                {
+                    Console.WriteLine($"compare_removed_query_id={queryId}");
+                }
+            }
+        }
+
+        return true;
     }
 
     private static bool TryPrintPlanOutput(IReadOnlyList<string> sqlLiterals, bool verbose, out string? error)
@@ -511,6 +582,18 @@ public class Program
             || sql.StartsWith("delete", StringComparison.OrdinalIgnoreCase)
             || sql.StartsWith("update", StringComparison.OrdinalIgnoreCase)
             || sql.StartsWith("insert", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed record QueryMetricSnapshotEntry
+    {
+        [JsonPropertyName("query_id")]
+        public string? QueryId { get; init; }
+
+        [JsonPropertyName("average_duration")]
+        public int AverageDuration { get; init; }
+
+        [JsonPropertyName("execution_count")]
+        public int ExecutionCount { get; init; }
     }
 
     private static int InitProject(string[] args, string usage)
