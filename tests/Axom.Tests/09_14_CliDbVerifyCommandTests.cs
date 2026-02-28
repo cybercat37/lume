@@ -44,6 +44,44 @@ public class CliDbVerifyCommandTests
     }
 
     [Fact]
+    public void Db_check_alias_behaves_like_db_verify()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "check", filePath, "--report" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("total_queries_validated=1", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
     public void Db_verify_report_prints_aggregated_metrics()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
@@ -124,15 +162,13 @@ public class CliDbVerifyCommandTests
     }
 
     [Fact]
-    public void Db_verify_plan_requires_db_environment_configuration()
+    public void Db_verify_plan_uses_ephemeral_sqlite_without_env_configuration()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
 
-        var previousProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
-        var previousConnectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
         var originalDirectory = Directory.GetCurrentDirectory();
         var originalOut = Console.Out;
         var originalError = Console.Error;
@@ -141,21 +177,18 @@ public class CliDbVerifyCommandTests
 
         try
         {
-            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", null);
-            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", null);
             Directory.SetCurrentDirectory(tempDir);
             Console.SetOut(output);
             Console.SetError(error);
 
             var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--plan" });
 
-            Assert.Equal(1, exitCode);
-            Assert.Contains("--plan requires AXOM_DB_PROVIDER and AXOM_DB_CONNECTION_STRING", error.ToString(), StringComparison.Ordinal);
+            Assert.Equal(0, exitCode);
+            Assert.Contains("plan query_id=", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
         }
         finally
         {
-            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", previousProvider);
-            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", previousConnectionString);
             Console.SetOut(originalOut);
             Console.SetError(originalError);
             Directory.SetCurrentDirectory(originalDirectory);
@@ -171,12 +204,9 @@ public class CliDbVerifyCommandTests
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
-        var dbPath = Path.Combine(tempDir, "test.db");
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
 
-        var previousProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
-        var previousConnectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
         var originalDirectory = Directory.GetCurrentDirectory();
         var originalOut = Console.Out;
         var originalError = Console.Error;
@@ -185,8 +215,6 @@ public class CliDbVerifyCommandTests
 
         try
         {
-            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", "sqlite");
-            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", $"Data Source={dbPath}");
             Directory.SetCurrentDirectory(tempDir);
             Console.SetOut(output);
             Console.SetError(error);
@@ -200,8 +228,6 @@ public class CliDbVerifyCommandTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", previousProvider);
-            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", previousConnectionString);
             Console.SetOut(originalOut);
             Console.SetError(originalError);
             Directory.SetCurrentDirectory(originalDirectory);
@@ -425,12 +451,9 @@ public class CliDbVerifyCommandTests
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
-        var dbPath = Path.Combine(tempDir, "test.db");
         var filePath = Path.Combine(tempDir, "test.axom");
         File.WriteAllText(filePath, "print sql\"\"\"select {id}\"\"\".one([\"id\": \"1\"])");
 
-        var previousProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
-        var previousConnectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
         var originalDirectory = Directory.GetCurrentDirectory();
         var originalOut = Console.Out;
         var originalError = Console.Error;
@@ -439,8 +462,6 @@ public class CliDbVerifyCommandTests
 
         try
         {
-            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", "sqlite");
-            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", $"Data Source={dbPath}");
             Directory.SetCurrentDirectory(tempDir);
             Console.SetOut(output);
             Console.SetError(error);
@@ -448,13 +469,176 @@ public class CliDbVerifyCommandTests
             var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--plan", "--verbose" });
 
             Assert.Equal(0, exitCode);
-            Assert.Contains("plan skipped=query_template", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("plan query_id=", output.ToString(), StringComparison.Ordinal);
             Assert.Equal(string.Empty, error.ToString());
         }
         finally
         {
-            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", previousProvider);
-            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", previousConnectionString);
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Db_verify_snapshot_with_plan_includes_plan_hash()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--plan", "--snapshot" });
+
+            Assert.Equal(0, exitCode);
+            var snapshotPath = Path.Combine(tempDir, ".axom", "query-metrics.json");
+            var snapshot = File.ReadAllText(snapshotPath);
+            Assert.Contains("plan_hash", snapshot, StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Db_verify_compare_with_plan_warns_when_snapshot_plan_hash_differs()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "test.axom");
+        var sql = "select 1";
+        var queryId = Axom.Runtime.Db.DbQueryFingerprint.CreateQueryId(sql);
+        File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
+        Directory.CreateDirectory(Path.Combine(tempDir, ".axom"));
+        File.WriteAllText(
+            Path.Combine(tempDir, ".axom", "query-metrics.json"),
+            $"[{{\"query_id\":\"{queryId}\",\"average_duration\":0,\"execution_count\":0,\"plan_hash\":\"deadbeef\"}}]");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--compare", "--plan" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("compare_warning=plan_hash_changed count=1", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Db_verify_applies_migrations_next_to_input_file()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        var migrationsDir = Path.Combine(tempDir, "db", "migrations");
+        Directory.CreateDirectory(migrationsDir);
+        File.WriteAllText(Path.Combine(migrationsDir, "001_create_users.sql"), "create table users (id integer primary key, name text not null);");
+
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select name from users\"\"\".all()");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--report" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("total_queries_validated=1", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Db_verify_returns_error_when_migration_application_fails()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        var migrationsDir = Path.Combine(tempDir, "db", "migrations");
+        Directory.CreateDirectory(migrationsDir);
+        File.WriteAllText(Path.Combine(migrationsDir, "001_invalid.sql"), "create table users (");
+
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Failed to apply migration", error.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
             Console.SetOut(originalOut);
             Console.SetError(originalError);
             Directory.SetCurrentDirectory(originalDirectory);

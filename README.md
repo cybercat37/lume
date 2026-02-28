@@ -467,6 +467,30 @@ dotnet run --project src/axom -- check path/to/file.axom
 
 Validates the source code without generating output files.
 
+### Verify DB Queries (MVP)
+
+```bash
+axom db verify path/to/file.axom
+# compatibility alias
+axom db check path/to/file.axom
+```
+
+Optional reporting flags:
+
+```bash
+axom db verify path/to/file.axom --report
+axom db verify path/to/file.axom --snapshot
+axom db verify path/to/file.axom --compare
+axom db verify path/to/file.axom --plan
+```
+
+Notes:
+
+- `--plan` currently uses provider-native `EXPLAIN QUERY PLAN` for `sqlite`.
+- `db/migrations/*.sql` next to the input file are applied on an ephemeral verification DB before query validation.
+- `--snapshot` writes `.axom/query-metrics.json`.
+- `--compare` compares current query fingerprints against snapshot fingerprints.
+
 ### Compile to C#
 
 ```bash

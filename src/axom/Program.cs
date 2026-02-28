@@ -3,7 +3,10 @@ using Axom.Compiler.Http.Routing;
 using Axom.Runtime.Db;
 using Axom.Runtime.Http;
 using Microsoft.Data.Sqlite;
+using System.Security.Cryptography;
 using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -17,7 +20,7 @@ public class Program
 
         const string usage =
             "Usage: axom <build|run|check|serve|init> <file.axom|project-name> [options]\n" +
-            "   or: axom db verify <file.axom> [--report] [--plan] [--snapshot] [--compare] [--quiet|--verbose] [--cache]\n" +
+            "   or: axom db <verify|check> <file.axom> [--report] [--plan] [--snapshot] [--compare] [--quiet|--verbose] [--cache]\n" +
             "\n" +
             "Options:\n" +
             "  --out <dir>   Override output directory (default: out)\n" +
@@ -34,6 +37,7 @@ public class Program
             "  axom init myapp\n" +
             "  axom check hello.axom\n" +
             "  axom db verify hello.axom --report\n" +
+            "  axom db check hello.axom --report\n" +
             "  axom build hello.axom --out out\n" +
             "  axom run hello.axom --cache\n" +
             "  axom serve hello.axom --host 127.0.0.1 --port 8080\n";
@@ -240,7 +244,15 @@ public class Program
 
     private static int HandleDbCommand(string[] args, string usage)
     {
-        if (args.Length < 3 || !string.Equals(args[1], "verify", StringComparison.Ordinal))
+        if (args.Length < 3)
+        {
+            Console.Error.WriteLine(usage);
+            return 1;
+        }
+
+        var dbSubcommand = args[1];
+        if (!string.Equals(dbSubcommand, "verify", StringComparison.Ordinal)
+            && !string.Equals(dbSubcommand, "check", StringComparison.Ordinal))
         {
             Console.Error.WriteLine(usage);
             return 1;
@@ -254,6 +266,8 @@ public class Program
         var plan = false;
         var snapshot = false;
         var compare = false;
+        Dictionary<string, string>? currentPlanHashes = null;
+        List<PreparedSqlQuery>? preparedQueries = null;
 
         for (var i = 3; i < args.Length; i++)
         {
@@ -333,24 +347,29 @@ public class Program
         }
 
         var sqlLiterals = ExtractSqlLiterals(source);
-        if (report && !quiet)
+        if (!TryValidateSqlAgainstEphemeralDatabase(
+                inputPath,
+                sqlLiterals,
+                includePlan: plan,
+                emitPlanOutput: plan && !quiet,
+                verbose,
+                out preparedQueries,
+                out currentPlanHashes,
+                out var verifyError))
         {
-            Console.WriteLine($"total_queries_validated={sqlLiterals.Count}");
-            Console.WriteLine("average_duration_ms=0");
+            Console.Error.WriteLine(verifyError ?? "Failed to verify SQL queries.");
+            return 1;
         }
 
-        if (plan && !quiet)
+        if (report && !quiet)
         {
-            if (!TryPrintPlanOutput(sqlLiterals, verbose, out var planError))
-            {
-                Console.Error.WriteLine(planError ?? "Failed to generate query plan output.");
-                return 1;
-            }
+            Console.WriteLine($"total_queries_validated={preparedQueries.Count}");
+            Console.WriteLine("average_duration_ms=0");
         }
 
         if (snapshot)
         {
-            WriteMetricsSnapshot(sqlLiterals);
+            WriteMetricsSnapshot(preparedQueries, currentPlanHashes);
             if (!quiet)
             {
                 Console.WriteLine("snapshot_written=.axom/query-metrics.json");
@@ -359,12 +378,12 @@ public class Program
 
         if (compare && !quiet)
         {
-            var currentQueryIds = sqlLiterals
-                .Select(DbQueryFingerprint.CreateQueryId)
+            var currentQueryIds = preparedQueries
+                .Select(query => query.QueryId)
                 .Distinct(StringComparer.Ordinal)
                 .ToHashSet(StringComparer.Ordinal);
 
-            if (!TryPrintSnapshotComparison(currentQueryIds, verbose, out var compareError))
+            if (!TryPrintSnapshotComparison(currentQueryIds, currentPlanHashes, verbose, out var compareError))
             {
                 Console.Error.WriteLine(compareError ?? "Failed to compare query metrics snapshot.");
                 return 1;
@@ -405,14 +424,17 @@ public class Program
         return values;
     }
 
-    private static void WriteMetricsSnapshot(IReadOnlyList<string> sqlLiterals)
+    private static void WriteMetricsSnapshot(
+        IReadOnlyList<PreparedSqlQuery> queries,
+        IReadOnlyDictionary<string, string>? planHashes)
     {
-        var payload = sqlLiterals
-            .Select(sql => new
+        var payload = queries
+            .Select(query => new
             {
-                query_id = DbQueryFingerprint.CreateQueryId(sql),
+                query_id = query.QueryId,
                 average_duration = 0,
-                execution_count = 0
+                execution_count = 0,
+                plan_hash = TryGetPlanHash(query.QueryId, planHashes)
             })
             .ToList();
 
@@ -422,7 +444,11 @@ public class Program
         File.WriteAllText(snapshotPath, json);
     }
 
-    private static bool TryPrintSnapshotComparison(IReadOnlySet<string> currentQueryIds, bool verbose, out string? error)
+    private static bool TryPrintSnapshotComparison(
+        IReadOnlySet<string> currentQueryIds,
+        IReadOnlyDictionary<string, string>? currentPlanHashes,
+        bool verbose,
+        out string? error)
     {
         error = null;
         var snapshotPath = Path.Combine(".axom", "query-metrics.json");
@@ -433,10 +459,11 @@ public class Program
         }
 
         HashSet<string> snapshotQueryIds;
+        List<QueryMetricSnapshotEntry> entries;
         try
         {
             var json = File.ReadAllText(snapshotPath);
-            var entries = JsonSerializer.Deserialize<List<QueryMetricSnapshotEntry>>(json) ?? new List<QueryMetricSnapshotEntry>();
+            entries = JsonSerializer.Deserialize<List<QueryMetricSnapshotEntry>>(json) ?? new List<QueryMetricSnapshotEntry>();
             snapshotQueryIds = entries
                 .Where(entry => !string.IsNullOrWhiteSpace(entry.QueryId))
                 .Select(entry => entry.QueryId!)
@@ -458,10 +485,33 @@ public class Program
             .OrderBy(queryId => queryId, StringComparer.Ordinal)
             .ToList();
 
+        var planHashChanged = new List<string>();
+        if (currentPlanHashes is not null)
+        {
+            foreach (var entry in entries)
+            {
+                if (string.IsNullOrWhiteSpace(entry.QueryId)
+                    || string.IsNullOrWhiteSpace(entry.PlanHash)
+                    || !currentPlanHashes.TryGetValue(entry.QueryId!, out var currentPlanHash)
+                    || string.IsNullOrWhiteSpace(currentPlanHash))
+                {
+                    continue;
+                }
+
+                if (!string.Equals(entry.PlanHash, currentPlanHash, StringComparison.Ordinal))
+                {
+                    planHashChanged.Add(entry.QueryId!);
+                }
+            }
+        }
+
         if (added.Count == 0 && removed.Count == 0)
         {
-            Console.WriteLine("compare_status=ok");
-            return true;
+            if (planHashChanged.Count == 0)
+            {
+                Console.WriteLine("compare_status=ok");
+                return true;
+            }
         }
 
         if (added.Count > 0)
@@ -488,25 +538,48 @@ public class Program
             }
         }
 
+        if (planHashChanged.Count > 0)
+        {
+            Console.WriteLine($"compare_warning=plan_hash_changed count={planHashChanged.Count}");
+            if (verbose)
+            {
+                foreach (var queryId in planHashChanged.OrderBy(queryId => queryId, StringComparer.Ordinal))
+                {
+                    Console.WriteLine($"compare_plan_hash_changed_query_id={queryId}");
+                }
+            }
+        }
+
+        if (added.Count == 0 && removed.Count == 0 && planHashChanged.Count == 0)
+        {
+            Console.WriteLine("compare_status=ok");
+        }
+
         return true;
     }
 
-    private static bool TryPrintPlanOutput(IReadOnlyList<string> sqlLiterals, bool verbose, out string? error)
+    private static bool TryValidateSqlAgainstEphemeralDatabase(
+        string inputPath,
+        IReadOnlyList<string> sqlLiterals,
+        bool includePlan,
+        bool emitPlanOutput,
+        bool verbose,
+        out List<PreparedSqlQuery> preparedQueries,
+        out Dictionary<string, string>? planHashes,
+        out string? error)
     {
+        preparedQueries = new List<PreparedSqlQuery>();
+        planHashes = includePlan ? new Dictionary<string, string>(StringComparer.Ordinal) : null;
         error = null;
 
-        var provider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
-        var connectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+        var tempRoot = Path.Combine(Path.GetTempPath(), "axom_db_verify", Guid.NewGuid().ToString("N", System.Globalization.CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(tempRoot);
+        var dbPath = Path.Combine(tempRoot, "verify.db");
+        var connectionString = $"Data Source={dbPath}";
 
-        if (string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(connectionString))
+        if (!TryCreateRecordProjectionResolverFromEnvironment(out var recordResolver, out var resolverError))
         {
-            error = "--plan requires AXOM_DB_PROVIDER and AXOM_DB_CONNECTION_STRING.";
-            return false;
-        }
-
-        if (!string.Equals(provider, "sqlite", StringComparison.OrdinalIgnoreCase))
-        {
-            error = $"--plan currently supports only sqlite provider. Received '{provider}'.";
+            error = resolverError;
             return false;
         }
 
@@ -514,6 +587,12 @@ public class Program
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
+
+            if (!TryApplyMigrations(connection, inputPath, out var migrationError))
+            {
+                error = migrationError;
+                return false;
+            }
 
             foreach (var sql in sqlLiterals)
             {
@@ -523,13 +602,38 @@ public class Program
                     continue;
                 }
 
-                if (sql.Contains('{'))
+                var queryId = DbQueryFingerprint.CreateQueryId(sql);
+                var seedParameters = BuildVerificationParameterSeed(sql);
+                if (!SqlTemplateBinder.TryBind(sql, seedParameters, recordResolver, out var boundSql, out var boundParameters, out var bindError))
                 {
-                    if (verbose)
-                    {
-                        Console.WriteLine($"plan skipped=query_template query_id={DbQueryFingerprint.CreateQueryId(sql)}");
-                    }
+                    error = $"db verify failed for query_id={queryId}: {bindError}";
+                    return false;
+                }
 
+                using var prepareCommand = connection.CreateCommand();
+                prepareCommand.CommandText = boundSql;
+                foreach (var (name, value) in boundParameters)
+                {
+                    var parameter = prepareCommand.CreateParameter();
+                    parameter.ParameterName = name.StartsWith('@') ? name : "@" + name;
+                    parameter.Value = value ?? 0;
+                    prepareCommand.Parameters.Add(parameter);
+                }
+
+                try
+                {
+                    prepareCommand.Prepare();
+                }
+                catch (Exception ex)
+                {
+                    error = $"db verify failed for query_id={queryId}: {ex.Message}";
+                    return false;
+                }
+
+                preparedQueries.Add(new PreparedSqlQuery(queryId, sql, boundSql, boundParameters));
+
+                if (!includePlan)
+                {
                     continue;
                 }
 
@@ -537,18 +641,28 @@ public class Program
                 {
                     if (verbose)
                     {
-                        Console.WriteLine($"plan skipped=statement_kind query_id={DbQueryFingerprint.CreateQueryId(sql)}");
+                        Console.WriteLine($"plan skipped=statement_kind query_id={queryId}");
                     }
 
                     continue;
                 }
 
                 using var command = connection.CreateCommand();
-                command.CommandText = "EXPLAIN QUERY PLAN " + sql;
+                command.CommandText = "EXPLAIN QUERY PLAN " + boundSql;
+                foreach (var (name, value) in boundParameters)
+                {
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = name.StartsWith('@') ? name : "@" + name;
+                    parameter.Value = value ?? 0;
+                    command.Parameters.Add(parameter);
+                }
 
                 using var reader = command.ExecuteReader();
-                var queryId = DbQueryFingerprint.CreateQueryId(sql);
-                Console.WriteLine($"plan query_id={queryId}");
+                var details = new List<string>();
+                if (emitPlanOutput)
+                {
+                    Console.WriteLine($"plan query_id={queryId}");
+                }
 
                 var hasRows = false;
                 while (reader.Read())
@@ -557,18 +671,204 @@ public class Program
                     var detail = reader.FieldCount > 3 && !reader.IsDBNull(3)
                         ? Convert.ToString(reader.GetValue(3))
                         : string.Empty;
-                    Console.WriteLine($"plan detail={detail}");
+                    details.Add(detail ?? string.Empty);
+                    if (emitPlanOutput)
+                    {
+                        Console.WriteLine($"plan detail={detail}");
+                    }
                 }
 
                 if (!hasRows)
                 {
-                    Console.WriteLine("plan detail=<empty>");
+                    details.Add("<empty>");
+                    if (emitPlanOutput)
+                    {
+                        Console.WriteLine("plan detail=<empty>");
+                    }
+                }
+
+                var planHash = ComputePlanHash(details);
+                planHashes![queryId] = planHash;
+                if (emitPlanOutput && verbose)
+                {
+                    Console.WriteLine($"plan hash={planHash}");
                 }
             }
 
             return true;
         }
         catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    private static bool TryApplyMigrations(SqliteConnection connection, string inputPath, out string? error)
+    {
+        error = null;
+
+        var sourceDir = Path.GetDirectoryName(Path.GetFullPath(inputPath));
+        if (string.IsNullOrWhiteSpace(sourceDir))
+        {
+            return true;
+        }
+
+        var migrationsDir = Path.Combine(sourceDir, "db", "migrations");
+        if (!Directory.Exists(migrationsDir))
+        {
+            return true;
+        }
+
+        var migrationFiles = Directory
+            .GetFiles(migrationsDir, "*.sql")
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToList();
+
+        foreach (var file in migrationFiles)
+        {
+            try
+            {
+                var script = File.ReadAllText(file);
+                if (string.IsNullOrWhiteSpace(script))
+                {
+                    continue;
+                }
+
+                using var command = connection.CreateCommand();
+                command.CommandText = script;
+                command.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                error = $"Failed to apply migration '{Path.GetFileName(file)}': {ex.Message}";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static IReadOnlyDictionary<string, object?> BuildVerificationParameterSeed(string sql)
+    {
+        var seed = new Dictionary<string, object?>(StringComparer.Ordinal);
+        var inSingleQuotedString = false;
+
+        for (var i = 0; i < sql.Length; i++)
+        {
+            var current = sql[i];
+            if (inSingleQuotedString)
+            {
+                if (current == '\'' && i + 1 < sql.Length && sql[i + 1] == '\'')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (current == '\'')
+                {
+                    inSingleQuotedString = false;
+                }
+
+                continue;
+            }
+
+            if (current == '\'')
+            {
+                inSingleQuotedString = true;
+                continue;
+            }
+
+            if (current != '{')
+            {
+                continue;
+            }
+
+            var end = sql.IndexOf('}', i + 1);
+            if (end <= i + 1)
+            {
+                continue;
+            }
+
+            var placeholder = sql.Substring(i + 1, end - i - 1).Trim();
+            if (placeholder.Length == 0)
+            {
+                i = end;
+                continue;
+            }
+
+            if (!Regex.IsMatch(placeholder, "^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant))
+            {
+                i = end;
+                continue;
+            }
+
+            if (char.IsUpper(placeholder[0]))
+            {
+                i = end;
+                continue;
+            }
+
+            if (!seed.ContainsKey(placeholder))
+            {
+                seed[placeholder] = 0;
+            }
+
+            i = end;
+        }
+
+        return seed;
+    }
+
+    private static bool TryCreateRecordProjectionResolverFromEnvironment(
+        out ISqlRecordProjectionResolver? resolver,
+        out string? error)
+    {
+        resolver = null;
+        error = null;
+
+        var raw = Environment.GetEnvironmentVariable("AXOM_DB_RECORD_PROJECTIONS");
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return true;
+        }
+
+        var map = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        var declarations = raw.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var declaration in declarations)
+        {
+            var parts = declaration.Split(':', StringSplitOptions.TrimEntries);
+            if (parts.Length != 2)
+            {
+                error = $"Invalid AXOM_DB_RECORD_PROJECTIONS entry '{declaration}'. Expected format Record:col1,col2.";
+                return false;
+            }
+
+            var columns = parts[1]
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToArray();
+            if (columns.Length == 0)
+            {
+                error = $"Invalid AXOM_DB_RECORD_PROJECTIONS entry '{declaration}'. Record '{parts[0]}' must list at least one column.";
+                return false;
+            }
+
+            map[parts[0]] = columns;
+        }
+
+        try
+        {
+            resolver = new DictionarySqlRecordProjectionResolver(map);
+            return true;
+        }
+        catch (ArgumentException ex)
         {
             error = ex.Message;
             return false;
@@ -584,6 +884,32 @@ public class Program
             || sql.StartsWith("insert", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string ComputePlanHash(IReadOnlyList<string> details)
+    {
+        var normalized = string.Join("\n", details).Trim();
+        var bytes = Encoding.UTF8.GetBytes(normalized);
+        var hash = SHA256.HashData(bytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static string? TryGetPlanHash(string queryId, IReadOnlyDictionary<string, string>? planHashes)
+    {
+        if (planHashes is null)
+        {
+            return null;
+        }
+
+        return planHashes.TryGetValue(queryId, out var planHash)
+            ? planHash
+            : null;
+    }
+
+    private sealed record PreparedSqlQuery(
+        string QueryId,
+        string OriginalSql,
+        string BoundSql,
+        IReadOnlyDictionary<string, object?> Parameters);
+
     private sealed record QueryMetricSnapshotEntry
     {
         [JsonPropertyName("query_id")]
@@ -594,6 +920,9 @@ public class Program
 
         [JsonPropertyName("execution_count")]
         public int ExecutionCount { get; init; }
+
+        [JsonPropertyName("plan_hash")]
+        public string? PlanHash { get; init; }
     }
 
     private static int InitProject(string[] args, string usage)
