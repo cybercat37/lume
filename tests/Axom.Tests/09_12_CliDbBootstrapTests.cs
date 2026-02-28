@@ -140,6 +140,8 @@ print match inserted {
   Error(_) -> -1
 }
 
+type User { id: Int, name: String }
+
 let rows = sql"""
 select {User} from users where id = {id}
 """.all(["id": "1"])
