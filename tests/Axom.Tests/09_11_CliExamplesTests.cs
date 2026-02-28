@@ -224,6 +224,55 @@ public class CliExamplesTests
         }
     }
 
+    [Fact]
+    public void Run_transaction_block_example_succeeds_with_sqlite_bootstrap()
+    {
+        var repoRoot = FindRepoRoot();
+        var filePath = Path.Combine(repoRoot, "examples", "044_transaction-block-minimal.axom");
+        var outDir = Path.Combine(Path.GetTempPath(), $"axom_cli_examples_{Guid.NewGuid():N}");
+        var dbPath = Path.Combine(Path.GetTempPath(), $"axom_cli_examples_txblock_{Guid.NewGuid():N}.db");
+        Directory.CreateDirectory(outDir);
+
+        var previousProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
+        var previousConnection = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", "sqlite");
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", $"Data Source={dbPath}");
+            Directory.SetCurrentDirectory(repoRoot);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "run", filePath, "--quiet", "--out", outDir });
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal(string.Empty, error.ToString());
+            Assert.True(File.Exists(Path.Combine(outDir, "Program.cs")));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", previousProvider);
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", previousConnection);
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+
+            if (Directory.Exists(outDir))
+            {
+                Directory.Delete(outDir, true);
+            }
+
+            if (File.Exists(dbPath))
+            {
+                File.Delete(dbPath);
+            }
+        }
+    }
+
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

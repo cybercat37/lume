@@ -27,6 +27,7 @@ public sealed class Parser
         TokenKind.FromKeyword,
         TokenKind.At,
         TokenKind.ScopeKeyword,
+        TokenKind.TransactionKeyword,
         TokenKind.MatchKeyword,
         TokenKind.Identifier,
         TokenKind.InputKeyword,
@@ -127,6 +128,7 @@ public sealed class Parser
             TokenKind.OpenBrace => ParseBlockStatement(),
             TokenKind.LetKeyword => ParseVariableDeclaration(),
             TokenKind.ScopeKeyword => ParseScopeStatement(),
+            TokenKind.TransactionKeyword => ParseTransactionStatement(),
             TokenKind.PrintKeyword => ParsePrintStatement(),
             TokenKind.PrintlnKeyword => ParsePrintStatement(),
             TokenKind.ReturnKeyword => ParseReturnStatement(),
@@ -350,6 +352,13 @@ public sealed class Parser
         var scopeKeyword = MatchToken(TokenKind.ScopeKeyword, "scope");
         var body = (BlockStatementSyntax)ParseBlockStatement();
         return new ScopeStatementSyntax(scopeKeyword, body);
+    }
+
+    private StatementSyntax ParseTransactionStatement()
+    {
+        var transactionKeyword = MatchToken(TokenKind.TransactionKeyword, "transaction");
+        var body = (BlockStatementSyntax)ParseBlockStatement();
+        return new TransactionStatementSyntax(transactionKeyword, body);
     }
 
     private StatementSyntax ParseTypeDeclaration()

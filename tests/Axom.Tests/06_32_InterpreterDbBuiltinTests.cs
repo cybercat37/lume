@@ -301,6 +301,50 @@ print match countAfterCommit {
         }
     }
 
+    [Fact]
+    public void Transaction_statement_commits_block_changes()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+        DbBuiltinGateway.Configure(adapter);
+
+        try
+        {
+            const string source = """
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+transaction {
+  let inserted = db.exec("insert into users (id, name) values (7, 'Zoe')")
+  print match inserted {
+    Ok(v) -> v
+    Error(_) -> -1
+  }
+}
+
+let count = db.scalar("select count(*) from users")
+print match count {
+  Ok(v) -> v
+  Error(e) -> e
+}
+""";
+
+            var syntaxTree = SyntaxTree.Parse(new SourceText(source, "test.axom"));
+            var interpreter = new Interpreter();
+            var result = interpreter.Run(syntaxTree);
+
+            Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error);
+            Assert.Equal("0\n1\n1", result.Output);
+        }
+        finally
+        {
+            DbBuiltinGateway.Reset();
+        }
+    }
+
     private sealed class SqliteFixture : IDisposable
     {
         private readonly string dbPath;

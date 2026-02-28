@@ -18,6 +18,7 @@ public enum TokenKind
     MatchKeyword,
     WhenKeyword,
     ScopeKeyword,
+    TransactionKeyword,
     SpawnKeyword,
     JoinKeyword,
     PubKeyword,

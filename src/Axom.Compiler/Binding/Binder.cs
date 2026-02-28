@@ -546,6 +546,8 @@ public sealed class Binder
                 {
                     scopeStatementDepth--;
                 }
+            case TransactionStatementSyntax transactionStatement:
+                return BindTransactionStatement(transactionStatement);
             case ExpressionStatementSyntax expressionStatement:
                 var expression = BindExpression(expressionStatement.Expression);
                 if (expression.Type.ResultValueType is not null)
@@ -4005,6 +4007,29 @@ public sealed class Binder
         }
 
         return new BoundDeferStatement(new BoundExpressionStatement(expression));
+    }
+
+    private BoundStatement BindTransactionStatement(TransactionStatementSyntax transactionStatement)
+    {
+        var beginCall = new BoundCallExpression(
+            new BoundFunctionExpression(BuiltinFunctions.DbBegin),
+            Array.Empty<BoundExpression>(),
+            BuiltinFunctions.DbBegin.ReturnType);
+        var commitCall = new BoundCallExpression(
+            new BoundFunctionExpression(BuiltinFunctions.DbCommit),
+            Array.Empty<BoundExpression>(),
+            BuiltinFunctions.DbCommit.ReturnType);
+
+        var body = (BoundBlockStatement)BindBlockStatement(transactionStatement.Body);
+
+        var statements = new List<BoundStatement>
+        {
+            new BoundExpressionStatement(beginCall),
+            body,
+            new BoundExpressionStatement(commitCall)
+        };
+
+        return new BoundBlockStatement(statements, isScopeBlock: true);
     }
 
     private BoundExpression BindLambdaExpression(LambdaExpressionSyntax lambda)

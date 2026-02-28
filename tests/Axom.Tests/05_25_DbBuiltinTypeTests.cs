@@ -187,4 +187,23 @@ print sql"""update users set name='x' returning {User}""".exec()
             diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
             && diagnostic.Message.Contains("expects no arguments", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void Transaction_statement_syntax_binds_successfully()
+    {
+        const string sourceText = """
+transaction {
+  let x = db.begin()
+  print x
+}
+""";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+            diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+            && diagnostic.Message.Contains("Unexpected", StringComparison.Ordinal));
+    }
 }

@@ -412,6 +412,7 @@ public sealed class Lexer
             "match" => TokenKind.MatchKeyword,
             "when" => TokenKind.WhenKeyword,
             "scope" => TokenKind.ScopeKeyword,
+            "transaction" => TokenKind.TransactionKeyword,
             "spawn" => TokenKind.SpawnKeyword,
             "join" => TokenKind.JoinKeyword,
             "pub" => TokenKind.PubKeyword,
