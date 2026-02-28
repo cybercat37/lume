@@ -174,7 +174,8 @@ LetStmt := "let" Identifier IntentAnnotation? "=" Expression
 - HTTP client v1 is partial: baseline client/request builders are implemented and the
   pipeline-first stdlib module (`http`) remains the target shape.
 - DB runtime v1 is partial: `db.exec(...)`, `db.query(...)`, and `db.scalar(...)` are available with provider bootstrap through environment configuration.
-- Typed SQL module (`sql"""..."""` with `{param}` and `{Record}`) and build-time SQL verification are planned.
+- Typed SQL module is partial: `sql"""..."""` plus `.one/.all/.exec` sugar are available, with runtime `{param}` binding and baseline `{Record}` projection via explicit resolver mapping.
+- Build-time SQL verification is available in MVP form via `axom db verify` / `axom db check` (ephemeral SQLite validation + local migration apply).
 - Auth/security DSL remains planned.
 - Reference docs: `docs/roadmap/http-db-plan.md`, `docs/proposals/http-db-reference.md`, `sql.md`, `docs/roadmap/query-observability-performance-instrumentation.md`.
 

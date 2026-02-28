@@ -991,7 +991,7 @@ fn handler(ctx) => OkJson({ "now": Time.nowUtcIso8601() })
 
 ### 1. Obiettivo
 
-Estendere `sql"..."` con marcatori tipati che:
+Estendere `sql"""..."""` con marcatori tipati che:
 
 * dichiarano implicitamente il tipo di ritorno della query,
 * espandono record in liste di colonne,
@@ -1000,7 +1000,7 @@ Estendere `sql"..."` con marcatori tipati che:
 
 ### 2. Sintassi
 
-All’interno di `sql"..."` sono validi tre costrutti:
+All’interno di `sql"""..."""` sono validi tre costrutti:
 
 1. **Proiezione di record**
 

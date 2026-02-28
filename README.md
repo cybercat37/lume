@@ -290,7 +290,8 @@ Current HTTP + DB track status (Early/Partial):
 - DB runtime baseline is available with `db.exec(...)`, `db.query(...)`, and `db.scalar(...)` builtins wired through a provider adapter.
 - CLI/runtime DB bootstrap is environment-driven (`AXOM_DB_PROVIDER=sqlite`, `AXOM_DB_CONNECTION_STRING=...`).
 - DB query observability is opt-in and environment-controlled (`AXOM_DB_LOG*`, `AXOM_DB_PROFILE`, `AXOM_DB_PLAN*`, `AXOM_DB_SLOW_MS`).
-- Typed SQL module (`sql"""..."""`, `{param}`, `{Record}`, `.one/.all/.exec`, `transaction {}`) and build-time verification (`axom db verify`) are the next M18 lane.
+- Typed SQL module is partial: `sql"""..."""` plus `.one/.all/.exec` sugar are implemented; `{param}` binding is implemented at runtime, `{Record}` projection currently requires explicit projection mapping configuration.
+- Build-time verification (`axom db verify`, alias `axom db check`) is available in MVP form with ephemeral DB validation and migration apply.
 - HTTP client and auth/security DSL remain in the M13-M21 track.
 
 Design references:
@@ -489,7 +490,8 @@ Notes:
 - `--plan` currently uses provider-native `EXPLAIN QUERY PLAN` for `sqlite`.
 - `db/migrations/*.sql` next to the input file are applied on an ephemeral verification DB before query validation.
 - `--snapshot` writes `.axom/query-metrics.json`.
-- `--compare` compares current query fingerprints against snapshot fingerprints.
+- `--compare` compares current query fingerprints against snapshot fingerprints and warns on plan-hash drift when available.
+- `{Record}` placeholders in runtime SQL currently require `AXOM_DB_RECORD_PROJECTIONS` mapping (example: `User:id,name`).
 
 ### Compile to C#
 

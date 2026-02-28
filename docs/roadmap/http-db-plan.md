@@ -168,7 +168,13 @@ Tests:
 
 ## M18: Typed SQL Interpolation v1
 
-Objective: ship `sql"..."` with typed parameters and baseline typed result inference.
+Objective: ship `sql"""..."""` with typed parameters and baseline typed result inference.
+
+Current status (partial):
+- `sql"""..."""` literal and `.one/.all/.exec` sugar are implemented.
+- `{param}` runtime binding is implemented.
+- `{Record}` runtime projection currently uses explicit mapping configuration.
+- `axom db verify` / `axom db check` command lane is implemented with ephemeral DB + local migration apply.
 
 Normative direction (see `sql.md`):
 - Primary literal form is `sql"""..."""` with two extensions only: `{param}` binding and `{Record}` row mapping.

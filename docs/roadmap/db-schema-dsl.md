@@ -122,7 +122,7 @@ Planned flow:
 
 1. start ephemeral Postgres
 2. apply migrations from `db/migrations/`
-3. validate each `sql"..."` query against real engine metadata
+3. validate each `sql"""..."""` query against real engine metadata
 4. fail check on syntax/type/projection mismatch
 
 Fallback mode (`--offline`) can use snapshot-only validation when DB tooling is unavailable.

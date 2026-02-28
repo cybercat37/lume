@@ -2,7 +2,21 @@
 
 ## Status
 
-Draft
+Draft (partially implemented)
+
+Current implementation snapshot:
+
+* `sql"""..."""` literals are supported.
+* `.one()`, `.all()`, `.exec()` sugar is wired to DB builtins.
+* `{param}` runtime binding is implemented.
+* `{Record}` runtime projection is implemented via explicit projection map (`AXOM_DB_RECORD_PROJECTIONS`).
+* `axom db verify` / `axom db check` validates queries on an ephemeral SQLite database and applies `db/migrations/*.sql` next to the input file.
+
+Still planned to fully match this RFC:
+
+* compile-time type validation for `{param}` and `{Record}`.
+* richer provider coverage and parity (PostgreSQL-first target).
+* explicit `transaction {}` language/runtime lane.
 
 Related RFCs:
 
