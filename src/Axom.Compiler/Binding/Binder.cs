@@ -4015,6 +4015,10 @@ public sealed class Binder
             new BoundFunctionExpression(BuiltinFunctions.DbBegin),
             Array.Empty<BoundExpression>(),
             BuiltinFunctions.DbBegin.ReturnType);
+        var rollbackCall = new BoundCallExpression(
+            new BoundFunctionExpression(BuiltinFunctions.DbRollback),
+            Array.Empty<BoundExpression>(),
+            BuiltinFunctions.DbRollback.ReturnType);
         var commitCall = new BoundCallExpression(
             new BoundFunctionExpression(BuiltinFunctions.DbCommit),
             Array.Empty<BoundExpression>(),
@@ -4022,11 +4026,19 @@ public sealed class Binder
 
         var body = (BoundBlockStatement)BindBlockStatement(transactionStatement.Body);
 
+        var guardedBodyStatements = new List<BoundStatement>
+        {
+            new BoundDeferStatement(new BoundExpressionStatement(rollbackCall))
+        };
+        guardedBodyStatements.AddRange(body.Statements);
+        guardedBodyStatements.Add(new BoundExpressionStatement(commitCall));
+
+        var guardedBody = new BoundBlockStatement(guardedBodyStatements, isScopeBlock: true);
+
         var statements = new List<BoundStatement>
         {
             new BoundExpressionStatement(beginCall),
-            body,
-            new BoundExpressionStatement(commitCall)
+            guardedBody
         };
 
         return new BoundBlockStatement(statements, isScopeBlock: true);

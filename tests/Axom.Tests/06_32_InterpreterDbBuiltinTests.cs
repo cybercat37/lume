@@ -345,6 +345,56 @@ print match count {
         }
     }
 
+    [Fact]
+    public void Transaction_statement_rolls_back_automatically_on_early_return()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+        DbBuiltinGateway.Configure(adapter);
+
+        try
+        {
+            const string source = """
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+fn add_and_return() -> Int {
+  transaction {
+    let inserted = db.exec("insert into users (id, name) values (55, 'Ria')")
+    print match inserted {
+      Ok(v) -> v
+      Error(_) -> -1
+    }
+    return 7
+  }
+  return -1
+}
+
+print add_and_return()
+
+let count = db.scalar("select count(*) from users")
+print match count {
+  Ok(v) -> v
+  Error(e) -> e
+}
+""";
+
+            var syntaxTree = SyntaxTree.Parse(new SourceText(source, "test.axom"));
+            var interpreter = new Interpreter();
+            var result = interpreter.Run(syntaxTree);
+
+            Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error);
+            Assert.Equal("0\n1\n7\n0", result.Output);
+        }
+        finally
+        {
+            DbBuiltinGateway.Reset();
+        }
+    }
+
     private sealed class SqliteFixture : IDisposable
     {
         private readonly string dbPath;
