@@ -1,0 +1,28 @@
+println "transaction { ... } auto rollback"
+
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+fn insert_then_exit() -> Int {
+  transaction {
+    let inserted = db.exec("insert into users (id, name) values (99, 'AutoRollback')")
+    print match inserted {
+      Ok(v) -> str(v)
+      Error(_) -> "-1"
+    }
+    return 7
+  }
+
+  return -1
+}
+
+print insert_then_exit()
+
+let total = db.scalar("select count(*) from users")
+print match total {
+  Ok(v) -> v
+  Error(e) -> e
+}

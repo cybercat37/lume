@@ -1105,6 +1105,20 @@ public class Program
                 return 1;
             }
 
+            var tempProjectPath = Path.Combine(tempDir, "TempRun", "TempRun.csproj");
+            if (File.Exists(tempProjectPath))
+            {
+                var projectText = File.ReadAllText(tempProjectPath);
+                if (!projectText.Contains("<NoWarn>", StringComparison.Ordinal))
+                {
+                    projectText = projectText.Replace(
+                        "  </PropertyGroup>",
+                        "    <Nullable>disable</Nullable>\n    <NoWarn>CS0162;CS8600;CS8603;CS8605;CS8618;CS8632</NoWarn>\n  </PropertyGroup>",
+                        StringComparison.Ordinal);
+                    File.WriteAllText(tempProjectPath, projectText);
+                }
+            }
+
             // Copy generated Program.cs
             var generatedProgramPath = Path.Combine(outputDir, "Program.cs");
             var tempProgramPath = Path.Combine(tempDir, "TempRun", "Program.cs");
