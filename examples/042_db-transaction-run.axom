@@ -1,0 +1,55 @@
+println "DB transaction builtins"
+
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let tx1 = db.begin()
+print match tx1 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let inserted1 = db.exec("insert into users (id, name) values (1, 'Ada')")
+print match inserted1 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let rolled = db.rollback()
+print match rolled {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let countAfterRollback = db.scalar("select count(*) from users")
+print match countAfterRollback {
+  Ok(v) -> v
+  Error(e) -> e
+}
+
+let tx2 = db.begin()
+print match tx2 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let inserted2 = db.exec("insert into users (id, name) values (2, 'Bob')")
+print match inserted2 {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let committed = db.commit()
+print match committed {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+let countAfterCommit = db.scalar("select count(*) from users")
+print match countAfterCommit {
+  Ok(v) -> v
+  Error(e) -> e
+}
