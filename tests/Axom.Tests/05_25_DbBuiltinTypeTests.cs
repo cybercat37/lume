@@ -12,9 +12,13 @@ public class DbBuiltinTypeTests
 let a = db.exec("select 1")
 let b = db.query("select 1")
 let c = db.scalar("select 1")
+let tx1 = db.begin()
+let tx2 = db.rollback()
 print a
 print b
 print c
+print tx1
+print tx2
 """;
 
         var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
@@ -168,5 +172,19 @@ print sql"""update users set name='x' returning {User}""".exec()
         Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
             && diagnostic.Message.Contains("exec() cannot use record projection placeholders", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Db_transaction_members_reject_arguments()
+    {
+        const string sourceText = "print db.begin(1)\nprint db.commit(1)\nprint db.rollback(1)";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+            && diagnostic.Message.Contains("expects no arguments", StringComparison.Ordinal));
     }
 }

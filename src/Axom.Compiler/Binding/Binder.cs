@@ -3177,6 +3177,10 @@ public sealed class Binder
     {
         switch (function.Name)
         {
+            case "db_begin":
+            case "db_commit":
+            case "db_rollback":
+                return BindBuiltinDbTransactionCall(function, call, arguments);
             case "db_exec":
                 return BindBuiltinDbCall(function, call, arguments, TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String));
             case "db_query":
@@ -3219,6 +3223,9 @@ public sealed class Binder
             "exec" => BuiltinFunctions.DbExec,
             "query" => BuiltinFunctions.DbQuery,
             "scalar" => BuiltinFunctions.DbScalar,
+            "begin" => BuiltinFunctions.DbBegin,
+            "commit" => BuiltinFunctions.DbCommit,
+            "rollback" => BuiltinFunctions.DbRollback,
             _ => null
         };
 
@@ -3227,7 +3234,7 @@ public sealed class Binder
             diagnostics.Add(Diagnostic.Error(
                 SourceText,
                 dbMemberCall.Span,
-                $"Unknown db member '{dbMemberCall.IdentifierToken.Text}'. Supported members: exec, query, scalar."));
+                $"Unknown db member '{dbMemberCall.IdentifierToken.Text}'. Supported members: exec, query, scalar, begin, commit, rollback."));
             expression = new BoundCallExpression(new BoundFunctionExpression(BuiltinFunctions.DbExec), Array.Empty<BoundExpression>(), TypeSymbol.Error);
             return true;
         }
@@ -3518,6 +3525,26 @@ public sealed class Binder
             new BoundFunctionExpression(function),
             arguments,
             hasTypeError ? TypeSymbol.Error : returnType);
+    }
+
+    private BoundExpression BindBuiltinDbTransactionCall(
+        FunctionSymbol function,
+        CallExpressionSyntax call,
+        IReadOnlyList<BoundExpression> arguments)
+    {
+        if (arguments.Count != 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                call.Span,
+                $"{function.Name}() expects no arguments."));
+            return new BoundCallExpression(new BoundFunctionExpression(function), arguments, TypeSymbol.Error);
+        }
+
+        return new BoundCallExpression(
+            new BoundFunctionExpression(function),
+            arguments,
+            function.ReturnType);
     }
 
     private BoundExpression BindBuiltinHeader(

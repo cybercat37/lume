@@ -1267,6 +1267,12 @@ public sealed class Interpreter
                     return EvaluateDbQuery(arguments);
                 case "db_scalar":
                     return EvaluateDbScalar(arguments);
+                case "db_begin":
+                    return EvaluateDbBegin(arguments);
+                case "db_commit":
+                    return EvaluateDbCommit(arguments);
+                case "db_rollback":
+                    return EvaluateDbRollback(arguments);
                 case "route_param":
                     if (arguments.Length == 1 && arguments[0] is string routeParamName)
                     {
@@ -2275,6 +2281,42 @@ public sealed class Interpreter
 
             var text = value is null ? string.Empty : FormatValue(value);
             return BuildStringResult(isSuccess: true, text, null);
+        }
+
+        private static object EvaluateDbBegin(object?[] arguments)
+        {
+            if (arguments.Length != 0)
+            {
+                return BuildIntResult(isSuccess: false, null, "db.begin() takes no arguments");
+            }
+
+            return DbBuiltinGateway.TryBeginTransaction(out var error)
+                ? BuildIntResult(isSuccess: true, 1, null)
+                : BuildIntResult(isSuccess: false, null, error ?? "db begin failed");
+        }
+
+        private static object EvaluateDbCommit(object?[] arguments)
+        {
+            if (arguments.Length != 0)
+            {
+                return BuildIntResult(isSuccess: false, null, "db.commit() takes no arguments");
+            }
+
+            return DbBuiltinGateway.TryCommitTransaction(out var error)
+                ? BuildIntResult(isSuccess: true, 1, null)
+                : BuildIntResult(isSuccess: false, null, error ?? "db commit failed");
+        }
+
+        private static object EvaluateDbRollback(object?[] arguments)
+        {
+            if (arguments.Length != 0)
+            {
+                return BuildIntResult(isSuccess: false, null, "db.rollback() takes no arguments");
+            }
+
+            return DbBuiltinGateway.TryRollbackTransaction(out var error)
+                ? BuildIntResult(isSuccess: true, 1, null)
+                : BuildIntResult(isSuccess: false, null, error ?? "db rollback failed");
         }
 
         private static bool TryParseDbArguments(

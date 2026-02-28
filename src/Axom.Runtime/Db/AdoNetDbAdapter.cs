@@ -8,6 +8,9 @@ public sealed class AdoNetDbAdapter
     private readonly Func<DbConnection> connectionFactory;
     private readonly DbObservabilityRuntime observability;
     private readonly ISqlRecordProjectionResolver? recordProjectionResolver;
+    private readonly object transactionSync = new();
+    private DbConnection? transactionConnection;
+    private DbTransaction? transaction;
 
     public AdoNetDbAdapter(
         Func<DbConnection> connectionFactory,
@@ -34,6 +37,91 @@ public sealed class AdoNetDbAdapter
         return observability.ExecuteScalar(sql, parameters, ExecuteScalarCore<T>);
     }
 
+    public bool TryBeginTransaction(out string? error)
+    {
+        lock (transactionSync)
+        {
+            if (transaction is not null)
+            {
+                error = "transaction is already active";
+                return false;
+            }
+
+            try
+            {
+                var connection = connectionFactory();
+                connection.Open();
+                var started = connection.BeginTransaction();
+                transactionConnection = connection;
+                transaction = started;
+                error = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DisposeTransactionState();
+                error = ex.Message;
+                return false;
+            }
+        }
+    }
+
+    public bool TryCommitTransaction(out string? error)
+    {
+        lock (transactionSync)
+        {
+            if (transaction is null)
+            {
+                error = "transaction is not active";
+                return false;
+            }
+
+            try
+            {
+                transaction.Commit();
+                error = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+            finally
+            {
+                DisposeTransactionState();
+            }
+        }
+    }
+
+    public bool TryRollbackTransaction(out string? error)
+    {
+        lock (transactionSync)
+        {
+            if (transaction is null)
+            {
+                error = "transaction is not active";
+                return false;
+            }
+
+            try
+            {
+                transaction.Rollback();
+                error = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+            finally
+            {
+                DisposeTransactionState();
+            }
+        }
+    }
+
     public DbMetricsSnapshot GetMetricsSnapshot()
     {
         return observability.GetMetricsSnapshot();
@@ -42,10 +130,7 @@ public sealed class AdoNetDbAdapter
     private int ExecuteNonQueryCore(string sql, IReadOnlyDictionary<string, object?>? parameters)
     {
         var (boundSql, boundParameters) = BindSqlTemplate(sql, parameters);
-        using var connection = connectionFactory();
-        connection.Open();
-        using var command = CreateCommand(connection, boundSql, boundParameters);
-        return command.ExecuteNonQuery();
+        return ExecuteWithCommand(boundSql, boundParameters, static command => command.ExecuteNonQuery());
     }
 
     private IReadOnlyList<IReadOnlyDictionary<string, object?>> ExecuteQueryCore(
@@ -53,46 +138,45 @@ public sealed class AdoNetDbAdapter
         IReadOnlyDictionary<string, object?>? parameters)
     {
         var (boundSql, boundParameters) = BindSqlTemplate(sql, parameters);
-        using var connection = connectionFactory();
-        connection.Open();
-        using var command = CreateCommand(connection, boundSql, boundParameters);
-        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-
-        var rows = new List<IReadOnlyDictionary<string, object?>>();
-        while (reader.Read())
+        return ExecuteWithCommand(boundSql, boundParameters, static command =>
         {
-            var row = new Dictionary<string, object?>(reader.FieldCount, StringComparer.Ordinal);
-            for (var i = 0; i < reader.FieldCount; i++)
+            using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+
+            var rows = new List<IReadOnlyDictionary<string, object?>>();
+            while (reader.Read())
             {
-                var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                row[reader.GetName(i)] = value;
+                var row = new Dictionary<string, object?>(reader.FieldCount, StringComparer.Ordinal);
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    row[reader.GetName(i)] = value;
+                }
+
+                rows.Add(row);
             }
 
-            rows.Add(row);
-        }
-
-        return rows;
+            return (IReadOnlyList<IReadOnlyDictionary<string, object?>>)rows;
+        });
     }
 
     private T? ExecuteScalarCore<T>(string sql, IReadOnlyDictionary<string, object?>? parameters)
     {
         var (boundSql, boundParameters) = BindSqlTemplate(sql, parameters);
-        using var connection = connectionFactory();
-        connection.Open();
-        using var command = CreateCommand(connection, boundSql, boundParameters);
-
-        var value = command.ExecuteScalar();
-        if (value is null || value is DBNull)
+        return ExecuteWithCommand(boundSql, boundParameters, static command =>
         {
-            return default;
-        }
+            var value = command.ExecuteScalar();
+            if (value is null || value is DBNull)
+            {
+                return default;
+            }
 
-        if (value is T typed)
-        {
-            return typed;
-        }
+            if (value is T typed)
+            {
+                return typed;
+            }
 
-        return (T)Convert.ChangeType(value, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
+            return (T)Convert.ChangeType(value, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
+        });
     }
 
     private (string sql, IReadOnlyDictionary<string, object?> parameters) BindSqlTemplate(
@@ -109,10 +193,12 @@ public sealed class AdoNetDbAdapter
 
     private static DbCommand CreateCommand(
         DbConnection connection,
+        DbTransaction? transaction,
         string sql,
         IReadOnlyDictionary<string, object?>? parameters)
     {
         var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = sql;
 
         if (parameters is null || parameters.Count == 0)
@@ -144,5 +230,34 @@ public sealed class AdoNetDbAdapter
         }
 
         return "@" + name;
+    }
+
+    private TResult ExecuteWithCommand<TResult>(
+        string sql,
+        IReadOnlyDictionary<string, object?>? parameters,
+        Func<DbCommand, TResult> execute)
+    {
+        lock (transactionSync)
+        {
+            if (transactionConnection is not null && transaction is not null)
+            {
+                using var command = CreateCommand(transactionConnection, transaction, sql, parameters);
+                return execute(command);
+            }
+        }
+
+        using var connection = connectionFactory();
+        connection.Open();
+        using var nonTransactionCommand = CreateCommand(connection, transaction: null, sql, parameters);
+        return execute(nonTransactionCommand);
+    }
+
+    private void DisposeTransactionState()
+    {
+        transaction?.Dispose();
+        transaction = null;
+
+        transactionConnection?.Dispose();
+        transactionConnection = null;
     }
 }

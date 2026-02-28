@@ -100,6 +100,39 @@ public static class DbBuiltinGateway
         }
     }
 
+    public static bool TryBeginTransaction(out string? error)
+    {
+        var db = GetAdapterOrError(out error);
+        if (db is null)
+        {
+            return false;
+        }
+
+        return db.TryBeginTransaction(out error);
+    }
+
+    public static bool TryCommitTransaction(out string? error)
+    {
+        var db = GetAdapterOrError(out error);
+        if (db is null)
+        {
+            return false;
+        }
+
+        return db.TryCommitTransaction(out error);
+    }
+
+    public static bool TryRollbackTransaction(out string? error)
+    {
+        var db = GetAdapterOrError(out error);
+        if (db is null)
+        {
+            return false;
+        }
+
+        return db.TryRollbackTransaction(out error);
+    }
+
     private static AdoNetDbAdapter? GetAdapterOrError(out string? error)
     {
         lock (Sync)

@@ -223,6 +223,84 @@ print match value {
         Assert.Contains("db adapter is not configured", result.Output, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Db_transaction_commit_and_rollback_control_visibility()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+        DbBuiltinGateway.Configure(adapter);
+
+        try
+        {
+            const string source = """
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let tx1 = db.begin()
+print match tx1 {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let inserted1 = db.exec("insert into users (id, name) values (1, 'Ada')")
+print match inserted1 {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let rollbacked = db.rollback()
+print match rollbacked {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let countAfterRollback = db.scalar("select count(*) from users")
+print match countAfterRollback {
+  Ok(v) -> v
+  Error(e) -> e
+}
+
+let tx2 = db.begin()
+print match tx2 {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let inserted2 = db.exec("insert into users (id, name) values (2, 'Bob')")
+print match inserted2 {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let committed = db.commit()
+print match committed {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let countAfterCommit = db.scalar("select count(*) from users")
+print match countAfterCommit {
+  Ok(v) -> v
+  Error(e) -> e
+}
+""";
+
+            var syntaxTree = SyntaxTree.Parse(new SourceText(source, "test.axom"));
+            var interpreter = new Interpreter();
+            var result = interpreter.Run(syntaxTree);
+
+            Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error);
+            Assert.Equal("0\n1\n1\n1\n0\n1\n1\n1\n1", result.Output);
+        }
+        finally
+        {
+            DbBuiltinGateway.Reset();
+        }
+    }
+
     private sealed class SqliteFixture : IDisposable
     {
         private readonly string dbPath;

@@ -158,6 +158,41 @@ public class AdoNetDbAdapterTests
         Assert.Equal("Ada", rows[0]["name"]);
     }
 
+    [Fact]
+    public void Adapter_transaction_rollback_discards_changes_and_commit_persists()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+
+        adapter.Exec("create table users (id integer primary key, name text not null)");
+
+        Assert.True(adapter.TryBeginTransaction(out var beginError), beginError);
+        adapter.Exec("insert into users (id, name) values (1, 'Ada')");
+        Assert.True(adapter.TryRollbackTransaction(out var rollbackError), rollbackError);
+
+        var afterRollback = adapter.Scalar<long>("select count(*) from users");
+        Assert.Equal(0L, afterRollback);
+
+        Assert.True(adapter.TryBeginTransaction(out var beginAgainError), beginAgainError);
+        adapter.Exec("insert into users (id, name) values (2, 'Bob')");
+        Assert.True(adapter.TryCommitTransaction(out var commitError), commitError);
+
+        var afterCommit = adapter.Scalar<long>("select count(*) from users");
+        Assert.Equal(1L, afterCommit);
+    }
+
+    [Fact]
+    public void Adapter_rejects_nested_transaction_begin()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+
+        Assert.True(adapter.TryBeginTransaction(out var beginError), beginError);
+        Assert.False(adapter.TryBeginTransaction(out var nestedError));
+        Assert.Contains("already active", nestedError, StringComparison.Ordinal);
+        Assert.True(adapter.TryRollbackTransaction(out var rollbackError), rollbackError);
+    }
+
     private sealed class TestSink : IDbObservabilitySink
     {
         public List<DbQueryLogEntry> Entries { get; } = new();

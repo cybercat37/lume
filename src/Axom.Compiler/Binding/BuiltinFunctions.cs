@@ -270,6 +270,27 @@ public static class BuiltinFunctions
         TypeSymbol.Result(TypeSymbol.String, TypeSymbol.String),
         isBuiltin: true);
 
+    public static readonly FunctionSymbol DbBegin = new(
+        "db_begin",
+        Array.Empty<ParameterSymbol>(),
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol DbCommit = new(
+        "db_commit",
+        Array.Empty<ParameterSymbol>(),
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String),
+        isBuiltin: true);
+
+    public static readonly FunctionSymbol DbRollback = new(
+        "db_rollback",
+        Array.Empty<ParameterSymbol>(),
+        Array.Empty<TypeSymbol>(),
+        TypeSymbol.Result(TypeSymbol.Int, TypeSymbol.String),
+        isBuiltin: true);
+
     public static readonly FunctionSymbol RouteParam = new(
         "route_param",
         new[] { new ParameterSymbol("name", TypeSymbol.String) },
@@ -691,6 +712,9 @@ public static class BuiltinFunctions
         [DbExec.Name] = DbExec,
         [DbQuery.Name] = DbQuery,
         [DbScalar.Name] = DbScalar,
+        [DbBegin.Name] = DbBegin,
+        [DbCommit.Name] = DbCommit,
+        [DbRollback.Name] = DbRollback,
         [RouteParam.Name] = RouteParam,
         [RouteParamInt.Name] = RouteParamInt,
         [RouteParamFloat.Name] = RouteParamFloat,
