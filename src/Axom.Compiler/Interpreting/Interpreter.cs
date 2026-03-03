@@ -159,6 +159,11 @@ public sealed class Interpreter
                             foreach (var inner in block.Statements)
                             {
                                 EvaluateStatement(inner);
+                                if (diagnostics.Count > 0)
+                                {
+                                    DbBuiltinGateway.TryRollbackTransaction(out _);
+                                    break;
+                                }
                             }
                         }
                         finally
@@ -175,6 +180,11 @@ public sealed class Interpreter
                     foreach (var inner in block.Statements)
                     {
                         EvaluateStatement(inner);
+                        if (diagnostics.Count > 0)
+                        {
+                            DbBuiltinGateway.TryRollbackTransaction(out _);
+                            break;
+                        }
                     }
 
                     return;

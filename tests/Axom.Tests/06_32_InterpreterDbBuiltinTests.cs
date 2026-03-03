@@ -395,6 +395,57 @@ print match count {
         }
     }
 
+    [Fact]
+    public void Transaction_statement_rolls_back_when_runtime_diagnostic_occurs()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+        DbBuiltinGateway.Configure(adapter);
+
+        try
+        {
+            const string source = """
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+transaction {
+  let inserted = db.exec("insert into users (id, name) values (77, 'Diag')")
+  print match inserted {
+    Ok(v) -> v
+    Error(_) -> -1
+  }
+
+  let crash = 1 / 0
+  print crash
+}
+
+let count = db.scalar("select count(*) from users")
+print match count {
+  Ok(v) -> v
+  Error(e) -> e
+}
+""";
+
+            var syntaxTree = SyntaxTree.Parse(new SourceText(source, "test.axom"));
+            var interpreter = new Interpreter();
+            var result = interpreter.Run(syntaxTree);
+
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+                && diagnostic.Message.Contains("Division by zero", StringComparison.Ordinal));
+
+            var persisted = adapter.Scalar<long>("select count(*) from users");
+            Assert.Equal(0L, persisted);
+        }
+        finally
+        {
+            DbBuiltinGateway.Reset();
+        }
+    }
+
     private sealed class SqliteFixture : IDisposable
     {
         private readonly string dbPath;
