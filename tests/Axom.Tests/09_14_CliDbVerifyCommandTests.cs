@@ -325,6 +325,57 @@ public class CliDbVerifyCommandTests
     }
 
     [Fact]
+    public void Db_verify_postgres_happy_path_when_test_connection_is_available()
+    {
+        var integrationConnectionString = Environment.GetEnvironmentVariable("AXOM_TEST_POSTGRES_CONNECTION_STRING");
+        if (string.IsNullOrWhiteSpace(integrationConnectionString))
+        {
+            return;
+        }
+
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_pg_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
+
+        var previousProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
+        var previousConnectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", "postgres");
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", integrationConnectionString);
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--report", "--plan" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("total_queries_validated=1", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("plan query_id=", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", previousProvider);
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", previousConnectionString);
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
     public void Db_verify_compare_reports_ok_when_snapshot_matches_current_queries()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
