@@ -1,0 +1,25 @@
+println "transaction rollback on runtime error"
+
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> str(v)
+  Error(e) -> e
+}
+
+transaction {
+  let inserted = db.exec("insert into users (id, name) values (500, 'Rex')")
+  print match inserted {
+    Ok(v) -> str(v)
+    Error(e) -> e
+  }
+
+  let zero = 0
+  let crash = 1 / zero
+  print crash
+}
+
+let total = db.scalar("select count(*) from users")
+print match total {
+  Ok(v) -> v
+  Error(e) -> e
+}

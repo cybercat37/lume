@@ -11,7 +11,7 @@ Current implementation snapshot:
 * `{param}` runtime binding is implemented.
 * `{Record}` runtime projection is implemented via explicit projection map (`AXOM_DB_RECORD_PROJECTIONS`).
 * `axom db verify` / `axom db check` validates queries on an ephemeral SQLite database and applies `db/migrations/*.sql` next to the input file.
-* `transaction { ... }` syntax is implemented as explicit DB transaction sugar with automatic rollback on early-return paths.
+* `transaction { ... }` syntax is implemented as explicit DB transaction sugar with automatic rollback on early-return and runtime diagnostic/error paths.
 
 Still planned to fully match this RFC:
 

@@ -335,6 +335,63 @@ public class CliExamplesTests
         }
     }
 
+    [Fact]
+    public void Run_transaction_runtime_error_example_rolls_back_and_reports_error()
+    {
+        var repoRoot = FindRepoRoot();
+        var filePath = Path.Combine(repoRoot, "examples", "047_transaction-runtime-error-rollback.axom");
+        var outDir = Path.Combine(Path.GetTempPath(), $"axom_cli_examples_{Guid.NewGuid():N}");
+        var dbPath = Path.Combine(Path.GetTempPath(), $"axom_cli_examples_txerr_{Guid.NewGuid():N}.db");
+        Directory.CreateDirectory(outDir);
+
+        var previousProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
+        var previousConnection = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", "sqlite");
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", $"Data Source={dbPath}");
+            Directory.SetCurrentDirectory(repoRoot);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "run", filePath, "--quiet", "--out", outDir });
+
+            Assert.Equal(0, exitCode);
+
+            using var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={dbPath}");
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "select count(*) from users";
+            var total = (long)(command.ExecuteScalar() ?? 0L);
+            Assert.Equal(0L, total);
+            Assert.True(File.Exists(Path.Combine(outDir, "Program.cs")));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AXOM_DB_PROVIDER", previousProvider);
+            Environment.SetEnvironmentVariable("AXOM_DB_CONNECTION_STRING", previousConnection);
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+
+            if (Directory.Exists(outDir))
+            {
+                Directory.Delete(outDir, true);
+            }
+
+            if (File.Exists(dbPath))
+            {
+                File.Delete(dbPath);
+            }
+        }
+    }
+
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

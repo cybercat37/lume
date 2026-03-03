@@ -148,10 +148,38 @@ public sealed class Emitter
         builder.AppendLine("    static void Main()");
         builder.AppendLine("    {");
         var writer = new IndentedWriter(builder, 2);
+
+        if (requiresDbBuiltins)
+        {
+            writer.WriteLine("try");
+            writer.WriteLine("{");
+            writer.Indent();
+        }
+
         foreach (var statement in program.Statements)
         {
             WriteStatement(writer, statement);
         }
+
+        if (requiresDbBuiltins)
+        {
+            writer.Unindent();
+            writer.WriteLine("}");
+            writer.WriteLine("catch (Exception ex)");
+            writer.WriteLine("{");
+            writer.Indent();
+            writer.WriteLine("AxomCleanupDbTransaction();");
+            writer.WriteLine("Console.Error.WriteLine($\"runtime error: {ex.Message}\");");
+            writer.Unindent();
+            writer.WriteLine("}");
+            writer.WriteLine("finally");
+            writer.WriteLine("{");
+            writer.Indent();
+            writer.WriteLine("AxomCleanupDbTransaction();");
+            writer.Unindent();
+            writer.WriteLine("}");
+        }
+
         builder.AppendLine("    }");
         builder.AppendLine("}");
 
@@ -2386,6 +2414,27 @@ public sealed class Emitter
         builder.AppendLine("            }");
         builder.AppendLine("        }");
         builder.AppendLine("        return true;");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+        builder.AppendLine("    static void AxomCleanupDbTransaction()");
+        builder.AppendLine("    {");
+        builder.AppendLine("        try");
+        builder.AppendLine("        {");
+        builder.AppendLine("            if (AxomDbTransaction is not null)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                AxomDbTransaction.Rollback();");
+        builder.AppendLine("            }");
+        builder.AppendLine("        }");
+        builder.AppendLine("        catch");
+        builder.AppendLine("        {");
+        builder.AppendLine("        }");
+        builder.AppendLine("        finally");
+        builder.AppendLine("        {");
+        builder.AppendLine("            AxomDbTransaction?.Dispose();");
+        builder.AppendLine("            AxomDbTransaction = null;");
+        builder.AppendLine("            AxomDbTransactionConnection?.Dispose();");
+        builder.AppendLine("            AxomDbTransactionConnection = null;");
+        builder.AppendLine("        }");
         builder.AppendLine("    }");
     }
 
