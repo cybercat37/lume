@@ -20,6 +20,7 @@ public sealed class Binder
     private List<TypeSymbol>? returnTypes;
     private Dictionary<string, TypeSymbol>? genericTypeParameters;
     private int scopeStatementDepth;
+    private int transactionStatementDepth;
     private int currentScopeDepth;
     private readonly Stack<int> returnBoundaryDepths = new();
     private readonly Dictionary<string, TypeSymbol> recordTypes = new(StringComparer.Ordinal);
@@ -4011,6 +4012,24 @@ public sealed class Binder
 
     private BoundStatement BindTransactionStatement(TransactionStatementSyntax transactionStatement)
     {
+        if (transactionStatementDepth > 0)
+        {
+            diagnostics.Add(Diagnostic.Error(
+                SourceText,
+                transactionStatement.Span,
+                "Nested transaction blocks are not supported. Use a single transaction boundary."));
+
+            transactionStatementDepth++;
+            try
+            {
+                return BindBlockStatement(transactionStatement.Body, isScopeBlock: true);
+            }
+            finally
+            {
+                transactionStatementDepth--;
+            }
+        }
+
         var beginCall = new BoundCallExpression(
             new BoundFunctionExpression(BuiltinFunctions.DbBegin),
             Array.Empty<BoundExpression>(),
@@ -4024,7 +4043,16 @@ public sealed class Binder
             Array.Empty<BoundExpression>(),
             BuiltinFunctions.DbCommit.ReturnType);
 
-        var body = (BoundBlockStatement)BindBlockStatement(transactionStatement.Body);
+        transactionStatementDepth++;
+        BoundBlockStatement body;
+        try
+        {
+            body = (BoundBlockStatement)BindBlockStatement(transactionStatement.Body);
+        }
+        finally
+        {
+            transactionStatementDepth--;
+        }
 
         var guardedBodyStatements = new List<BoundStatement>
         {

@@ -206,4 +206,24 @@ transaction {
             diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
             && diagnostic.Message.Contains("Unexpected", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void Nested_transaction_blocks_report_diagnostic()
+    {
+        const string sourceText = """
+transaction {
+  transaction {
+    print 1
+  }
+}
+""";
+
+        var syntaxTree = SyntaxTree.Parse(new SourceText(sourceText, "test.axom"));
+        var binder = new Axom.Compiler.Binding.Binder();
+        var result = binder.Bind(syntaxTree);
+
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+            && diagnostic.Message.Contains("Nested transaction blocks are not supported", StringComparison.Ordinal));
+    }
 }

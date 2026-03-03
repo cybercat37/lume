@@ -499,6 +499,7 @@ Notes:
 - `--compare` compares current query fingerprints against snapshot fingerprints and warns on plan-hash drift when available.
 - `{Record}` placeholders in runtime SQL currently require `AXOM_DB_RECORD_PROJECTIONS` mapping (example: `User:id,name`).
 - `transaction { ... }` sugar is available and currently desugars to `db.begin()` + body + `db.commit()` with automatic rollback on early return and runtime diagnostic/error paths.
+- Nested `transaction { ... }` blocks are currently rejected with a compile-time diagnostic.
 
 ### Compile to C#
 

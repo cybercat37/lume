@@ -247,6 +247,7 @@ Semantica:
 * Tutte le query dentro il blocco condividono la stessa transazione.
 * Se il blocco termina con successo → commit.
 * Se il blocco termina con early-exit (`?`) o errore → rollback.
+* Blocchi `transaction {}` annidati non sono supportati e producono errore di compilazione.
 
 Esempio:
 
