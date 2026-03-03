@@ -446,6 +446,84 @@ print match count {
         }
     }
 
+    [Fact]
+    public void Transaction_statement_releases_transaction_after_runtime_error()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+        DbBuiltinGateway.Configure(adapter);
+
+        try
+        {
+            const string source = """
+let created = db.exec("create table users (id integer primary key, name text not null)")
+print match created {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+transaction {
+  let inserted = db.exec("insert into users (id, name) values (88, 'LeakCheck')")
+  print match inserted {
+    Ok(v) -> v
+    Error(_) -> -1
+  }
+  let crash = 1 / 0
+  print crash
+}
+
+let beginAgain = db.begin()
+print match beginAgain {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let rollbackAgain = db.rollback()
+print match rollbackAgain {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+""";
+
+            var syntaxTree = SyntaxTree.Parse(new SourceText(source, "test.axom"));
+            var interpreter = new Interpreter();
+            var result = interpreter.Run(syntaxTree);
+
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error
+                && diagnostic.Message.Contains("Division by zero", StringComparison.Ordinal));
+
+            Assert.Equal("0\n1", result.Output);
+
+            var persisted = adapter.Scalar<long>("select count(*) from users");
+            Assert.Equal(0L, persisted);
+
+            const string followUpSource = """
+let beginAgain = db.begin()
+print match beginAgain {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+
+let rollbackAgain = db.rollback()
+print match rollbackAgain {
+  Ok(v) -> v
+  Error(_) -> -1
+}
+""";
+
+            var followUpTree = SyntaxTree.Parse(new SourceText(followUpSource, "follow-up.axom"));
+            var followUp = new Interpreter().Run(followUpTree);
+
+            Assert.DoesNotContain(followUp.Diagnostics, diagnostic => diagnostic.Severity == Axom.Compiler.Diagnostics.DiagnosticSeverity.Error);
+            Assert.Equal("1\n1", followUp.Output);
+        }
+        finally
+        {
+            DbBuiltinGateway.Reset();
+        }
+    }
+
     private sealed class SqliteFixture : IDisposable
     {
         private readonly string dbPath;

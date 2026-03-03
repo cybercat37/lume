@@ -193,6 +193,26 @@ public class AdoNetDbAdapterTests
         Assert.True(adapter.TryRollbackTransaction(out var rollbackError), rollbackError);
     }
 
+    [Fact]
+    public void Adapter_commit_without_active_transaction_returns_error()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+
+        Assert.False(adapter.TryCommitTransaction(out var error));
+        Assert.Contains("not active", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Adapter_rollback_without_active_transaction_returns_error()
+    {
+        using var fixture = SqliteFixture.Create();
+        var adapter = new AdoNetDbAdapter(fixture.CreateConnection);
+
+        Assert.False(adapter.TryRollbackTransaction(out var error));
+        Assert.Contains("not active", error, StringComparison.Ordinal);
+    }
+
     private sealed class TestSink : IDbObservabilitySink
     {
         public List<DbQueryLogEntry> Entries { get; } = new();
