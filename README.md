@@ -360,6 +360,10 @@ Run examples:
 dotnet run --project src/axom -- run examples/037_db-builtins-run.axom
 rm -f /tmp/axom-example.db
 dotnet run --project src/axom -- run examples/038_sql-template-params-run.axom
+rm -f /tmp/axom-example.db
+dotnet run --project src/axom -- run examples/044_transaction-block-minimal.axom
+rm -f /tmp/axom-example.db
+dotnet run --project src/axom -- run examples/045_transaction-auto-rollback.axom
 ```
 
 `{Record}` projection example requires record-column mapping:
@@ -494,6 +498,7 @@ Notes:
 - `--snapshot` writes `.axom/query-metrics.json`.
 - `--compare` compares current query fingerprints against snapshot fingerprints and warns on plan-hash drift when available.
 - `{Record}` placeholders in runtime SQL currently require `AXOM_DB_RECORD_PROJECTIONS` mapping (example: `User:id,name`).
+- `transaction { ... }` sugar is available and currently desugars to `db.begin()` + body + `db.commit()` with automatic rollback on early return paths.
 
 ### Compile to C#
 
