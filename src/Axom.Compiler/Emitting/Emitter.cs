@@ -1378,14 +1378,17 @@ public sealed class Emitter
 
     private static string WriteResultMapCall(LoweredCallExpression call, IReadOnlyList<string> argumentExpressions)
     {
-        var resultType = call.Type.ResultValueType is not null
-            ? TypeToCSharp(call.Type.ResultValueType)
+        var resultValueType = call.Type.ResultValueType;
+        var sourceOkValueType = call.Arguments[0].Type.ResultValueType;
+
+        var resultType = resultValueType is not null
+            ? TypeToCSharp(resultValueType)
             : "object";
-        var sourceOkType = call.Arguments[0].Type.ResultValueType is not null
-            ? TypeToCSharp(call.Arguments[0].Type.ResultValueType)
+        var sourceOkType = sourceOkValueType is not null
+            ? TypeToCSharp(sourceOkValueType)
             : "object";
-        var mapReturnType = call.Type.ResultValueType is not null
-            ? TypeToCSharp(call.Type.ResultValueType)
+        var mapReturnType = resultValueType is not null
+            ? TypeToCSharp(resultValueType)
             : "object";
         var source = argumentExpressions[0];
         var transform = argumentExpressions[1];
