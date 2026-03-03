@@ -249,6 +249,12 @@ Semantica:
 * Se il blocco termina con early-exit (`?`) o errore → rollback.
 * Blocchi `transaction {}` annidati non sono supportati e producono errore di compilazione.
 
+Stato implementazione corrente:
+
+* Commit su uscita normale dal blocco.
+* Rollback automatico su early-return e su runtime diagnostics/errors.
+* Nested transaction policy: rejected at compile-time.
+
 Esempio:
 
 ```axom

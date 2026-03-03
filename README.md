@@ -361,9 +361,15 @@ dotnet run --project src/axom -- run examples/037_db-builtins-run.axom
 rm -f /tmp/axom-example.db
 dotnet run --project src/axom -- run examples/038_sql-template-params-run.axom
 rm -f /tmp/axom-example.db
+dotnet run --project src/axom -- run examples/043_db-transaction-minimal.axom
+rm -f /tmp/axom-example.db
 dotnet run --project src/axom -- run examples/044_transaction-block-minimal.axom
 rm -f /tmp/axom-example.db
 dotnet run --project src/axom -- run examples/045_transaction-auto-rollback.axom
+rm -f /tmp/axom-example.db
+dotnet run --project src/axom -- run examples/046_transaction-single-file.axom
+rm -f /tmp/axom-example.db
+dotnet run --project src/axom -- run examples/047_transaction-runtime-error-rollback.axom
 ```
 
 `{Record}` projection example requires record-column mapping:
@@ -492,7 +498,9 @@ axom db verify path/to/file.axom --seeds
 
 Notes:
 
-- `--plan` currently uses provider-native `EXPLAIN QUERY PLAN` for `sqlite`.
+- `--plan` uses provider-native explain (`EXPLAIN QUERY PLAN` for `sqlite`, `EXPLAIN` for `postgres`).
+- `AXOM_DB_PROVIDER` supports `sqlite` (default) and `postgres` for `db verify`.
+- For `postgres`, set `AXOM_DB_CONNECTION_STRING`; verify uses an isolated temporary schema per run.
 - `db/migrations/*.sql` next to the input file are applied on an ephemeral verification DB before query validation.
 - `--seeds` also applies `db/seeds/*.sql` (lexicographic order) on the same ephemeral DB before query validation.
 - `--snapshot` writes `.axom/query-metrics.json`.
@@ -500,6 +508,13 @@ Notes:
 - `{Record}` placeholders in runtime SQL currently require `AXOM_DB_RECORD_PROJECTIONS` mapping (example: `User:id,name`).
 - `transaction { ... }` sugar is available and currently desugars to `db.begin()` + body + `db.commit()` with automatic rollback on early return and runtime diagnostic/error paths.
 - Nested `transaction { ... }` blocks are currently rejected with a compile-time diagnostic.
+
+Transaction behavior quick reference:
+
+- `success`: commit
+- `early return`: rollback
+- `runtime diagnostic/error`: rollback
+- `nested transaction`: compile-time error
 
 ### Compile to C#
 

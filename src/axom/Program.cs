@@ -3,7 +3,9 @@ using Axom.Compiler.Http.Routing;
 using Axom.Runtime.Db;
 using Axom.Runtime.Http;
 using Microsoft.Data.Sqlite;
+using Npgsql;
 using System.Security.Cryptography;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -582,10 +584,12 @@ public class Program
         planHashes = includePlan ? new Dictionary<string, string>(StringComparer.Ordinal) : null;
         error = null;
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), "axom_db_verify", Guid.NewGuid().ToString("N", System.Globalization.CultureInfo.InvariantCulture));
-        Directory.CreateDirectory(tempRoot);
-        var dbPath = Path.Combine(tempRoot, "verify.db");
-        var connectionString = $"Data Source={dbPath}";
+        var configuredProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
+        var provider = string.IsNullOrWhiteSpace(configuredProvider)
+            ? "sqlite"
+            : configuredProvider.Trim().ToLowerInvariant();
+        var sqliteTempRoot = string.Empty;
+        string? postgresSchemaName = null;
 
         if (!TryCreateRecordProjectionResolverFromEnvironment(out var recordResolver, out var resolverError))
         {
@@ -595,8 +599,22 @@ public class Program
 
         try
         {
-            using var connection = new SqliteConnection(connectionString);
+            if (!TryCreateVerifyConnection(provider, out var connection, out sqliteTempRoot, out var createError))
+            {
+                error = createError;
+                return false;
+            }
+
+            using (connection)
+            {
             connection.Open();
+
+            if (string.Equals(provider, "postgres", StringComparison.Ordinal)
+                && !TryInitializePostgresSchema(connection, out postgresSchemaName, out var schemaError))
+            {
+                error = schemaError;
+                return false;
+            }
 
             if (!TryApplyMigrations(connection, inputPath, includeSeeds, out var migrationError))
             {
@@ -622,13 +640,7 @@ public class Program
 
                 using var prepareCommand = connection.CreateCommand();
                 prepareCommand.CommandText = boundSql;
-                foreach (var (name, value) in boundParameters)
-                {
-                    var parameter = prepareCommand.CreateParameter();
-                    parameter.ParameterName = name.StartsWith('@') ? name : "@" + name;
-                    parameter.Value = value ?? 0;
-                    prepareCommand.Parameters.Add(parameter);
-                }
+                AddParameters(prepareCommand, boundParameters);
 
                 try
                 {
@@ -658,14 +670,8 @@ public class Program
                 }
 
                 using var command = connection.CreateCommand();
-                command.CommandText = "EXPLAIN QUERY PLAN " + boundSql;
-                foreach (var (name, value) in boundParameters)
-                {
-                    var parameter = command.CreateParameter();
-                    parameter.ParameterName = name.StartsWith('@') ? name : "@" + name;
-                    parameter.Value = value ?? 0;
-                    command.Parameters.Add(parameter);
-                }
+                command.CommandText = GetExplainPrefix(provider) + boundSql;
+                AddParameters(command, boundParameters);
 
                 using var reader = command.ExecuteReader();
                 var details = new List<string>();
@@ -678,9 +684,7 @@ public class Program
                 while (reader.Read())
                 {
                     hasRows = true;
-                    var detail = reader.FieldCount > 3 && !reader.IsDBNull(3)
-                        ? Convert.ToString(reader.GetValue(3))
-                        : string.Empty;
+                    var detail = ReadExplainDetail(provider, reader);
                     details.Add(detail ?? string.Empty);
                     if (emitPlanOutput)
                     {
@@ -706,6 +710,7 @@ public class Program
             }
 
             return true;
+            }
         }
         catch (Exception ex)
         {
@@ -714,15 +719,27 @@ public class Program
         }
         finally
         {
-            if (Directory.Exists(tempRoot))
+            if (!string.IsNullOrWhiteSpace(postgresSchemaName)
+                && TryCreatePostgresCleanupConnection(out var cleanupConnection))
             {
-                Directory.Delete(tempRoot, recursive: true);
+                using (cleanupConnection)
+                {
+                    cleanupConnection.Open();
+                    using var cleanupCommand = cleanupConnection.CreateCommand();
+                    cleanupCommand.CommandText = $"DROP SCHEMA IF EXISTS \"{postgresSchemaName}\" CASCADE;";
+                    cleanupCommand.ExecuteNonQuery();
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(sqliteTempRoot) && Directory.Exists(sqliteTempRoot))
+            {
+                Directory.Delete(sqliteTempRoot, recursive: true);
             }
         }
     }
 
     private static bool TryApplyMigrations(
-        SqliteConnection connection,
+        DbConnection connection,
         string inputPath,
         bool includeSeeds,
         out string? error)
@@ -751,7 +768,7 @@ public class Program
     }
 
     private static bool TryApplySqlScripts(
-        SqliteConnection connection,
+        DbConnection connection,
         string directory,
         string scriptKind,
         out string? error)
@@ -789,6 +806,114 @@ public class Program
         }
 
         return true;
+    }
+
+    private static bool TryCreateVerifyConnection(
+        string provider,
+        out DbConnection connection,
+        out string sqliteTempRoot,
+        out string? error)
+    {
+        connection = null!;
+        sqliteTempRoot = string.Empty;
+        error = null;
+
+        if (string.Equals(provider, "sqlite", StringComparison.Ordinal))
+        {
+            var configuredConnectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+            if (!string.IsNullOrWhiteSpace(configuredConnectionString))
+            {
+                connection = new SqliteConnection(configuredConnectionString);
+                return true;
+            }
+
+            sqliteTempRoot = Path.Combine(Path.GetTempPath(), "axom_db_verify", Guid.NewGuid().ToString("N", System.Globalization.CultureInfo.InvariantCulture));
+            Directory.CreateDirectory(sqliteTempRoot);
+            var dbPath = Path.Combine(sqliteTempRoot, "verify.db");
+            connection = new SqliteConnection($"Data Source={dbPath}");
+            return true;
+        }
+
+        if (string.Equals(provider, "postgres", StringComparison.Ordinal))
+        {
+            var connectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                error = "AXOM_DB_CONNECTION_STRING is required when AXOM_DB_PROVIDER=postgres for db verify.";
+                return false;
+            }
+
+            connection = new NpgsqlConnection(connectionString);
+            return true;
+        }
+
+        error = $"Unsupported AXOM_DB_PROVIDER '{provider}' for db verify. Supported providers: sqlite, postgres.";
+        return false;
+    }
+
+    private static bool TryInitializePostgresSchema(DbConnection connection, out string? schemaName, out string? error)
+    {
+        schemaName = "axom_verify_" + Guid.NewGuid().ToString("N", System.Globalization.CultureInfo.InvariantCulture);
+        error = null;
+
+        try
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = $"CREATE SCHEMA \"{schemaName}\"; SET search_path TO \"{schemaName}\";";
+            command.ExecuteNonQuery();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to initialize postgres verify schema: {ex.Message}";
+            schemaName = null;
+            return false;
+        }
+    }
+
+    private static bool TryCreatePostgresCleanupConnection(out DbConnection cleanupConnection)
+    {
+        cleanupConnection = null!;
+        var connectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return false;
+        }
+
+        cleanupConnection = new NpgsqlConnection(connectionString);
+        return true;
+    }
+
+    private static void AddParameters(DbCommand command, IReadOnlyDictionary<string, object?> parameters)
+    {
+        foreach (var (name, value) in parameters)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = name.StartsWith('@') ? name : "@" + name;
+            parameter.Value = value ?? 0;
+            command.Parameters.Add(parameter);
+        }
+    }
+
+    private static string GetExplainPrefix(string provider)
+    {
+        return string.Equals(provider, "postgres", StringComparison.Ordinal)
+            ? "EXPLAIN "
+            : "EXPLAIN QUERY PLAN ";
+    }
+
+    private static string ReadExplainDetail(string provider, DbDataReader reader)
+    {
+        if (string.Equals(provider, "postgres", StringComparison.Ordinal))
+        {
+            return reader.FieldCount > 0 && !reader.IsDBNull(0)
+                ? Convert.ToString(reader.GetValue(0)) ?? string.Empty
+                : string.Empty;
+        }
+
+        return reader.FieldCount > 3 && !reader.IsDBNull(3)
+            ? Convert.ToString(reader.GetValue(3)) ?? string.Empty
+            : string.Empty;
     }
 
     private static IReadOnlyDictionary<string, object?> BuildVerificationParameterSeed(string sql)
