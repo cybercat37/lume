@@ -1,7 +1,6 @@
 using System.Data.Common;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using Axom.Runtime.Db;
 using Microsoft.Data.Sqlite;
 using Npgsql;
@@ -74,7 +73,7 @@ internal static class DbVerifyDatabaseSession
                     }
 
                     var queryId = DbQueryFingerprint.CreateQueryId(sql);
-                    var seedParameters = BuildVerificationParameterSeed(sql);
+                    var seedParameters = DbVerifyParameterSeedBuilder.Build(sql);
                     if (!SqlTemplateBinder.TryBind(sql, seedParameters, recordResolver, out var boundSql, out var boundParameters, out var bindError))
                     {
                         error = $"db verify failed for query_id={queryId}: {bindError}";
@@ -357,77 +356,6 @@ internal static class DbVerifyDatabaseSession
         return reader.FieldCount > 3 && !reader.IsDBNull(3)
             ? Convert.ToString(reader.GetValue(3)) ?? string.Empty
             : string.Empty;
-    }
-
-    private static IReadOnlyDictionary<string, object?> BuildVerificationParameterSeed(string sql)
-    {
-        var seed = new Dictionary<string, object?>(StringComparer.Ordinal);
-        var inSingleQuotedString = false;
-
-        for (var i = 0; i < sql.Length; i++)
-        {
-            var current = sql[i];
-            if (inSingleQuotedString)
-            {
-                if (current == '\'' && i + 1 < sql.Length && sql[i + 1] == '\'')
-                {
-                    i++;
-                    continue;
-                }
-
-                if (current == '\'')
-                {
-                    inSingleQuotedString = false;
-                }
-
-                continue;
-            }
-
-            if (current == '\'')
-            {
-                inSingleQuotedString = true;
-                continue;
-            }
-
-            if (current != '{')
-            {
-                continue;
-            }
-
-            var end = sql.IndexOf('}', i + 1);
-            if (end <= i + 1)
-            {
-                continue;
-            }
-
-            var placeholder = sql.Substring(i + 1, end - i - 1).Trim();
-            if (placeholder.Length == 0)
-            {
-                i = end;
-                continue;
-            }
-
-            if (!Regex.IsMatch(placeholder, "^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant))
-            {
-                i = end;
-                continue;
-            }
-
-            if (char.IsUpper(placeholder[0]))
-            {
-                i = end;
-                continue;
-            }
-
-            if (!seed.ContainsKey(placeholder))
-            {
-                seed[placeholder] = 0;
-            }
-
-            i = end;
-        }
-
-        return seed;
     }
 
     private static bool TryCreateRecordProjectionResolverFromEnvironment(
