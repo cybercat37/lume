@@ -26,22 +26,19 @@ internal static class DbVerifyDatabaseSession
         planHashes = includePlan ? new Dictionary<string, string>(StringComparer.Ordinal) : null;
         error = null;
 
-        var configuredProvider = Environment.GetEnvironmentVariable("AXOM_DB_PROVIDER");
-        var provider = string.IsNullOrWhiteSpace(configuredProvider)
-            ? "sqlite"
-            : configuredProvider.Trim().ToLowerInvariant();
-        var sqliteTempRoot = string.Empty;
-        string? postgresSchemaName = null;
-
-        if (!TryCreateRecordProjectionResolverFromEnvironment(out var recordResolver, out var resolverError))
+        if (!DbVerifyEnvironmentLoader.TryLoad(out var environment, out var loadError))
         {
-            error = resolverError;
+            error = loadError;
             return false;
         }
 
+        var provider = environment.Provider;
+        var sqliteTempRoot = string.Empty;
+        string? postgresSchemaName = null;
+
         try
         {
-            if (!TryCreateVerifyConnection(provider, out var connection, out sqliteTempRoot, out var createError))
+            if (!TryCreateVerifyConnection(environment, out var connection, out sqliteTempRoot, out var createError))
             {
                 error = createError;
                 return false;
@@ -74,7 +71,7 @@ internal static class DbVerifyDatabaseSession
 
                     var queryId = DbQueryFingerprint.CreateQueryId(sql);
                     var seedParameters = DbVerifyParameterSeedBuilder.Build(sql);
-                    if (!SqlTemplateBinder.TryBind(sql, seedParameters, recordResolver, out var boundSql, out var boundParameters, out var bindError))
+                    if (!SqlTemplateBinder.TryBind(sql, seedParameters, environment.RecordProjectionResolver, out var boundSql, out var boundParameters, out var bindError))
                     {
                         error = $"db verify failed for query_id={queryId}: {bindError}";
                         return false;
@@ -162,7 +159,7 @@ internal static class DbVerifyDatabaseSession
         finally
         {
             if (!string.IsNullOrWhiteSpace(postgresSchemaName)
-                && TryCreatePostgresCleanupConnection(out var cleanupConnection))
+                && TryCreatePostgresCleanupConnection(environment, out var cleanupConnection))
             {
                 using (cleanupConnection)
                 {
@@ -251,7 +248,7 @@ internal static class DbVerifyDatabaseSession
     }
 
     private static bool TryCreateVerifyConnection(
-        string provider,
+        DbVerifyEnvironment environment,
         out DbConnection connection,
         out string sqliteTempRoot,
         out string? error)
@@ -260,12 +257,13 @@ internal static class DbVerifyDatabaseSession
         sqliteTempRoot = string.Empty;
         error = null;
 
+        var provider = environment.Provider;
+
         if (string.Equals(provider, "sqlite", StringComparison.Ordinal))
         {
-            var configuredConnectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
-            if (!string.IsNullOrWhiteSpace(configuredConnectionString))
+            if (!string.IsNullOrWhiteSpace(environment.ConnectionString))
             {
-                connection = new SqliteConnection(configuredConnectionString);
+                connection = new SqliteConnection(environment.ConnectionString);
                 return true;
             }
 
@@ -278,14 +276,13 @@ internal static class DbVerifyDatabaseSession
 
         if (string.Equals(provider, "postgres", StringComparison.Ordinal))
         {
-            var connectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
-            if (string.IsNullOrWhiteSpace(connectionString))
+            if (string.IsNullOrWhiteSpace(environment.ConnectionString))
             {
                 error = "AXOM_DB_CONNECTION_STRING is required when AXOM_DB_PROVIDER=postgres for db verify.";
                 return false;
             }
 
-            connection = new NpgsqlConnection(connectionString);
+            connection = new NpgsqlConnection(environment.ConnectionString);
             return true;
         }
 
@@ -313,16 +310,15 @@ internal static class DbVerifyDatabaseSession
         }
     }
 
-    private static bool TryCreatePostgresCleanupConnection(out DbConnection cleanupConnection)
+    private static bool TryCreatePostgresCleanupConnection(DbVerifyEnvironment environment, out DbConnection cleanupConnection)
     {
         cleanupConnection = null!;
-        var connectionString = Environment.GetEnvironmentVariable("AXOM_DB_CONNECTION_STRING");
-        if (string.IsNullOrWhiteSpace(connectionString))
+        if (string.IsNullOrWhiteSpace(environment.ConnectionString))
         {
             return false;
         }
 
-        cleanupConnection = new NpgsqlConnection(connectionString);
+        cleanupConnection = new NpgsqlConnection(environment.ConnectionString);
         return true;
     }
 
@@ -356,54 +352,6 @@ internal static class DbVerifyDatabaseSession
         return reader.FieldCount > 3 && !reader.IsDBNull(3)
             ? Convert.ToString(reader.GetValue(3)) ?? string.Empty
             : string.Empty;
-    }
-
-    private static bool TryCreateRecordProjectionResolverFromEnvironment(
-        out ISqlRecordProjectionResolver? resolver,
-        out string? error)
-    {
-        resolver = null;
-        error = null;
-
-        var raw = Environment.GetEnvironmentVariable("AXOM_DB_RECORD_PROJECTIONS");
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return true;
-        }
-
-        var map = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-        var declarations = raw.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        foreach (var declaration in declarations)
-        {
-            var parts = declaration.Split(':', StringSplitOptions.TrimEntries);
-            if (parts.Length != 2)
-            {
-                error = $"Invalid AXOM_DB_RECORD_PROJECTIONS entry '{declaration}'. Expected format Record:col1,col2.";
-                return false;
-            }
-
-            var columns = parts[1]
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .ToArray();
-            if (columns.Length == 0)
-            {
-                error = $"Invalid AXOM_DB_RECORD_PROJECTIONS entry '{declaration}'. Record '{parts[0]}' must list at least one column.";
-                return false;
-            }
-
-            map[parts[0]] = columns;
-        }
-
-        try
-        {
-            resolver = new DictionarySqlRecordProjectionResolver(map);
-            return true;
-        }
-        catch (ArgumentException ex)
-        {
-            error = ex.Message;
-            return false;
-        }
     }
 
     private static bool CanExplainSql(string sql)
