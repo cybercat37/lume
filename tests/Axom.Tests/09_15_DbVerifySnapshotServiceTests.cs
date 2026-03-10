@@ -86,6 +86,53 @@ public class DbVerifySnapshotServiceTests
     }
 
     [Fact]
+    public void Write_metrics_snapshot_is_byte_stable_across_equivalent_runs()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_snapshot_service_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var originalDirectory = Directory.GetCurrentDirectory();
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+
+            var firstQueries = new List<DbVerifiedQuery>
+            {
+                new("q-b"),
+                new("q-a"),
+                new("q-b")
+            };
+            var secondQueries = new List<DbVerifiedQuery>
+            {
+                new("q-a"),
+                new("q-b")
+            };
+            var planHashes = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["q-b"] = "hash-b",
+                ["q-a"] = "hash-a"
+            };
+
+            DbVerifySnapshotService.WriteMetricsSnapshot(firstQueries, planHashes);
+            var snapshotPath = Path.Combine(tempDir, ".axom", "query-metrics.json");
+            var firstSnapshot = File.ReadAllText(snapshotPath);
+
+            DbVerifySnapshotService.WriteMetricsSnapshot(secondQueries, planHashes);
+            var secondSnapshot = File.ReadAllText(snapshotPath);
+
+            Assert.Equal(firstSnapshot, secondSnapshot);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
     public void Compare_prints_ok_when_snapshot_matches_current_queries()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_snapshot_service_{Guid.NewGuid():N}");
