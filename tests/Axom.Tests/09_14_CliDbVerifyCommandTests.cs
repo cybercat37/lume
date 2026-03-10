@@ -438,6 +438,46 @@ public class CliDbVerifyCommandTests
     }
 
     [Fact]
+    public void Db_verify_plan_verbose_prints_plan_hash_for_sqlite()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--plan", "--verbose" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("plan query_id=", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("plan detail=", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("plan hash=", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
     public void Db_verify_fails_for_unsupported_provider()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
@@ -558,6 +598,7 @@ public class CliDbVerifyCommandTests
             Assert.Equal(0, exitCode);
             Assert.Contains("total_queries_validated=1", output.ToString(), StringComparison.Ordinal);
             Assert.Contains("plan query_id=", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("plan detail=", output.ToString(), StringComparison.Ordinal);
             Assert.Equal(string.Empty, error.ToString());
         }
         finally
