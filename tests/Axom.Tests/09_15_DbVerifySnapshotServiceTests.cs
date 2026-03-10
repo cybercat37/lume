@@ -204,4 +204,47 @@ public class DbVerifySnapshotServiceTests
             }
         }
     }
+
+    [Fact]
+    public void Compare_verbose_prints_old_and_new_plan_hash_details()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_snapshot_service_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(tempDir, ".axom"));
+        File.WriteAllText(
+            Path.Combine(tempDir, ".axom", "query-metrics.json"),
+            "[{\"query_id\":\"q1\",\"average_duration\":0,\"execution_count\":0,\"plan_hash\":\"old-hash\"}]");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+
+            var success = DbVerifySnapshotService.TryPrintSnapshotComparison(
+                new HashSet<string>(StringComparer.Ordinal) { "q1" },
+                new Dictionary<string, string>(StringComparer.Ordinal) { ["q1"] = "new-hash" },
+                verbose: true,
+                emitOutput: true,
+                out var error);
+
+            Assert.True(success);
+            Assert.Null(error);
+            Assert.Contains("compare_warning=plan_hash_changed count=1", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("compare_plan_hash_changed_query_id=q1", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("compare_plan_hash_old=old-hash", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("compare_plan_hash_new=new-hash", output.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
 }

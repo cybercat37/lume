@@ -74,7 +74,7 @@ internal static class DbVerifySnapshotService
             .OrderBy(queryId => queryId, StringComparer.Ordinal)
             .ToList();
 
-        var planHashChanged = new List<string>();
+        var planHashChanged = new List<PlanHashChange>();
         if (currentPlanHashes is not null)
         {
             foreach (var entry in entries)
@@ -89,10 +89,16 @@ internal static class DbVerifySnapshotService
 
                 if (!string.Equals(entry.PlanHash, currentPlanHash, StringComparison.Ordinal))
                 {
-                    planHashChanged.Add(entry.QueryId!);
+                    planHashChanged.Add(new PlanHashChange(entry.QueryId!, entry.PlanHash!, currentPlanHash));
                 }
             }
         }
+
+        planHashChanged = planHashChanged
+            .GroupBy(change => change.QueryId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderBy(change => change.QueryId, StringComparer.Ordinal)
+            .ToList();
 
         if (added.Count == 0 && removed.Count == 0 && planHashChanged.Count == 0)
         {
@@ -141,9 +147,11 @@ internal static class DbVerifySnapshotService
                 Console.WriteLine($"compare_warning=plan_hash_changed count={planHashChanged.Count}");
                 if (verbose)
                 {
-                    foreach (var queryId in planHashChanged.OrderBy(queryId => queryId, StringComparer.Ordinal))
+                    foreach (var change in planHashChanged)
                     {
-                        Console.WriteLine($"compare_plan_hash_changed_query_id={queryId}");
+                        Console.WriteLine($"compare_plan_hash_changed_query_id={change.QueryId}");
+                        Console.WriteLine($"compare_plan_hash_old={change.PreviousPlanHash}");
+                        Console.WriteLine($"compare_plan_hash_new={change.CurrentPlanHash}");
                     }
                 }
             }
@@ -178,4 +186,6 @@ internal static class DbVerifySnapshotService
         [JsonPropertyName("plan_hash")]
         public string? PlanHash { get; init; }
     }
+
+    private sealed record PlanHashChange(string QueryId, string PreviousPlanHash, string CurrentPlanHash);
 }

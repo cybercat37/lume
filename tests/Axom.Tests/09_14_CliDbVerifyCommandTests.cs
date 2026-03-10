@@ -1027,6 +1027,53 @@ public class CliDbVerifyCommandTests
     }
 
     [Fact]
+    public void Db_verify_compare_with_plan_verbose_prints_old_and_new_plan_hashes()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "test.axom");
+        var sql = "select 1";
+        var queryId = Axom.Runtime.Db.DbQueryFingerprint.CreateQueryId(sql);
+        File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
+        Directory.CreateDirectory(Path.Combine(tempDir, ".axom"));
+        File.WriteAllText(
+            Path.Combine(tempDir, ".axom", "query-metrics.json"),
+            $"[{{\"query_id\":\"{queryId}\",\"average_duration\":0,\"execution_count\":0,\"plan_hash\":\"deadbeef\"}}]");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--compare", "--plan", "--verbose" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("compare_warning=plan_hash_changed count=1", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains($"compare_plan_hash_changed_query_id={queryId}", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("compare_plan_hash_old=deadbeef", output.ToString(), StringComparison.Ordinal);
+            Assert.Contains("compare_plan_hash_new=", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
     public void Db_verify_applies_migrations_next_to_input_file()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
