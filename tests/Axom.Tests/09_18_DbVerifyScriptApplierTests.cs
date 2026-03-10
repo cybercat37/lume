@@ -94,7 +94,42 @@ public class DbVerifyScriptApplierTests
             var success = DbVerifyScriptApplier.TryApply(connection, inputPath, includeSeeds: false, out var error);
 
             Assert.False(success);
-            Assert.Contains("Failed to apply migration '001_invalid.sql'", error, StringComparison.Ordinal);
+            Assert.Contains("Failed to apply migration 'migrations/001_invalid.sql'", error, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Try_apply_uses_lexicographic_order_for_migration_scripts()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_script_applier_{Guid.NewGuid():N}");
+        var migrationsDir = Path.Combine(tempDir, "db", "migrations");
+        Directory.CreateDirectory(migrationsDir);
+        File.WriteAllText(Path.Combine(migrationsDir, "001_create_users.sql"), "create table users (id integer primary key, name text not null);");
+        File.WriteAllText(Path.Combine(migrationsDir, "002_insert_user.sql"), "insert into users (name) values ('Ada');");
+        var inputPath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(inputPath, "print 1");
+
+        try
+        {
+            using var connection = new SqliteConnection("Data Source=:memory:");
+            connection.Open();
+
+            var success = DbVerifyScriptApplier.TryApply(connection, inputPath, includeSeeds: false, out var error);
+
+            Assert.True(success);
+            Assert.Null(error);
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "select count(*) from users;";
+            var count = Convert.ToInt32(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+            Assert.Equal(1, count);
         }
         finally
         {

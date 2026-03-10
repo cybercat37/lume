@@ -10,12 +10,15 @@ internal static class DbVerifySnapshotService
         IReadOnlyDictionary<string, string>? planHashes)
     {
         var payload = queries
-            .Select(query => new
+            .Select(query => query.QueryId)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(queryId => queryId, StringComparer.Ordinal)
+            .Select(queryId => new
             {
-                query_id = query.QueryId,
+                query_id = queryId,
                 average_duration = 0,
                 execution_count = 0,
-                plan_hash = TryGetPlanHash(query.QueryId, planHashes)
+                plan_hash = TryGetPlanHash(queryId, planHashes)
             })
             .ToList();
 

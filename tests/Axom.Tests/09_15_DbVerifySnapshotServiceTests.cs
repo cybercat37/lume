@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Axom.Cli;
 
 namespace Axom.Tests;
@@ -34,6 +35,45 @@ public class DbVerifySnapshotServiceTests
             Assert.Contains("\"query_id\": \"q1\"", snapshot, StringComparison.Ordinal);
             Assert.Contains("\"query_id\": \"q2\"", snapshot, StringComparison.Ordinal);
             Assert.Contains("\"plan_hash\": \"hash-1\"", snapshot, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void Write_metrics_snapshot_sorts_and_deduplicates_query_ids()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_snapshot_service_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var originalDirectory = Directory.GetCurrentDirectory();
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+
+            var queries = new List<DbVerifiedQuery>
+            {
+                new("q-b"),
+                new("q-a"),
+                new("q-b")
+            };
+
+            DbVerifySnapshotService.WriteMetricsSnapshot(queries, planHashes: null);
+
+            var snapshotPath = Path.Combine(tempDir, ".axom", "query-metrics.json");
+            var snapshot = File.ReadAllText(snapshotPath);
+            using var document = JsonDocument.Parse(snapshot);
+            var rows = document.RootElement.EnumerateArray().ToList();
+
+            Assert.Equal(2, rows.Count);
+            Assert.Equal("q-a", rows[0].GetProperty("query_id").GetString());
+            Assert.Equal("q-b", rows[1].GetProperty("query_id").GetString());
         }
         finally
         {

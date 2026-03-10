@@ -66,7 +66,12 @@ internal static class DbVerifyScriptApplier
             }
             catch (Exception ex)
             {
-                error = $"Failed to apply {scriptKind} '{Path.GetFileName(file)}': {ex.Message}";
+                var fileName = Path.GetFileName(file);
+                var folderName = Path.GetFileName(directory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                var scriptLocation = string.IsNullOrWhiteSpace(folderName)
+                    ? fileName
+                    : $"{folderName}/{fileName}";
+                error = $"Failed to apply {scriptKind} '{scriptLocation}': {ex.Message}";
                 return false;
             }
         }
