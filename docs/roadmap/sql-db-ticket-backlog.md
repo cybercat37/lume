@@ -10,6 +10,7 @@ Legenda priorita': `P0` alta, `P1` media, `P2` bassa.
 ### SQLDB-001 (`P0`) - Definire contratto output `db verify`
 - Task: formalizzare righe output per `--report`, `--compare`, `--plan`, `--snapshot`.
 - DoD: documento contratto in docs + test CLI che assertano le chiavi output canoniche.
+- Riferimento: `docs/roadmap/db-verify-output-contract.md`.
 
 ### SQLDB-002 (`P0`) - Snapshot deterministico completo
 - Task: stabilizzare ordine, deduplica e serializzazione del file `.axom/query-metrics.json`.
