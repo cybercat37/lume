@@ -1153,6 +1153,49 @@ public class CliDbVerifyCommandTests
         }
     }
 
+    [Fact]
+    public void Db_verify_returns_error_when_seed_application_fails()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        var migrationsDir = Path.Combine(tempDir, "db", "migrations");
+        var seedsDir = Path.Combine(tempDir, "db", "seeds");
+        Directory.CreateDirectory(migrationsDir);
+        Directory.CreateDirectory(seedsDir);
+        File.WriteAllText(Path.Combine(migrationsDir, "001_create_users.sql"), "create table users (id integer primary key, name text not null);");
+        File.WriteAllText(Path.Combine(seedsDir, "001_invalid_seed.sql"), "insert into users (");
+
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--seeds" });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Failed to apply seed 'seeds/001_invalid_seed.sql'", error.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
     private static string[] ReadNonEmptyLines(string value)
     {
         return value

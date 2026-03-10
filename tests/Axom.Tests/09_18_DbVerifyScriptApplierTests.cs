@@ -139,4 +139,36 @@ public class DbVerifyScriptApplierTests
             }
         }
     }
+
+    [Fact]
+    public void Try_apply_returns_error_when_seed_script_fails()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_script_applier_{Guid.NewGuid():N}");
+        var migrationsDir = Path.Combine(tempDir, "db", "migrations");
+        var seedsDir = Path.Combine(tempDir, "db", "seeds");
+        Directory.CreateDirectory(migrationsDir);
+        Directory.CreateDirectory(seedsDir);
+        File.WriteAllText(Path.Combine(migrationsDir, "001_create_users.sql"), "create table users (id integer primary key, name text not null);");
+        File.WriteAllText(Path.Combine(seedsDir, "001_invalid_seed.sql"), "insert into users (");
+        var inputPath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(inputPath, "print 1");
+
+        try
+        {
+            using var connection = new SqliteConnection("Data Source=:memory:");
+            connection.Open();
+
+            var success = DbVerifyScriptApplier.TryApply(connection, inputPath, includeSeeds: true, out var error);
+
+            Assert.False(success);
+            Assert.Contains("Failed to apply seed 'seeds/001_invalid_seed.sql'", error, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
 }
