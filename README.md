@@ -297,6 +297,7 @@ Current HTTP + DB track status (Early/Partial):
 Design references:
 - `docs/proposals/http-db-reference.md` (vision/reference)
 - `docs/roadmap/http-db-plan.md` (implementation plan)
+- `docs/roadmap/sql-db-completion-roadmap.md` (SQL/DB completion roadmap)
 - `sql.md` (SQL-first module RFC)
 - `docs/roadmap/query-observability-performance-instrumentation.md` (observability RFC)
 

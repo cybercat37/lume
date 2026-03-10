@@ -14,6 +14,7 @@ Sources used for consolidation:
 
 Detailed implementation plan for HTTP/DB expansion:
 - docs/roadmap/http-db-plan.md
+- docs/roadmap/sql-db-completion-roadmap.md
 
 ## Current Baseline (Implemented)
 
@@ -305,6 +306,8 @@ Current HTTP+DB progress:
 
 See `docs/roadmap/http-db-plan.md` for objectives, DoD, implementation tasks,
 test strategy, sprint cadence, and risk mitigations.
+See `docs/roadmap/sql-db-completion-roadmap.md` for SQL/DB completion phases,
+DoD checkpoints, and execution order.
 
 ### Aspect syntax and model
 - Promote aspect tags to builtin identifiers (e.g. `@logging`, `@metrics`) instead of free-form strings.

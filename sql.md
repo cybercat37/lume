@@ -23,6 +23,7 @@ Related RFCs:
 
 * `docs/roadmap/query-observability-performance-instrumentation.md` (query observability and performance instrumentation)
 * `docs/roadmap/http-db-plan.md` (delivery milestones M17-M18)
+* `docs/roadmap/sql-db-completion-roadmap.md` (execution roadmap to close current SQL/DB gaps)
 
 ## Goals
 
