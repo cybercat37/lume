@@ -152,3 +152,7 @@ introdurre nuove semantiche core del linguaggio.
 - Evitare scope creep: niente nuove primitive core per chiudere questa roadmap.
 - Ogni fase deve includere: test, docs, esempi, checklist di compatibilita'.
 - Aggiornare `roadmap.md` e `README.md` al termine di ogni fase completata.
+
+## Backlog operativo
+
+- Breakdown in ticket piccoli (1 PR = 1 task): `docs/roadmap/sql-db-ticket-backlog.md`
