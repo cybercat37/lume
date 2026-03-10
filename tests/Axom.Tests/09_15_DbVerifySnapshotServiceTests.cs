@@ -107,6 +107,7 @@ public class DbVerifySnapshotServiceTests
                 new HashSet<string>(StringComparer.Ordinal) { "q1" },
                 currentPlanHashes: null,
                 verbose: false,
+                emitOutput: true,
                 out var error);
 
             Assert.True(success);
@@ -141,6 +142,7 @@ public class DbVerifySnapshotServiceTests
                 new HashSet<string>(StringComparer.Ordinal),
                 currentPlanHashes: null,
                 verbose: false,
+                emitOutput: true,
                 out var error);
 
             Assert.False(success);

@@ -584,6 +584,46 @@ public class CliDbVerifyCommandTests
     }
 
     [Fact]
+    public void Db_verify_compare_quiet_still_returns_error_for_invalid_snapshot_json()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "test.axom");
+        File.WriteAllText(filePath, "print sql\"\"\"select 1\"\"\".one()");
+        Directory.CreateDirectory(Path.Combine(tempDir, ".axom"));
+        File.WriteAllText(Path.Combine(tempDir, ".axom", "query-metrics.json"), "{ not-valid-json ");
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        var output = new StringWriter(CultureInfo.InvariantCulture);
+        var error = new StringWriter(CultureInfo.InvariantCulture);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+            Console.SetOut(output);
+            Console.SetError(error);
+
+            var exitCode = Axom.Cli.Program.Main(new[] { "db", "verify", filePath, "--compare", "--quiet" });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Invalid snapshot file", error.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, output.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
     public void Db_verify_plan_verbose_skips_template_queries_without_failing()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"axom_cli_db_verify_{Guid.NewGuid():N}");

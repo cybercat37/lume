@@ -32,13 +32,18 @@ internal static class DbVerifySnapshotService
         IReadOnlySet<string> currentQueryIds,
         IReadOnlyDictionary<string, string>? currentPlanHashes,
         bool verbose,
+        bool emitOutput,
         out string? error)
     {
         error = null;
         var snapshotPath = Path.Combine(".axom", "query-metrics.json");
         if (!File.Exists(snapshotPath))
         {
-            Console.WriteLine("compare_warning=snapshot_missing");
+            if (emitOutput)
+            {
+                Console.WriteLine("compare_warning=snapshot_missing");
+            }
+
             return true;
         }
 
@@ -91,42 +96,55 @@ internal static class DbVerifySnapshotService
 
         if (added.Count == 0 && removed.Count == 0 && planHashChanged.Count == 0)
         {
-            Console.WriteLine("compare_status=ok");
+            if (emitOutput)
+            {
+                Console.WriteLine("compare_status=ok");
+            }
+
             return true;
         }
 
         if (added.Count > 0)
         {
-            Console.WriteLine($"compare_warning=query_added count={added.Count}");
-            if (verbose)
+            if (emitOutput)
             {
-                foreach (var queryId in added)
+                Console.WriteLine($"compare_warning=query_added count={added.Count}");
+                if (verbose)
                 {
-                    Console.WriteLine($"compare_added_query_id={queryId}");
+                    foreach (var queryId in added)
+                    {
+                        Console.WriteLine($"compare_added_query_id={queryId}");
+                    }
                 }
             }
         }
 
         if (removed.Count > 0)
         {
-            Console.WriteLine($"compare_warning=query_removed count={removed.Count}");
-            if (verbose)
+            if (emitOutput)
             {
-                foreach (var queryId in removed)
+                Console.WriteLine($"compare_warning=query_removed count={removed.Count}");
+                if (verbose)
                 {
-                    Console.WriteLine($"compare_removed_query_id={queryId}");
+                    foreach (var queryId in removed)
+                    {
+                        Console.WriteLine($"compare_removed_query_id={queryId}");
+                    }
                 }
             }
         }
 
         if (planHashChanged.Count > 0)
         {
-            Console.WriteLine($"compare_warning=plan_hash_changed count={planHashChanged.Count}");
-            if (verbose)
+            if (emitOutput)
             {
-                foreach (var queryId in planHashChanged.OrderBy(queryId => queryId, StringComparer.Ordinal))
+                Console.WriteLine($"compare_warning=plan_hash_changed count={planHashChanged.Count}");
+                if (verbose)
                 {
-                    Console.WriteLine($"compare_plan_hash_changed_query_id={queryId}");
+                    foreach (var queryId in planHashChanged.OrderBy(queryId => queryId, StringComparer.Ordinal))
+                    {
+                        Console.WriteLine($"compare_plan_hash_changed_query_id={queryId}");
+                    }
                 }
             }
         }

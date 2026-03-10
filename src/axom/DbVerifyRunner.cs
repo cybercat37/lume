@@ -69,14 +69,19 @@ internal static class DbVerifyRunner
             }
         }
 
-        if (options.Compare && !options.Quiet)
+        if (options.Compare)
         {
             var currentQueryIds = verifiedQueries
                 .Select(query => query.QueryId)
                 .Distinct(StringComparer.Ordinal)
                 .ToHashSet(StringComparer.Ordinal);
 
-            if (!DbVerifySnapshotService.TryPrintSnapshotComparison(currentQueryIds, currentPlanHashes, options.Verbose, out var compareError))
+            if (!DbVerifySnapshotService.TryPrintSnapshotComparison(
+                    currentQueryIds,
+                    currentPlanHashes,
+                    options.Verbose,
+                    emitOutput: !options.Quiet,
+                    out var compareError))
             {
                 Console.Error.WriteLine(compareError ?? "Failed to compare query metrics snapshot.");
                 return 1;
